@@ -31,7 +31,7 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["pytest==9.1.1"]
+dev = ["pytest==9.2.0"]
 # mike: the squidfunk fork that builds with Zensical rather than MkDocs, pinned
 # to a commit because it is distributed from GitHub only. `mike deploy <ver>`
 # runs `zensical build` and writes the gh-pages version layout the theme's
