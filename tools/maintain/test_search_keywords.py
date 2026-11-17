@@ -43,3 +43,25 @@ def test_add_keywords_keeps_existing_block():
 def test_add_keywords_leaves_search_excluded_page_alone():
     md = page("R←⎕A").replace("boost: 2", "exclude: true")
     assert sk.add_keywords(md) == md
+
+
+def test_add_keywords_uses_crlf_when_file_does():
+    md = page("R←⎕AT Y").replace("\n", "\r\n")
+    out = sk.add_keywords(md)
+    assert out.endswith("\r\n</div>\r\n")
+    assert "\n" not in out.replace("\r\n", "")
+    assert out == md.rstrip("\r\n") + "\r\n\r\n" + BLOCK.format("⎕AT AT").replace("\n", "\r\n")
+
+
+def test_cli_accepts_cwd_relative_docs_relative_and_absolute(tmp_path, monkeypatch, capsys):
+    (tmp_path / "zensical.toml").write_text('[project]\nsite_name = "T"\nnav = []\n', encoding="utf-8")
+    docs = tmp_path / "docs" / "guide"
+    docs.mkdir(parents=True)
+    for n in "abc":
+        (docs / f"{n}.md").write_text(page("R←⎕AT Y"), encoding="utf-8")
+    monkeypatch.setenv("DOCS_PROJECT", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+    assert sk.main(["docs/guide/a.md", "guide/b.md", str(docs / "c.md")]) == 0
+    assert "3 page(s) changed" in capsys.readouterr().out
+    for n in "abc":
+        assert "Hidden search keywords" in (docs / f"{n}.md").read_text(encoding="utf-8")

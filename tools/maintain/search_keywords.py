@@ -66,19 +66,20 @@ def keywords(syntax: str) -> str | None:
 def add_keywords(md: str) -> str:
     if MARKER in md or '<div style="display: none;">' in md:
         return md
-    if check._excludes_search(md):  # a keyword div there is a check.py error
+    if check.excludes_search(md):  # a keyword div there is a check.py error
         return md
     syntax = _syntax(md)
     k = keywords(syntax) if syntax else None
     if not k:
         return md
     block = f'{MARKER}\n<div style="display: none;">\n  {k}\n</div>\n'
-    return md.rstrip("\n") + "\n\n" + block
+    nl = "\r\n" if "\r\n" in md else "\n"  # keep the file's own line endings
+    return md.rstrip("\r\n") + nl + nl + block.replace("\n", nl)
 
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("pages", nargs="+", help="page paths, relative to the docs directory (or absolute)")
+    ap.add_argument("pages", nargs="+", help="page paths: relative to the docs directory, to the current directory, or absolute")
     ap.add_argument("--dry-run", action="store_true", help="list pages that would change, write nothing")
     args = ap.parse_args(argv)
     site = docsite.Site.load(docsite.find_project())
@@ -87,6 +88,8 @@ def main(argv: list[str] | None = None) -> int:
         path = Path(page)
         if not path.is_absolute():
             path = site.docs / page
+            if not path.is_file() and Path(page).is_file():
+                path = Path(page)
         with open(path, encoding="utf-8", newline="") as f:
             md = f.read()
         new = add_keywords(md)

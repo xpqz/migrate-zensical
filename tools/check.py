@@ -146,7 +146,7 @@ _HIDDEN_DIV = re.compile(
     re.IGNORECASE)
 
 
-def _excludes_search(text: str) -> bool:
+def excludes_search(text: str) -> bool:
     if not text.startswith("---"):
         return False
     parts = text.split("\n---", 1)
@@ -164,7 +164,7 @@ def check_search_exclusions(site: Site) -> list[Problem]:
     problems = []
     for page in site.pages():
         text = site.read(page)
-        if not _excludes_search(text):
+        if not excludes_search(text):
             continue
         for n, line in docsite.prose_lines(text):
             if _HIDDEN_DIV.search(line):

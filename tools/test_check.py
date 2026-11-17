@@ -415,3 +415,9 @@ def test_escaped_bracket_in_alt_text(tmp_path):
     assert used_by(tmp_path, "![a \\] b](a/pic.png)\n") == []
     probs = used_by(tmp_path, "![a \\] b](a/gone.png)\n")
     assert [p.severity for p in probs if p.severity == "error"] == ["error"]
+
+
+def test_excludes_search_is_public():
+    assert check.excludes_search("---\nsearch:\n  exclude: true\n---\n\n# T\n")
+    assert not check.excludes_search("---\nsearch:\n  boost: 2\n---\n\n# T\n")
+    assert not check.excludes_search("# T\n")
