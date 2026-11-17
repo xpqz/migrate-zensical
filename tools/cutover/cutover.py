@@ -113,7 +113,7 @@ THEME_PATHS_IN_TOOLING = (f"zensical/docs/{THEME}", THEME_PATH)
 
 # The workflow names release branches dispatch, which GitHub only offers when
 # a file of that name exists on the default branch.
-STUB_WORKFLOWS = ("mkdocs-publish.yml", "mkdocs-chm.yml", "mkdocs-pdf.yml", "full-release.yml")
+STUB_WORKFLOWS = ("mkdocs-publish.yml", "mkdocs-chm.yml", "full-release.yml")
 
 # The edit link points into the content tree, which moves from zensical/docs
 # to docs.

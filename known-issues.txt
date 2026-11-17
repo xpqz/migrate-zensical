@@ -1,6 +1,6 @@
 # Internal-link and anchor issues that Zensical's built-in checker reports
 # for the flattened corpus and that pre-date the migration. The flatten must
-# introduce no issue outside this set (tools/check_flatten.py enforces this).
+# introduce no issue outside this set (tools/check.py enforces this).
 #
 # Composition (1 entry): a broken relative link already present in the
 # monorepo source, unrelated to the flatten. The rest of the July 2026
@@ -16,7 +16,7 @@
 # separate concern, not part of this baseline.
 #
 # This baseline only shrinks. When the checker stops reporting an entry,
-# check_flatten prints it as resolved; remove it from this file so a later
+# tools/check.py reports it as resolved; remove it from this file so a later
 # regression is seen as new rather than silently accepted.
 #
 # Format: <type> @ <file>:<line>:<col>, one per line.
