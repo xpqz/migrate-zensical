@@ -1,0 +1,81 @@
+# Jenkins Pipelines: MkDocs Site Deployment and Restore
+
+> **Operator procedures** (how to publish to staging, push a live preview,
+> release to production, and rotate versions) live in [`RELEASE.md`](RELEASE.md).
+> This file describes the pipeline *architecture*.
+
+## Purpose
+
+Deploy the [MkDocs](https://www.mkdocs.org/) website which uses the [mike](https://github.com/jimporter/mike) tool for versioning. 
+
+## Overview
+
+### Deployment Pipeline (`Jenkinsfile`)
+
+Deployment Pipeline (`Jenkinsfile`): keeps a self-hosted version of the documentation site in sync with the `gh-pages` branch. The deployment pipeline mirrors the `gh-pages` branch to a target web server directory while maintaining all `mike` versioning features.
+
+The deployment pipeline is triggered whenever a new build is triggered via the GitHub Action (see `mkdocs-publish.yml`).
+
+1. Compares the latest commit against the currently deployed version
+   - Only proceeds if changes are detected (skip-if-same optimisation)
+2. Creates timestamped backup of current site (unless `SKIP_BACKUP` is set)
+   - Archives as Jenkins artifact with fingerprinting
+   - Jenkins manages retention (keeps 5)
+3. Deploys new content to web server
+   - Mirrors each `PRODUCTION_VERSIONS` directory with `rsync -rl --delete`
+   - Writes the root `versions.json` listing the deployed versions
+   - Stage-level locking prevents concurrent deployments
+4. Verifies the deployment succeeded
+5. Automatic rollback on failure from the backup taken by the same build
+   - Removes and restores only the `PRODUCTION_VERSIONS` directories, `.git-hash` and `versions.json`
+   - Leaves the rest of the web root (other versions, server files) alone
+   - No rollback is possible when `SKIP_BACKUP` is set
+6. Optional debug mode to display environment variables and state
+
+## Stages
+
+### Deployment Pipeline
+
+1. `Initialise`:
+    * Generates BUILD_TIMESTAMP for backup naming
+    * Bails if timestamp generation fails
+
+2. `Check for Changes`:
+    * Compares the latest commit hash with currently deployed version
+
+3. `Debug Environment` (optional):
+    * Only runs when `DEBUG` parameter is enabled
+    * Shows internal state variables and environment
+
+4. `Backup Current Site`:
+    * Only runs if changes detected and site exists
+    * Creates backup named: `docs.backup.YYYYMMDD_HHMMSS.{hash}.tar.gz` (UTC timestamp)
+    * Archives as Jenkins artifact with fingerprinting
+    * Jenkins handles retention via `buildDiscarder` (keeps 5 artifacts)
+    * Can be skipped with `SKIP_BACKUP` parameter
+    * 10-minute timeout
+
+5. `Deploy Site`:
+    * Protected by `lock('docs-deploy')` to prevent concurrent deployments
+    * Deploys only the `PRODUCTION_VERSIONS` directories; the rest of the web root is left alone
+    * Uses `rsync -rl --delete` to mirror each version directory. Ownership and permissions are not set explicitly
+    * Writes the root `versions.json` listing the deployed versions, which the version selector reads
+    * Stores commit hash for future comparisons
+    * Stage-level error reporting
+
+6. `Verify Deployment`:
+    * Simple verification checking for `index.html`
+    * Reports deployment location and git hash
+    * Stage-level error reporting
+
+## Jenkins Plugins
+
+The pipelines use the following Jenkins plugins:
+
+1. `pipeline`
+2. `git`
+3. `timestamper` (optional)
+   - Adds timestamps to console output via `timestamps()`
+4. `lockable-resources`
+   - Required for `lock('docs-deploy')` in deployment stage
+   - Prevents concurrent deployments

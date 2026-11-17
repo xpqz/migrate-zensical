@@ -2,7 +2,7 @@
 
 The parser and differ are exercised with captured checker output; the
 full-corpus `zensical build` in main() is an integration step, run during
-the cycle and recorded in docs/prs/21.md, not unit-tested here.
+the cycle and recorded in design/prs/21.md, not unit-tested here.
 """
 
 import textwrap
@@ -88,7 +88,8 @@ def test_load_baseline_ignores_comments_and_blank_lines(tmp_path):
         "# a comment\n"
         "anchor does not exist @ guide/page.md:3:98\n"
         "\n"
-        "page does not exist @ other/index.md:16:13\n"
+        "page does not exist @ other/index.md:16:13\n",
+        encoding="utf-8",
     )
     assert check_flatten.load_baseline(baseline) == {
         "anchor does not exist @ guide/page.md:3:98",
@@ -178,7 +179,8 @@ def test_main_returns_zero_on_a_clean_gate(tmp_path):
     baseline = tmp_path / "known-issues.txt"
     baseline.write_text(
         "anchor does not exist @ guide/page.md:3:98\n"
-        "page does not exist @ other/index.md:16:13\n"
+        "page does not exist @ other/index.md:16:13\n",
+        encoding="utf-8",
     )
     rc = check_flatten.main(
         ["--baseline", str(baseline)], runner=lambda _dir: (TWO_ISSUES, 0)
@@ -188,8 +190,39 @@ def test_main_returns_zero_on_a_clean_gate(tmp_path):
 
 def test_main_returns_one_when_the_gate_fails(tmp_path):
     baseline = tmp_path / "known-issues.txt"
-    baseline.write_text("anchor does not exist @ guide/page.md:3:98\n")
+    baseline.write_text("anchor does not exist @ guide/page.md:3:98\n", encoding="utf-8")
     rc = check_flatten.main(
         ["--baseline", str(baseline)], runner=lambda _dir: (TWO_ISSUES, 0)
     )
     assert rc == 1
+
+
+# --- run_build output decoding -----------------------------------------
+
+
+def test_run_build_decodes_output_as_utf8_whatever_the_locale(tmp_path):
+    # A stand-in `zensical` package in the project dir shadows the real one
+    # for `python -m zensical` (cwd is first on sys.path). It writes APL
+    # glyphs as UTF-8 plus one byte that is not valid UTF-8.
+    fake = tmp_path / "zensical"
+    fake.mkdir()
+    (fake / "__init__.py").write_text("", encoding="utf-8")
+    (fake / "__main__.py").write_text(
+        "import sys\n"
+        "sys.stdout.buffer.write('⍳⎕ build\\n'.encode('utf-8') + b'\\xff\\n')\n",
+        encoding="utf-8",
+    )
+    output, returncode = check_flatten.run_build(tmp_path)
+    assert returncode == 0
+    assert "⍳⎕ build" in output
+    assert "�" in output
+
+
+def test_main_builds_the_project_docsite_finds(tmp_path, monkeypatch):
+    baseline = tmp_path / "known-issues.txt"
+    baseline.write_text("", encoding="utf-8")
+    monkeypatch.setenv("DOCS_PROJECT", str(tmp_path / "project"))
+    built = []
+    check_flatten.main(["--baseline", str(baseline)],
+                       runner=lambda project: (built.append(project), (CLEAN, 0))[1])
+    assert built == [tmp_path / "project"]

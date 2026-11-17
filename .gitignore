@@ -1,7 +1,9 @@
-# Zensical build output and incremental cache. The generated project lives at
-# /zensical/; its site/ and .cache/ are build artefacts, not source.
+# Zensical build output and incremental cache: build artefacts, not source.
+# The project lives at /zensical/ until the cutover, at the root after it.
 /zensical/site/
 /zensical/.cache/
+/site/
+/.cache/
 
 # Python
 .venv/
@@ -12,3 +14,6 @@ __pycache__/
 
 # OS
 .DS_Store
+
+# CHM build output (tools/chm/build_chm.py --project-dir out/chm)
+/out/

@@ -18,12 +18,20 @@ edit_uri = "edit/main/zensical/docs"
 # strings.
 copyright = 'Made with <a href="https://zensical.org/" target="_blank" rel="noopener"><strong>Zensical</strong></a><br/>Copyright &copy; 1982-$CURRENT_YEAR <strong><a href="https://dyalog.com" target="_blank" rel="noopener">Dyalog Limited</a></strong> (<button type="button" class="copy" title="Copy build info to the clipboard" data-done="copied" data-fail="copy failed" onclick="var b=this,s=b.nextElementSibling;navigator.clipboard?navigator.clipboard.writeText(b.textContent.trim()).then(function(){s.textContent=b.dataset.done},function(){s.textContent=b.dataset.fail}):s.textContent=b.dataset.fail">$BUILD_DATE $GIT_INFO</button><span class="copy-status" role="status"></span>).<br/>Except where otherwise noted, content on this site is licensed under a <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener"><strong>Creative Commons Attribution 4.0 International</strong></a> licence.'
 
-extra_css = ["documentation-assetsz/css/dyalog.css"]
+extra_css = ["documentation-theme-zensical/css/dyalog.css"]
+# The house style submodule's README and LICENCE are repository files, not
+# site pages: keep them out of the build.
+exclude_docs = """
+/documentation-theme-zensical/README.md
+/documentation-theme-zensical/LICENCE
+"""
 # privacy and minify are MkDocs plugins Zensical does not implement; search is
-# built in. Only macros (version-number substitution) remains.
+# built in. macros is deliberately absent: from Zensical 0.0.68 it makes a
+# build about 25 times slower on macOS, and the corpus used it only for
+# version numbers, which the dyalog_vars Markdown extension substitutes from
+# [project.extra] instead (see tools/dyalog_vars.py).
 plugins = [
     "search",
-    "macros",
 ]
 markdown_extensions = [
     "admonition",
@@ -38,6 +46,7 @@ markdown_extensions = [
     "markdown_tables_extended",
     { toc = { title = "On this page" } },
     "dyalog_caption",
+    "dyalog_vars",
 ]
 site_url = "https://docs.dyalog.com/"
 
@@ -47,9 +56,9 @@ site_url = "https://docs.dyalog.com/"
 # and uses the primary colour in only two places, so the brand barely shows.
 variant = "classic"
 # Orange wordmark in both schemes — matches Dyalog's own dyalog_readme.htm.
-logo = "documentation-assetsz/images/dyalog-logo_orange.svg"
-favicon = "documentation-assetsz/images/dyalog-ide-cube-2025.2.svg"
-# Fonts are self-hosted by documentation-assetsz; skip the Google Fonts request
+logo = "documentation-theme-zensical/images/dyalog-logo_orange.svg"
+favicon = "documentation-theme-zensical/images/dyalog-ide-cube-2025.2.svg"
+# Fonts are self-hosted by documentation-theme-zensical; skip the Google Fonts request
 font = false
 custom_dir = "overrides"
 features = [

@@ -25,6 +25,8 @@ import sys
 from collections import namedtuple
 from pathlib import Path
 
+import docsite
+
 # Strips SGR colour sequences from Zensical's diagnostic output.
 _ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
 
@@ -41,12 +43,13 @@ _SEVERITY_RE = re.compile(r"^\s*(?:Warning|Error):\s+(.*\S)\s*$")
 _COUNT_RE = re.compile(r"(?:(\d+)\s+issues?\s+found|(No)\s+issues?\s+found)")
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-PROJECT_DIR = REPO_ROOT / "zensical"
 BASELINE_PATH = REPO_ROOT / "known-issues.txt"
 
 # Outcome of assessing one build. ok is the gate verdict; reasons explains a
 # failure; new and resolved are the baseline diff.
-Assessment = namedtuple("Assessment", "ok new resolved reasons")
+# other_reasons is reasons without the tally of new issues, for callers that
+# report each new issue individually.
+Assessment = namedtuple("Assessment", "ok new resolved reasons other_reasons")
 
 
 def parse_issues(build_output):
@@ -87,7 +90,7 @@ def load_baseline(path):
 
     Blank lines and lines beginning with '#' are ignored.
     """
-    lines = Path(path).read_text().splitlines()
+    lines = Path(path).read_text(encoding="utf-8").splitlines()
     return {
         stripped
         for line in lines
@@ -125,10 +128,12 @@ def assess(build_output, returncode, baseline):
             "the diagnostic format may have changed"
         )
 
+    other_reasons = list(reasons)
     if new:
         reasons.append(f"{len(new)} issue(s) outside the baseline")
 
-    return Assessment(ok=not reasons, new=new, resolved=resolved, reasons=reasons)
+    return Assessment(ok=not reasons, new=new, resolved=resolved,
+                      reasons=reasons, other_reasons=other_reasons)
 
 
 def run_build(project_dir):
@@ -141,18 +146,22 @@ def run_build(project_dir):
         [sys.executable, "-m", "zensical", "build", "-c"],
         cwd=project_dir,
         capture_output=True,
-        text=True,
+        # Zensical writes UTF-8 (APL glyphs in quoted source lines); decode it
+        # as such rather than in the OS default, which is not UTF-8 on Windows.
+        encoding="utf-8",
+        errors="replace",
     )
     return result.stdout + result.stderr, result.returncode
 
 
 def main(argv=None, runner=run_build):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--project-dir", type=Path, default=PROJECT_DIR)
+    parser.add_argument("--project-dir", type=Path, default=None,
+                        help="the project to build (default: docsite.find_project())")
     parser.add_argument("--baseline", type=Path, default=BASELINE_PATH)
     args = parser.parse_args(argv)
 
-    output, returncode = runner(args.project_dir)
+    output, returncode = runner(args.project_dir or docsite.find_project())
     result = assess(output, returncode, load_baseline(args.baseline))
 
     for issue in sorted(result.resolved):

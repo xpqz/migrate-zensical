@@ -1,9 +1,12 @@
 name: Publish Zensical Documentation
 
-# Builds the committed flattened project with Zensical and deploys a versioned
-# layout to gh-pages via the squidfunk/mike fork. Manual trigger only. Staging
-# is xpqz.github.io/zensical-dyalog/<ver>/; production (docs.dyalog.com) is a
-# separate Jenkins step that pulls from gh-pages.
+# Builds the project with Zensical and deploys one version directory to
+# gh-pages via the squidfunk/mike fork, then puts the Jenkins deployment
+# files at the gh-pages root. Other versions on gh-pages (including the
+# MkDocs-built ones from the release branches) and their versions.json
+# entries are left alone. Staging is this repository's GitHub Pages;
+# production (docs.dyalog.com) is a separate Jenkins step that pulls from
+# gh-pages.
 on:
   workflow_dispatch:
     inputs:
@@ -18,10 +21,21 @@ on:
         default: false
         type: boolean
       site_url_override:
-        description: 'Override site_url (for staging/test hosts, e.g. https://xpqz.github.io/zensical-dyalog/). Empty keeps the committed production canonical.'
+        description: 'Override site_url (for staging/test hosts, e.g. https://<owner>.github.io/<repo>/). Empty keeps the committed production canonical.'
         required: false
         default: ''
         type: string
+  workflow_call:
+    inputs:
+      version_override:
+        type: string
+        default: ''
+      set_as_latest:
+        type: boolean
+        default: false
+      site_url_override:
+        type: string
+        default: ''
 
 permissions:
   contents: write
@@ -38,42 +52,47 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-          # documentation-assets (the shared corporate style) is a submodule
-          # under zensical/docs/; the build reads its CSS/fonts from there.
+          # documentation-theme-zensical (the house style) is a submodule
+          # under the project's docs/; the build reads its CSS/fonts from there.
           submodules: recursive
 
-      - name: Drop the assets submodule's VCS pointer
-        # Zensical copies the docs tree into the site verbatim, and mike's
-        # git fast-import refuses any tree path named .git. The submodule's
-        # working tree carries a .git pointer file after checkout; remove it so
-        # site/documentation-assets/.git never gets built or published. Only the
-        # pointer goes; the CSS/fonts stay.
-        run: rm -f zensical/docs/documentation-assets/.git
-
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.11'
+      - uses: astral-sh/setup-uv@v10.3.3
 
       - name: Install build and deploy dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r tools/requirements-build.txt
-          pip install -e tools/
-          pip install -r tools/requirements-deploy.txt
+        # The Python version comes from .python-version, the pins from uv.lock.
+        run: uv sync --all-groups --locked
 
       - name: Determine version
+        # version_override, else zensical.toml's extra.version_majmin. On the
+        # default branch it must equal TRUNK_VERSION in tools/jenkins/Jenkinsfile
+        # (older versions are published from their vM.0 branch); the script
+        # stops the run otherwise. See tools/release_version.py.
         id: version
         env:
           VERSION_OVERRIDE: ${{ inputs.version_override }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: uv run python tools/release_version.py
+
+      - name: Locate the project
+        # The directory holding zensical.toml (zensical/ during the PoC, the
+        # repository root after cutover), as every tool resolves it.
+        id: project
+        env:
+          PYTHONPATH: tools
         run: |
-          VERSION="$VERSION_OVERRIDE"
-          if [ -z "$VERSION" ]; then
-            VERSION=$(python -c "import tomllib; print(tomllib.load(open('zensical/zensical.toml','rb'))['project']['extra']['version_majmin'])")
-          fi
-          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+$'; then
-            echo "ERROR: invalid version '$VERSION' (expected X.Y)"; exit 1
-          fi
-          echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+          DIR=$(uv run python -c "import os, docsite; print(os.path.relpath(docsite.find_project()))")
+          echo "DIR=$DIR" >> "$GITHUB_OUTPUT"
+          echo "Project: $DIR"
+
+      - name: Drop the house style submodule's VCS pointer
+        # Zensical copies the docs tree into the site verbatim, and mike's
+        # git fast-import refuses any tree path named .git. The submodule's
+        # working tree carries a .git pointer file after checkout; remove it so
+        # site/documentation-theme-zensical/.git never gets built or published.
+        # Only the pointer goes; the CSS/fonts stay.
+        env:
+          PROJECT: ${{ steps.project.outputs.DIR }}
+        run: rm -f "$PROJECT/docs/documentation-theme-zensical/.git"
 
       - name: Git info
         id: gitinfo
@@ -87,26 +106,28 @@ jobs:
           GIT_INFO: ${{ steps.gitinfo.outputs.GIT_INFO }}
           BUILD_DATE: ${{ steps.gitinfo.outputs.BUILD_DATE }}
           CURRENT_YEAR: ${{ steps.gitinfo.outputs.CURRENT_YEAR }}
+          PROJECT: ${{ steps.project.outputs.DIR }}
         run: |
-          cp zensical/zensical.toml zensical/zensical.toml.bak
+          cp "$PROJECT/zensical.toml" "$PROJECT/zensical.toml.bak"
           envsubst '$BUILD_DATE $GIT_INFO $CURRENT_YEAR' \
-            < zensical/zensical.toml.bak > zensical/zensical.toml
-          rm zensical/zensical.toml.bak
+            < "$PROJECT/zensical.toml.bak" > "$PROJECT/zensical.toml"
+          rm "$PROJECT/zensical.toml.bak"
 
       - name: Override site_url for staging
         if: inputs.site_url_override != ''
         env:
           SITE_URL_OVERRIDE: ${{ inputs.site_url_override }}
+          PROJECT: ${{ steps.project.outputs.DIR }}
         run: |
-          python - <<'PY'
+          uv run python - <<'PY'
           import os, re
           url = os.environ["SITE_URL_OVERRIDE"]
-          p = "zensical/zensical.toml"
-          text = open(p).read()
+          p = os.path.join(os.environ["PROJECT"], "zensical.toml")
+          text = open(p, encoding="utf-8").read()
           # Replacement passed as a function so backslashes/quotes in url are
           # never treated as regex group references.
           text = re.sub(r'^site_url = ".*"$', lambda _: f'site_url = "{url}"', text, count=1, flags=re.M)
-          open(p, "w").write(text)
+          open(p, "w", encoding="utf-8").write(text)
           PY
 
       - name: Configure Git identity
@@ -114,18 +135,64 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Gate on the built-in link/anchor checker
-        run: python tools/check_flatten.py
+      - name: Content checks and build
+        run: uv run python tools/check.py
 
       - name: Deploy the version
-        working-directory: zensical
+        # mike writes only <version>/ (plus any alias) and that version's
+        # versions.json entry; other version directories stay as they are.
+        working-directory: ${{ steps.project.outputs.DIR }}
         env:
           VERSION: ${{ steps.version.outputs.VERSION }}
           SET_AS_LATEST: ${{ inputs.set_as_latest }}
         run: |
           if [ "$SET_AS_LATEST" = "true" ]; then
-            mike deploy --push --update-aliases "$VERSION" latest
-            mike set-default --push latest
+            uv run mike deploy --push --update-aliases "$VERSION" latest
+            uv run mike set-default --push latest
           else
-            mike deploy --push "$VERSION"
+            uv run mike deploy --push "$VERSION"
+          fi
+
+      - name: Copy Jenkins files to gh-pages
+        # Jenkins reads its pipeline and helpers from the gh-pages root. As
+        # upstream does, always take them from the default branch, never from
+        # the commit being published: a publish from an older release branch
+        # must not overwrite PRODUCTION_VERSIONS or the helper functions on
+        # gh-pages with that branch's stale copies. If the default branch has
+        # no tools/jenkins/ yet (a fork before the port is merged), warn and
+        # skip the copy rather than fail the publish. The files are committed
+        # in a separate worktree so the stamped build tree is not disturbed;
+        # mike has just updated the local gh-pages branch and pushed it.
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          FILES="Jenkinsfile service.yml .rsync-exclude get_svn_docbin"
+          git fetch --quiet origin "$DEFAULT_BRANCH"
+          SOURCE=$(git rev-parse FETCH_HEAD)
+          echo "Jenkins files from $DEFAULT_BRANCH at $SOURCE"
+          MISSING=""
+          for f in $FILES; do
+            git cat-file -e "$SOURCE:tools/jenkins/$f" 2>/dev/null || MISSING="$MISSING $f"
+          done
+          if [ -n "$MISSING" ]; then
+            echo "::warning::$DEFAULT_BRANCH has no tools/jenkins/{$(echo $MISSING | tr ' ' ',')}; Jenkins files on gh-pages left unchanged"
+            exit 0
+          fi
+          PAGES="$RUNNER_TEMP/gh-pages"
+          git worktree add --quiet "$PAGES" gh-pages
+          cd "$PAGES"
+          # Check out into the worktree and move, so get_svn_docbin keeps the
+          # executable mode it has in the repository.
+          for f in $FILES; do
+            git checkout "$SOURCE" -- "tools/jenkins/$f"
+            git rm --quiet --cached "tools/jenkins/$f"
+            mv -f "tools/jenkins/$f" "$f"
+          done
+          rmdir tools/jenkins tools 2>/dev/null || true
+          git add $FILES
+          if git diff --staged --quiet; then
+            echo "No changes to Jenkins files"
+          else
+            git commit -m "Update Jenkins deployment files"
+            git push origin gh-pages
           fi
