@@ -109,11 +109,38 @@ merged before the freeze or re-applied by hand afterwards.
 
 ## Design
 
+### House style as a submodule (owner's requirement, 2026-11-17)
+
+The Zensical house style must be reusable by other Dyalog documentation
+projects and products, so it lives in its own repository and is consumed
+as a git submodule — alongside, not replacing, the MkDocs style
+(Dyalog/documentation-theme), which v20/v21 and other MkDocs projects keep
+using. Two style repos, one per generator.
+
+- New repo **xpqz/documentation-theme-zensical** (PoC home; transferred to
+  the Dyalog org at cutover, with the submodule URL updated then),
+  extracted from `zensical/docs/documentation-assetsz/` with its history
+  (`git subtree split` or `git filter-repo --subdirectory-filter`).
+  Contents: `css/dyalog.css`, `fonts/`, `images/`, plus README (how to
+  consume it from a Zensical project, the matching `zensical.toml` theme
+  settings to copy) and LICENCE.
+- Mounted here as submodule `docs/documentation-theme-zensical/`
+  (`zensical/docs/…` in the PoC); every `documentation-assetsz` reference
+  is renamed.
+- Project-specific pieces stay in the project: `zensical.toml` theme
+  settings (Zensical cannot import config), `overrides/` (a template dir
+  under `docs/` would be published), the gitissue icons used only by the
+  front page.
+- The submodule's README/LICENCE must not be published as pages; the
+  checks treat the submodule directory as assets.
+- CI checks out submodules; publish strips the submodule's `.git` pointer
+  before `mike` (mike's fast-import rejects `.git` paths).
+
 ### Repository layout (target, at cutover)
 
 ```
 zensical.toml            # was zensical/zensical.toml
-docs/                    # was zensical/docs/ (content + documentation-assetsz/)
+docs/                    # was zensical/docs/ (content + documentation-theme-zensical/ submodule)
 overrides/               # theme overrides (outdated-version banner)
 pyproject.toml, uv.lock  # one native environment
 tools/
@@ -287,8 +314,9 @@ xpqz/migrate-zensical for review.
 ## Settled during review (builder's calls)
 
 - Upgrade Zensical from the pinned 0.0.62 to 0.1.1 as the first step.
-- Retire the `documentation-assets` submodule; the build uses
-  `documentation-assetsz` only.
+- Retire the `documentation-assets` (MkDocs) submodule *in this repo*; the
+  MkDocs style stays in Dyalog/documentation-theme for v20/v21 and other
+  MkDocs projects.
 - Workflows and `check.py` take the content root as a setting, so they run
   with the PoC's `zensical/` prefix and at the root after cutover.
 

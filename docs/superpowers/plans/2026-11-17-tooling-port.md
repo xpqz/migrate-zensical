@@ -13,6 +13,7 @@
 ## Global Constraints
 
 - Never write to github.com/Dyalog/documentation (push, PR, issue, release, workflow dispatch, branch). Read-only clones only. Cutover output is pushed to xpqz/migrate-zensical at most.
+- House style: Zensical style in submodule `docs/documentation-theme-zensical` (repo xpqz/documentation-theme-zensical during the PoC); MkDocs style stays in Dyalog/documentation-theme, untouched. CI checkouts use `submodules: recursive`.
 - No Docker. Setup instructions are "install uv" plus per-OS notes only.
 - Python ≥ 3.11; Zensical pinned to `0.1.1`; mike pinned to `git+https://github.com/squidfunk/mike.git@2d4ad799442f4592db8ad53b179bfb33db8c69ac`.
 - Do not re-implement anything Zensical does: internal link and anchor validation comes only from `zensical build --strict`.
@@ -34,11 +35,12 @@
 
 ---
 
-### Task 1: Root uv project, Zensical 0.1.1, housekeeping
+### Task 1: Root uv project, Zensical 0.1.1, house style as a submodule, housekeeping
 
 **Files:**
 - Create: `pyproject.toml`, `uv.lock`, `.python-version` (`3.11`), `.vscode/extensions.json` (`["zensical.zensical-studio"]`)
-- Delete: `tools/pyproject.toml`, `tools/requirements-build.txt`, `tools/requirements-deploy.txt`, `tools/requirements-dev.txt`, `.gitmodules`, `zensical/docs/documentation-assets` (submodule)
+- Delete: `tools/pyproject.toml`, `tools/requirements-build.txt`, `tools/requirements-deploy.txt`, `tools/requirements-dev.txt`, `zensical/docs/documentation-assets` (MkDocs submodule)
+- Extract: `zensical/docs/documentation-assetsz/` → new public repo `xpqz/documentation-theme-zensical` (history preserved), re-added as submodule `zensical/docs/documentation-theme-zensical`; `.gitmodules` updated
 - Move: `docs/` → `design/` (plans, prs, reviews, superpowers, `asset-switch-issues.md`, `deploy.md`); fix links in `README.md`
 - Modify: `tools/convert.py` (`PRESERVED_DIRS` drops `documentation-assets`), `tools/check_flatten.py` (parser, if 0.1.1 output differs), `.github/workflows/publish.yml` (uv; drop submodule steps), `README.md`
 
@@ -49,10 +51,12 @@
 - [ ] **Step 2:** `uv lock && uv sync --all-groups`. Expected: success.
 - [ ] **Step 3:** `uv run pytest -q`. Expected: all existing tests pass.
 - [ ] **Step 4:** `uv run python tools/check_flatten.py`. If the summary/issue format changed in 0.1.1, update `parse_issues` and its tests in `tools/test_check_flatten.py` with a captured 0.1.1 sample. Expected: `OK: build clean against the baseline.`
-- [ ] **Step 5:** `git rm` the submodule and `.gitmodules`; drop `documentation-assets` from `PRESERVED_DIRS`; remove the "Drop the assets submodule's VCS pointer" step and `submodules: recursive` from `publish.yml`; switch its install step to `astral-sh/setup-uv` + `uv sync --all-groups`. Re-run Steps 3–4.
+- [ ] **Step 5:** MkDocs submodule: `git rm zensical/docs/documentation-assets`; drop it from `PRESERVED_DIRS`.
+- [ ] **Step 5a:** House style: in a scratch clone, `git subtree split --prefix=zensical/docs/documentation-assetsz -b theme`; add README (consuming it from a Zensical project, the `zensical.toml` theme block to copy, the Windows/macOS/Linux font notes) and LICENCE (copy the upstream theme's); create `xpqz/documentation-theme-zensical` (public) and push `theme` as `main`. Here: `git rm -r zensical/docs/documentation-assetsz`, `git submodule add https://github.com/xpqz/documentation-theme-zensical zensical/docs/documentation-theme-zensical`, rename every `documentation-assetsz` reference (`grep -rn documentation-assetsz` over `tools/`, `zensical/`, `.github/`; incl. `PRESERVED_DIRS`, `zensical.toml.template`, `tools/content/index.md`). Keep the submodule's README/LICENCE out of the built site (Zensical exclude setting) and verify `site/documentation-theme-zensical/README/` is absent after a build.
+- [ ] **Step 5b:** `publish.yml`: keep `submodules: recursive` and the step that removes the submodule's `.git` pointer (path updated); switch its install step to `astral-sh/setup-uv` + `uv sync --all-groups`. Re-run Steps 3–4; `uv run python tools/convert.py --regenerate` leaves the submodule untouched (`git status` clean for it).
 - [ ] **Step 6:** `git mv docs design`; update README links.
 - [ ] **Step 7:** README "Local builds" section: install uv (macOS `brew install uv`; Linux `curl -LsSf https://astral.sh/uv/install.sh | sh`; Windows `winget install astral-sh.uv`), then `uv sync`, `cd zensical && uv run zensical serve`, `uv run python tools/check.py`; Windows note `set UV_LINK_MODE=copy` (PowerShell `$env:UV_LINK_MODE="copy"`) if uv is configured for symlinks; recommend Zensical Studio.
-- [ ] **Step 8:** Commit: `Move to a root uv project on Zensical 0.1.1; retire the assets submodule`.
+- [ ] **Step 8:** Commit: `Move to a root uv project on Zensical 0.1.1; make the house style a submodule`.
 
 ### Task 2: Page model (`tools/docsite.py`)
 
@@ -65,13 +69,13 @@
   - `@dataclass(frozen=True) class Site: project: Path; docs: Path; config: dict` and `Site.load(project: Path) -> Site`.
   - `Site.nav_pages() -> list[str]` — docs-relative POSIX page paths in nav order, duplicates kept once (first position).
   - `Site.nav_section(title_path: tuple[str, ...]) -> list` — the raw nav list under that title path (e.g. `("Core Reference", "Dyalog APL Language")`), raising `KeyError` if absent.
-  - `Site.pages() -> list[str]` — all `*.md` under `docs/`, docs-relative POSIX, sorted, excluding `documentation-assetsz/`.
+  - `Site.pages() -> list[str]` — all `*.md` under `docs/`, docs-relative POSIX, sorted, excluding `documentation-theme-zensical/`.
   - `Site.read(page: str) -> str` (UTF-8).
   - `prose_lines(text: str) -> Iterator[tuple[int, str]]` — 1-based line numbers of lines outside fenced code (``` or ~~~, 3+, optionally indented; the fence lines themselves excluded).
 
-- [ ] **Step 1:** Tests in `tools/test_docsite.py` using a `tmp_path` project (a `zensical.toml` with a two-level nav incl. a section with an index page and a duplicate entry; three pages, one unlisted; a `documentation-assetsz/x.md`):
+- [ ] **Step 1:** Tests in `tools/test_docsite.py` using a `tmp_path` project (a `zensical.toml` with a two-level nav incl. a section with an index page and a duplicate entry; three pages, one unlisted; a `documentation-theme-zensical/x.md`):
   - `test_nav_pages_in_order_without_duplicates` → `["index.md", "a/index.md", "a/b.md"]`
-  - `test_pages_excludes_asset_dir` → unlisted page present, `documentation-assetsz/x.md` absent
+  - `test_pages_excludes_asset_dir` → unlisted page present, `documentation-theme-zensical/x.md` absent
   - `test_page_keys_are_posix` → no `\\` in any key
   - `test_nav_section_returns_raw_list` and `test_nav_section_missing_raises`
   - `test_prose_lines_skips_fences` → for `"a\n```apl\n!!! x\n```\nb"` yields `[(1,"a"),(5,"b")]`
@@ -134,7 +138,7 @@ Search exclusion rule: error if a page has front matter `search: {exclude: true}
 - Modify: `tools/check.py`, `tools/test_check.py`; Create: `unused-images.txt` only if Step 5 needs an allow-list.
 
 **Interfaces:**
-- Produces: `check_images(site, prune: bool = False) -> list[Problem]` — error per Markdown `![…](…)` or HTML `<img src>` in prose whose relative target does not exist; warning per image file (`png jpg jpeg gif svg webp`) under `docs/` (excluding `documentation-assetsz/`) not referenced by any page, by `zensical.toml`, or by the CSS under `documentation-assetsz/`; with `prune=True`, deletes those unreferenced files and reports them as warnings `removed`.
+- Produces: `check_images(site, prune: bool = False) -> list[Problem]` — error per Markdown `![…](…)` or HTML `<img src>` in prose whose relative target does not exist; warning per image file (`png jpg jpeg gif svg webp`) under `docs/` (excluding `documentation-theme-zensical/`) not referenced by any page, by `zensical.toml`, or by the CSS under `documentation-theme-zensical/`; with `prune=True`, deletes those unreferenced files and reports them as warnings `removed`.
 
 - [ ] **Step 1:** Tests: `test_missing_image_is_error`, `test_html_img_resolved`, `test_image_in_fence_ignored`, `test_external_image_ignored` (`http…`), `test_unused_image_is_warning`, `test_prune_removes_only_unused`, `test_image_referenced_from_css_is_used`.
 - [ ] **Step 2:** FAIL. **Step 3:** Implement (resolve relative to the page's directory; strip `#…` / `?…`; URL-decode). **Step 4:** PASS.
@@ -253,7 +257,7 @@ Search exclusion rule: error if a page has front matter `search: {exclude: true}
 - Consumes: `convert.mount_points`, `convert.transform_markdown`, `convert.write_zensical_toml`.
 - Produces: `cutover.py --upstream PATH --freeze REF --tooling PATH [--branch NAME]` operating on a local clone only; functions `rename_plan(upstream: Path, mounts: dict[str, str]) -> list[tuple[str, str]]` (source → `docs/<alias>/…`, root `docs/` → `docs/`), `commit_renames(repo: Path, plan) -> str` (sha), `commit_transform(repo: Path, tooling: Path) -> str`, `assert_pure_renames(repo: Path, sha: str) -> None` (raises if `git diff -M100% --name-status sha^ sha` has any non-`R100` line).
 
-Steps the script performs: create local branch `v21.0` at `REF`; create `--branch` (default `zensical-cutover`) from `REF`; commit A (renames only); `assert_pure_renames`; commit B (transforms, root `zensical.toml` and `overrides/`, `docs/documentation-assetsz/`, tooling copied from `--tooling` minus `tools/cutover/`, delete sub-project `mkdocs.yml`s, root `mkdocs.yml`, `chm/`, `pdf/`, `tools/docker-compose.yml`, `tools/nginx/`, `tools/utils/`, `tools/.env.template`, `documentation-assets` submodule; keep `tools/jenkins/*`); assert the four stub workflows exist; run `uv run python tools/check.py`; print the next manual step. **It never runs `git push`**, and before anything else it sets the push URL of every remote in `--upstream` to `no_push` (`git remote set-url --push <remote> no_push`), refusing to continue if that fails.
+Steps the script performs: create local branch `v21.0` at `REF`; create `--branch` (default `zensical-cutover`) from `REF`; commit A (renames only); `assert_pure_renames`; commit B (transforms, root `zensical.toml` and `overrides/`, `docs/documentation-theme-zensical` submodule, tooling copied from `--tooling` minus `tools/cutover/`, delete sub-project `mkdocs.yml`s, root `mkdocs.yml`, `chm/`, `pdf/`, `tools/docker-compose.yml`, `tools/nginx/`, `tools/utils/`, `tools/.env.template`, `documentation-assets` submodule; keep `tools/jenkins/*`); assert the four stub workflows exist; run `uv run python tools/check.py`; print the next manual step. **It never runs `git push`**, and before anything else it sets the push URL of every remote in `--upstream` to `no_push` (`git remote set-url --push <remote> no_push`), refusing to continue if that fails.
 
 - [ ] **Step 1:** Tests on `fixture_tree.py` (git-initialised in `tmp_path`): `test_rename_plan_maps_net_guides_to_aliases`, `test_commit_a_is_pure_renames`, `test_assert_pure_renames_rejects_edits`, `test_jenkins_files_survive`, `test_stub_workflows_present`, `test_push_url_disabled`.
 - [ ] **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS. Move existing convert/transform tests; all pass.
