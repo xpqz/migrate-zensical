@@ -81,3 +81,15 @@ def test_find_project_prefers_env_then_zensical_dir_then_root(tmp_path, monkeypa
     other = tmp_path / "other"
     monkeypatch.setenv("DOCS_PROJECT", str(other))
     assert docsite.find_project(tmp_path) == other
+
+
+def test_prose_lines_numbers_like_an_editor():
+    # \x0c and U+2028 are line breaks to splitlines() but not to an editor.
+    text = "a\x0cb\nc d\ne"
+    assert list(docsite.prose_lines(text)) == [(1, "a\x0cb"), (2, "c d"), (3, "e")]
+
+
+def test_backtick_info_string_with_backtick_is_not_a_fence():
+    text = "a\n```code``` text\nb\n```\nc"
+    # The first line is prose; the lone ``` on line 4 then opens a real fence.
+    assert list(docsite.prose_lines(text)) == [(1, "a"), (2, "```code``` text"), (3, "b")]

@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Iterator
 
 ASSET_DIR = "documentation-theme-zensical"
-_FENCE = re.compile(r"^\s*(`{3,}|~{3,})")
+_FENCE = re.compile(r"^\s*(`{3,}(?!.*`)|~{3,})")
 
 
 def find_project(repo_root: Path | None = None) -> Path:
@@ -89,9 +89,13 @@ class Site:
 
 
 def prose_lines(text: str) -> Iterator[tuple[int, str]]:
-    """Yield (1-based line number, line) for lines outside fenced code."""
+    """Yield (1-based line number, line) for lines outside fenced code.
+
+    Lines are split on "\\n" only, so numbers match an editor's (str.splitlines
+    would also break on U+2028, form feeds and the like).
+    """
     fence = None  # (char, length) of the open fence
-    for n, line in enumerate(text.splitlines(), 1):
+    for n, line in enumerate(text.split("\n"), 1):
         m = _FENCE.match(line)
         if fence is None:
             if m:
