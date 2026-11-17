@@ -38,3 +38,8 @@ def test_add_keywords_skips_pages_without_syntax_title():
 def test_add_keywords_keeps_existing_block():
     md = page("R←⎕A") + "\n" + BLOCK.format("⎕A custom")
     assert sk.add_keywords(md) == md
+
+
+def test_add_keywords_leaves_search_excluded_page_alone():
+    md = page("R←⎕A").replace("boost: 2", "exclude: true")
+    assert sk.add_keywords(md) == md

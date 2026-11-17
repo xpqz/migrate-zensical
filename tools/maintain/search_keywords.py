@@ -4,7 +4,7 @@
 
 The block goes at the end of the page, in the format already used across the
 corpus. Pages with a block, or without a `# <span class="title-name">` title
-carrying a syntax, are left alone, so running it twice changes nothing.
+carrying a syntax, or excluded from search, are left alone, so running it twice changes nothing.
 """
 
 from __future__ import annotations
@@ -16,6 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+import check  # noqa: E402
 import docsite  # noqa: E402
 
 MARKER = "<!-- Hidden search keywords -->"
@@ -64,6 +65,8 @@ def keywords(syntax: str) -> str | None:
 
 def add_keywords(md: str) -> str:
     if MARKER in md or '<div style="display: none;">' in md:
+        return md
+    if check._excludes_search(md):  # a keyword div there is a check.py error
         return md
     syntax = _syntax(md)
     k = keywords(syntax) if syntax else None
