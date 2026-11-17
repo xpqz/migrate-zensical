@@ -5,6 +5,7 @@ name: Convert MkDocs to PDF and CHM
 # default branch. This file registers the name; the v20.0 branch's own
 # mkdocs-pdf.yml is what runs there (it is called by that branch's
 # full-release.yml). Run on main it only fails. v22 has no PDF output.
+# v20.0's own file is workflow_call-only, so it is not dispatchable there.
 on:
   workflow_dispatch:
     inputs:

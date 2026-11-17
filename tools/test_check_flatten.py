@@ -197,7 +197,6 @@ def test_main_returns_one_when_the_gate_fails(tmp_path):
     assert rc == 1
 
 
-
 # --- run_build output decoding -----------------------------------------
 
 

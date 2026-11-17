@@ -158,20 +158,41 @@ jobs:
           fi
 
       - name: Copy Jenkins files to gh-pages
-        # Jenkins reads its pipeline and helpers from the gh-pages root. Take
-        # them from the commit being published (the checkout; earlier steps do
-        # not touch tools/jenkins/), and commit them in a separate worktree so
-        # the stamped build tree is not disturbed. mike has just updated the
-        # local gh-pages branch and pushed it.
+        # Jenkins reads its pipeline and helpers from the gh-pages root. As
+        # upstream does, always take them from the default branch, never from
+        # the commit being published: a publish from an older release branch
+        # must not overwrite PRODUCTION_VERSIONS or the helper functions on
+        # gh-pages with that branch's stale copies. If the default branch has
+        # no tools/jenkins/ yet (a fork before the port is merged), warn and
+        # skip the copy rather than fail the publish. The files are committed
+        # in a separate worktree so the stamped build tree is not disturbed;
+        # mike has just updated the local gh-pages branch and pushed it.
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           FILES="Jenkinsfile service.yml .rsync-exclude get_svn_docbin"
+          git fetch --quiet origin "$DEFAULT_BRANCH"
+          SOURCE=$(git rev-parse FETCH_HEAD)
+          echo "Jenkins files from $DEFAULT_BRANCH at $SOURCE"
+          MISSING=""
+          for f in $FILES; do
+            git cat-file -e "$SOURCE:tools/jenkins/$f" 2>/dev/null || MISSING="$MISSING $f"
+          done
+          if [ -n "$MISSING" ]; then
+            echo "::warning::$DEFAULT_BRANCH has no tools/jenkins/{$(echo $MISSING | tr ' ' ',')}; Jenkins files on gh-pages left unchanged"
+            exit 0
+          fi
           PAGES="$RUNNER_TEMP/gh-pages"
           git worktree add --quiet "$PAGES" gh-pages
-          for f in $FILES; do
-            # -p keeps get_svn_docbin executable.
-            cp -p "tools/jenkins/$f" "$PAGES/$f"
-          done
           cd "$PAGES"
+          # Check out into the worktree and move, so get_svn_docbin keeps the
+          # executable mode it has in the repository.
+          for f in $FILES; do
+            git checkout "$SOURCE" -- "tools/jenkins/$f"
+            git rm --quiet --cached "tools/jenkins/$f"
+            mv -f "tools/jenkins/$f" "$f"
+          done
+          rmdir tools/jenkins tools 2>/dev/null || true
           git add $FILES
           if git diff --staged --quiet; then
             echo "No changes to Jenkins files"
