@@ -286,7 +286,7 @@ def build_overlay_tree(root: Path, source: Path) -> Path:
 def tree_digest(root: Path) -> dict:
     """Map of relative path to content sha256 for every file under root."""
     return {
-        str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest()
+        p.relative_to(root).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
         for p in sorted(root.rglob("*"))
         if p.is_file()
     }
