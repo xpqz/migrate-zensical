@@ -37,7 +37,8 @@ def parse_args() -> argparse.Namespace:
         "--project-root",
         type=Path,
         default=None,
-        help="Root directory that contains chm/project (defaults to repository root).",
+        help="Directory that contains the CHM project as chm/ (default: out/ in the "
+        "repository, where `build_chm.py --project-dir out/chm` writes it).",
     )
     return parser.parse_args()
 
@@ -222,8 +223,10 @@ def main() -> int:
         print(f"error: {help_urls_path} does not exist or is not a file", file=sys.stderr)
         return 2
 
-    repo_root = args.project_root.resolve() if args.project_root else help_urls_path.parents[1]
-    project_root = repo_root / "chm" / "project"
+    repo_root = (
+        args.project_root.resolve() if args.project_root else Path(__file__).resolve().parents[2] / "out"
+    )
+    project_root = repo_root / "chm"
     if not project_root.is_dir():
         print(f"error: {project_root} is not a directory", file=sys.stderr)
         return 2

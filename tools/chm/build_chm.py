@@ -1,40 +1,39 @@
 """
-mkdocs2chm.py
+build_chm.py
 
-Convert a mkdocs site to a Windows CHM help file bundle.
+Build the Windows CHM help file from the Zensical project: the nav in
+zensical.toml (already merged and alias-prefixed) and the flat docs/ tree.
 
-Stefan Kruger <stefan@dyalog.com>
+    uv run python tools/chm/build_chm.py --project zensical --project-dir out/chm
 
-python mkdocs2chm.py \
-    --mkdocs-yml ../mkdocs.yml \
-    --project-dir project \
-    --assets-dir assets \
-    --config config.json
+writes the CHM project (pages, images, _table_of_contents.hhc, _index.hhk,
+dyalog.hfp) into out/chm/ and compiles it to out/chm/dyalog.chm, unless
+--no-compile is given.
 
-with a config.json:
+config.json names nav sections to leave out, by their nav titles:
 
 {
     "exclude": [
-        "Unix Installation",
-        "Unix User Guide"
+        "Dyalog for Unix"
     ]
 }
 
-will read the top-level "mkdocs.yml" file and make a CHM file
-
-    dyalog.chm
-
-in the ./project/ directory.
+Topic paths in the CHM must stay as they were in v21: the IDE's F1 help
+(help_urls.h) addresses topics by path. They use the guides' source
+directory names, so the two .NET guides, whose site aliases differ, are
+written under their v21 names (CHM_DIR_FOR_ALIAS).
 
 Notes:
 
-You need the tool "chmcmd" installed, which is part of Free Pascal. See
+You need the tool "chmcmd" installed, which is part of Free Pascal
+(brew install fpc; apt install fpc; or the Windows installer). See
 
     https://wiki.freepascal.org/htmlhelp_compiler
 
-You also need 'pygments' to highlight code.
+The Python dependencies are the `chm` dependency group (uv sync --all-groups).
 
-If a directory 'assets' is found, any .css and .ttf files discovered will be included.
+Any .css files in the assets directory are inlined into each page; other
+files there are copied into the project.
 """
 
 import argparse
@@ -43,22 +42,28 @@ import itertools
 import json
 import logging
 import os
+import posixpath
 from csscompressor import compress as css_compress
 import cssutils
 from htmlmin import minify as html_minify
+from pathlib import Path
 import re
 import shutil
 from subprocess import Popen
 import sys
-from typing import Callable, IO, List, Tuple
+from typing import IO, List, Tuple
 import warnings
 from xml.dom.minidom import getDOMImplementation
 
-from caption import TableCaptionExtension
 from bs4 import BeautifulSoup, MarkupResemblesLocatorWarning
 from bs4.element import NavigableString, Tag
 import markdown
-from ruamel.yaml import YAML
+import yaml
+
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE.parent))  # tools/, for docsite
+
+from docsite import Site, find_project  # noqa: E402
 
 warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
 
@@ -88,6 +93,33 @@ FILE_ENTRY = """<li><object type="text/sitemap">
         <param name="Local" value="{file}">
     </object>
 """
+
+# Guides whose site alias differs from the source directory name the v21 CHM
+# used. CHM topic paths keep the source name: help_urls.h depends on them.
+CHM_DIR_FOR_ALIAS = {
+    "net-interface-guide": "dotnet-interface-guide",
+    "net-framework-interface-guide": "dotnet-framework-interface-guide",
+}
+
+IMAGE_EXTENSIONS = {".png", ".gif", ".jpg", ".bmp", ".jpeg"}
+
+# A title's classifier ("Property", "Event 33", "Example 1"), which the site's
+# title normalisation (transforms.normalise_titles) moves out of the h1 into a
+# paragraph of its own directly below. The v21 CHM's titles and index entries
+# carried it ("APLVersion Property"), so it is put back for those.
+CLASSIFIER_RE = re.compile(r"(?:Property|Object|Method|Event|Example)(?:\s+\d+[a-z]?)?")
+
+
+def chm_dir(path: str) -> str:
+    """A docs-relative POSIX path with an aliased guide directory renamed to
+    its CHM (v21) name."""
+    head, sep, rest = path.partition("/")
+    return CHM_DIR_FOR_ALIAS.get(head, head) + sep + rest if sep else path
+
+
+def chm_path(page: str) -> str:
+    """The CHM topic path for a docs-relative Markdown page."""
+    return re.sub(r"\.md$", ".htm", chm_dir(page))
 
 
 @dataclass
@@ -192,21 +224,14 @@ def _traverse(node: Node, toc: IO[str]) -> None:
         toc.write("</ul>\n")
 
 
-def modify_paths(navdata, base_path: str):
-    """
-    In the monorepo, included documents must have the
-    top-level prepended (here known as the `base_path`)
-    """
+def rename_aliased_dirs(navdata):
+    """Map every page path in the nav to its CHM directory (chm_dir)."""
     if isinstance(navdata, dict):
-        for key, value in navdata.items():
-            if isinstance(value, (dict, list)):
-                navdata[key] = modify_paths(value, base_path)
-            elif isinstance(value, str) and value.endswith(".md"):
-                navdata[key] = os.path.join(base_path, value)
-    elif isinstance(navdata, list):
-        navdata = [modify_paths(item, base_path) for item in navdata]
-    elif isinstance(navdata, str):
-        navdata = os.path.join(base_path, navdata)
+        return {key: rename_aliased_dirs(value) for key, value in navdata.items()}
+    if isinstance(navdata, list):
+        return [rename_aliased_dirs(item) for item in navdata]
+    if isinstance(navdata, str):
+        return chm_dir(navdata)
     return navdata
 
 
@@ -233,58 +258,18 @@ def clean_nav_titles(navdata):
         return navdata
 
 
-def parse_mkdocs_yml(yml_file: str, remove: List[str]) -> dict:
+def load_nav(site: Site, exclude: List[str]) -> dict:
     """
-    Read and parse the mkdocs.yml files. The monorepo plugin references
-    the sub-document mkdocs.yml files, which we expand in place to produce
-    the complete state.
-
-    The remove list can contain section group names to exclude entire groups.
+    The nav from zensical.toml as {"nav": [...]}, the shape generate_toc
+    consumes: top-level sections whose title is in `exclude` dropped, titles
+    cleaned for the CHM, and page paths in their CHM directories.
     """
-
-    yaml = YAML()
-    with open(yml_file, "r", encoding="utf-8") as f:
-        data = yaml.load(f)
-
-    if remove:
-        # Filter out nav items that match the exclusion list
-        # This now handles both direct nav items and section groups
-        filtered_nav = []
-        for item in data["nav"]:
-            # Get the top-level key (which could be a section group name)
-            if isinstance(item, dict):
-                key = next(iter(item.keys()))
-                # Skip this entire item if its key is in the remove list
-                if key not in remove:
-                    filtered_nav.append(item)
-            else:
-                # Non-dict items (shouldn't happen in normal mkdocs.yml)
-                filtered_nav.append(item)
-        data["nav"] = filtered_nav
-
-    def resolve_includes(data: dict, base_path: str) -> dict:
-        if isinstance(data, dict):
-            for key, value in data.items():
-                data[key] = resolve_includes(value, base_path)
-        elif isinstance(data, list):
-            for i in range(len(data)):
-                data[i] = resolve_includes(data[i], base_path)
-        elif isinstance(data, str) and data.startswith("!include"):
-            include_path = data.split(" ")[1]
-            full_path = os.path.normpath(os.path.join(base_path, include_path))
-            navdata = parse_mkdocs_yml(full_path, remove=[])["nav"]
-            subdir = os.path.basename(os.path.dirname(include_path))
-            return modify_paths(navdata, subdir)
-        return data
-
-    base_path = os.path.dirname(yml_file)
-    data = resolve_includes(data, base_path)
-
-    # Clean navigation titles after parsing
-    if "nav" in data:
-        data["nav"] = clean_nav_titles(data["nav"])
-
-    return data
+    nav = [
+        item
+        for item in site.config.get("project", {}).get("nav", [])
+        if not (isinstance(item, dict) and next(iter(item)) in exclude)
+    ]
+    return {"nav": clean_nav_titles(rename_aliased_dirs(nav))}
 
 
 def generate_toc(yml_data: dict, project="project"):
@@ -325,44 +310,59 @@ def generate_toc(yml_data: dict, project="project"):
     return None
 
 
-def find_source_files(topdir: str, subdirs: List[str]) -> Tuple[List[str], List[str]]:
-    """
-    Under `topdir`, recursively scan the subdirs defined by `subdirs`,
-    and return full paths to all Markdown and image files.
-    """
-    markdown_files = []
-    image_files = []
-    excluded_print_files = []
+def _nav_paths(navdata) -> List[str]:
+    if isinstance(navdata, str):
+        return [navdata]
+    if isinstance(navdata, dict):
+        navdata = list(navdata.values())
+    return [path for item in navdata for path in _nav_paths(item)]
 
-    for subdir in subdirs:
-        incldir = os.path.join(topdir, re.sub(r"^[./]+", "", os.path.dirname(subdir)))
-        if not os.path.isdir(incldir):
-            raise NotADirectoryError(f"Not a directory: {incldir}")
-        for root, _, files in os.walk(incldir):
-            for file in files:
-                full_path = os.path.abspath(os.path.join(root, file))
-                # If the markdown source has been used to build a site already, we need to
-                # ensure we skip the target files
-                if "/site/" in full_path:
-                    continue
-                extension = os.path.splitext(full_path)[-1]
-                if extension == ".md":
-                    # Skip -print.md files completely
-                    if file.endswith("-print.md"):
-                        excluded_print_files.append(full_path)
-                    else:
-                        markdown_files.append(full_path)
-                elif extension in {".png", ".gif", ".jpg", ".bmp", ".jpeg"}:
-                    image_files.append(full_path)
+
+def chm_pages(site: Site, nav: dict) -> List[Tuple[str, str]]:
+    """
+    The Markdown pages that go into the CHM, as (docs-relative source path,
+    CHM topic path) pairs: every page under a guide directory the nav
+    reaches (listed in the nav or not -- symbol pages, for one, are reached
+    only by link), plus the root-level pages the nav lists. -print.md pages
+    are left out.
+    """
+    nav_paths = [p for p in _nav_paths(nav["nav"]) if p.endswith(".md")]
+    dirs = {p.split("/", 1)[0] for p in nav_paths if "/" in p}
+    root_pages = {p for p in nav_paths if "/" not in p}
+    pages = []
+    excluded_print_files = []
+    for page in site.pages():
+        top = chm_dir(page).split("/", 1)[0]
+        if not (top in dirs and "/" in page) and page not in root_pages:
+            continue
+        if page.endswith("-print.md"):
+            excluded_print_files.append(page)
+            continue
+        pages.append((page, chm_path(page)))
 
     if excluded_print_files:
         print(
             f"\nExcluded {len(excluded_print_files)} -print.md files from all processing:"
         )
         for f in sorted(excluded_print_files):
-            print(f"  - {os.path.basename(f)}")
+            print(f"  - {posixpath.basename(f)}")
 
-    return markdown_files, image_files
+    return pages
+
+
+def chm_images(site: Site, pages: List[Tuple[str, str]]) -> List[Tuple[str, str]]:
+    """
+    The image files under the guide directories of `pages`, as (absolute
+    source path, CHM path) pairs.
+    """
+    dirs = sorted({src.split("/", 1)[0] for src, _ in pages if "/" in src})
+    images = []
+    for d in dirs:
+        for path in sorted((site.docs / d).rglob("*")):
+            if path.suffix in IMAGE_EXTENSIONS and path.is_file():
+                rel = path.relative_to(site.docs).as_posix()
+                images.append((str(path), chm_dir(rel)))
+    return images
 
 
 def expand_macros(data: str, macros: dict) -> str:
@@ -505,12 +505,11 @@ def parse_frontmatter(content: str) -> Tuple[dict, str]:
     match = re.match(frontmatter_pattern, content, flags=re.DOTALL)
 
     if match:
-        yaml = YAML()
         try:
-            frontmatter = yaml.load(match.group(1))
-            if frontmatter is None:
+            frontmatter = yaml.safe_load(match.group(1))
+            if not isinstance(frontmatter, dict):
                 frontmatter = {}
-        except:
+        except yaml.YAMLError:
             frontmatter = {}
         content_without = re.sub(
             frontmatter_pattern, "", content, count=1, flags=re.DOTALL
@@ -519,19 +518,82 @@ def parse_frontmatter(content: str) -> Tuple[dict, str]:
     return {}, content
 
 
+def markdown_extensions(site: Site) -> Tuple[List[str], dict]:
+    """
+    The site's markdown_extensions from zensical.toml, as (names, configs) for
+    Python-Markdown, adjusted for the CHM: Pygments highlighting is forced on
+    (a CHM has no client-side highlighter), and dyalog_vars is dropped, as
+    expand_macros substitutes the variables (including the CHM-only
+    build_date and git_info).
+    """
+    names: List[str] = []
+    configs: dict = {}
+    for entry in site.config.get("project", {}).get("markdown_extensions", []):
+        if isinstance(entry, str):
+            name, config = entry, None
+        else:
+            ((name, config),) = entry.items()
+        if name == "dyalog_vars":
+            continue
+        names.append(name)
+        if config:
+            configs[name] = dict(config)
+    if "pymdownx.highlight" not in names:
+        names.append("pymdownx.highlight")
+    configs.setdefault("pymdownx.highlight", {})["use_pygments"] = True
+    return names, configs
+
+
+def render_markdown(md: str, site: Site) -> str:
+    """Render one page's Markdown with the CHM's extension set."""
+    extensions, configs = markdown_extensions(site)
+    return markdown.markdown(md, extensions=extensions, extension_configs=configs)
+
+
+def mark_os_admonitions(html: str) -> str:
+    """
+    Add class "os" to info admonitions titled "Dyalog on ...": the site maps
+    the old OS-specific admonition types onto info, and the CHM stylesheet
+    gives them back their own look.
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    changed = False
+    for div in soup.find_all("div", class_="admonition"):
+        title = div.find("p", class_="admonition-title", recursive=False)
+        if "info" in div["class"] and title and title.get_text().startswith("Dyalog on "):
+            div["class"].append("os")
+            changed = True
+    return str(soup) if changed else html
+
+
+def mark_title_banner(html: str) -> str:
+    """
+    Add class "heading" to a title h1 with a calling syntax (a leading
+    span.title-name), so the old .heading banner rule styles it. The CHM
+    viewer's browser engine has no :has(), so this cannot be left to CSS.
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    changed = False
+    for h1 in soup.find_all("h1"):
+        first = next((c for c in h1.children if isinstance(c, Tag)), None)
+        if first is not None and first.name == "span" and "title-name" in first.get("class", []):
+            h1["class"] = h1.get("class", []) + ["heading"]
+            changed = True
+    return str(soup) if changed else html
+
+
 def convert_to_html(
-    filenames: List[str],
+    pages: List[Tuple[str, str]],
     css: str,
     macros: dict,
-    transforms: List[Callable[[str], str]],
     project: str,
-    top_level_files: List[str],
+    site: Site,
     version: str = None,
 ) -> Tuple[List[str], List[str]]:
     """
-    Convert each Markdown file and convert to HTML, using the same rendering library as
-    mkdocs, with the same set of extensions. We expand the mkdocs-macro {{ templates }}
-    and optionally provide means for applying a set of transformations. Currently, we add
+    Convert each Markdown page, given as (absolute source path, CHM topic
+    path) pairs, to HTML with the site's Markdown extensions (see
+    markdown_extensions). We expand the {{ variable }} templates. Currently, we add
     all the CSS in the header - this is required as the HTML engine in the Windows CHM
     viewer does not understand <link ...>.
 
@@ -552,19 +614,7 @@ def convert_to_html(
     <title>{title}</title>
 """
 
-    for file in filenames:
-        if file in top_level_files:
-            # Top-level files go directly in project/
-            newname = os.path.basename(file).replace(".md", ".htm")
-        elif "/docs/" in file:
-            # Sub-site files go in project/sub-site/
-            path, oldname = file.split("/docs/", maxsplit=1)
-            sub_site = os.path.basename(path)
-            newname = os.path.join(sub_site, oldname.replace(".md", ".htm"))
-        else:
-            # Fallback for files without /docs/
-            newname = os.path.basename(file).replace(".md", ".htm")
-
+    for file, newname in pages:
         realpath_newname = str(os.path.join(project, newname))
         os.makedirs(os.path.dirname(realpath_newname), exist_ok=True)
 
@@ -576,31 +626,13 @@ def convert_to_html(
         if frontmatter.get("search", {}).get("exclude", False):
             excluded.append(file)
 
-        # Macros are defined in the "extra:" section in the mkdocs.yml file. In the Markdown
+        # Variables are defined in [project.extra] in zensical.toml. In the Markdown
         # source, they are templates of the type
         #
-        #    {{ macro-name }}
+        #    {{ variable-name }}
         md = expand_macros(md, macros)
 
-        # Hook point for transforms we may want to apply to the source Markdown before it's
-        # converted to HTML.
-        for fun in transforms:
-            md = fun(md)
-
-        # Convert Markdown to HTML, using the same extensions as used by our mkdocs setup.
-        body = markdown.markdown(
-            md,
-            extensions=[
-                "admonition",  # https://python-markdown.github.io/extensions/admonition/
-                "attr_list",  # https://python-markdown.github.io/extensions/attr_list/
-                "footnotes",  # https://python-markdown.github.io/extensions/footnotes/
-                "markdown_tables_extended",  # https://github.com/fumbles/tables_extended
-                "pymdownx.details",  # https://facelessuser.github.io/pymdown-extensions/extensions/details/
-                "pymdownx.superfences",  # https://facelessuser.github.io/pymdown-extensions/extensions/superfences/
-                "toc",  # https://python-markdown.github.io/extensions/toc/ - adds id attributes to headings
-                TableCaptionExtension(),  # https://github.com/flywire/caption
-            ],
-        )
+        body = render_markdown(md, site)
 
         body = body.replace("``", "")  # Empty code blocks aren't rendered correctly
 
@@ -610,6 +642,8 @@ def convert_to_html(
         body = fix_key_notation_link(body, newname)
         body = fix_external_links(body)
         body = fix_apl_root_namespace_highlighting(body)
+        body = mark_os_admonitions(body)
+        body = mark_title_banner(body)
 
         # Extract the H1 content for use in the title tag, setting for_title=True
         # to only extract the name part (excluding command span)
@@ -623,7 +657,7 @@ def convert_to_html(
             )
 
             # For special files like welcome.md, use a more appropriate title
-            if file.endswith("welcome.md"):
+            if newname == "welcome.htm":
                 title = "Welcome to Dyalog APL"
 
         # Format the head with the title
@@ -655,12 +689,10 @@ def convert_to_html(
     return converted, excluded
 
 
-def copy_images(filenames: List[str], project="project") -> List[str]:
+def copy_images(images: List[Tuple[str, str]], project="project") -> List[str]:
     copied: List[str] = []
-    for file in filenames:
-        path, oldname = file.split("/docs/", maxsplit=1)
-        newname = str(os.path.join(os.path.basename(path), oldname))
-        realpath_newname = str(os.path.join(project, newname))
+    for file, newname in images:
+        realpath_newname = os.path.join(project, newname)
         os.makedirs(os.path.dirname(realpath_newname), exist_ok=True)
         shutil.copy(file, realpath_newname)
         copied.append(newname)
@@ -701,7 +733,7 @@ def static_assets(
                 css_files.append(src_path)  # Add to list of CSS files
             else:
                 shutil.copy(src_path, dst_path)
-                assets.append(os.path.join("assets", rel_path))
+                assets.append(posixpath.join("assets", Path(rel_path).as_posix()))
 
     return assets, css, css_files
 
@@ -716,13 +748,21 @@ def extract_h1(data: str, for_title: bool = False) -> str:
     display, so the name is the h1 text with <code> and <a> elements removed.
     Headers without those (e.g. Object Reference "Name Type") keep their full text.
 
-    Legacy <span class="name">/<span class="command"> markup is still honoured,
-    where for_title selects the name alone versus "name command".
+    A normalised title, `<h1><span class="title-name">Name</span> <code>command</code>`,
+    and legacy <span class="name">/<span class="command"> markup are honoured, where
+    for_title selects the name alone versus "name command".
     """
     soup = BeautifulSoup(data, "html.parser")
     h1 = soup.find("h1")
     if not h1:
         return ""
+
+    if name_span := h1.find("span", class_="title-name"):
+        name = re.sub(r"\s+", " ", name_span.get_text()).strip()
+        code = h1.find("code")
+        if not for_title and code:
+            name = f"{name} {code.get_text(' ').strip()}"
+        return name.replace('"', "").replace("`", "")
 
     if name_span := h1.find("span", class_="name"):
         name = name_span.get_text().strip()
@@ -733,7 +773,13 @@ def extract_h1(data: str, for_title: bool = False) -> str:
 
     for tag in h1.find_all(["code", "a"]):
         tag.decompose()
-    return re.sub(r"\s+", " ", h1.get_text()).strip().replace('"', "").replace("`", "")
+    name = re.sub(r"\s+", " ", h1.get_text()).strip()
+    following = h1.find_next_sibling()
+    if following is not None and following.name == "p":
+        classifier = following.get_text().strip()
+        if CLASSIFIER_RE.fullmatch(classifier):
+            name = f"{name} {classifier}"
+    return name.replace('"', "").replace("`", "")
 
 
 def extract_headers(filename: str) -> List[str]:
@@ -765,25 +811,21 @@ def extract_headers(filename: str) -> List[str]:
     for tag in soup.find_all(["code", "a"]):  # drop a literal <code> command / key link
         tag.decompose()
     title = re.sub(r"\s+", " ", soup.get_text()).strip().strip('"').strip("`").strip()
+    following = re.match(r"\s*\n\s*([^\n]*?)\s*$", body[match.end():], flags=re.MULTILINE)
+    if title and following and CLASSIFIER_RE.fullmatch(following.group(1)):
+        title = f"{title} {following.group(1)}"
     return [title] if title else []
 
 
-def generate_index_data(files: List[str]) -> List[Tuple[str, str]]:
+def generate_index_data(files: List[Tuple[str, str]]) -> List[Tuple[str, str]]:
     """
-    Note: we're generating the index data from the source Markdown, but we
-    need to ensure that filenames refer to the converted HTML files.
+    Note: we're generating the index data from the source Markdown, given as
+    (source path, CHM topic path) pairs, so that entries refer to the
+    converted HTML files.
     """
     entries = []
-    for filename in files:
-        headings = extract_headers(filename)
-        if "/docs/" in filename:
-            a, b = filename.split("/docs/", maxsplit=1)
-            newname = f"{os.path.basename(a)}/{b.replace('.md', '.htm')}"
-        else:
-            # For root-level files, just use the basename
-            newname = os.path.basename(filename).replace(".md", ".htm")
-
-        for heading in headings:
+    for filename, newname in files:
+        for heading in extract_headers(filename):
             entries.append((heading, newname))
 
     # Sort the index alphabetically by entry (not filename!)
@@ -803,52 +845,6 @@ def write_index_data(entries: List[Tuple[str, str]], filename: str) -> None:
             idxfh.write(FILE_ENTRY.format(name=x[0], file=x[1]))
         idxfh.write("</ul>\n")
         idxfh.write("</body></html>\n")
-
-
-def find_nav_files_and_dirs(
-    filename: str, remove: List[str]
-) -> Tuple[List[str], List[str]]:
-    """
-    Extract both top-level directories (from !include directives) and standalone Markdown files
-    directly listed in the nav section of the mkdocs.yml file.
-
-    Handles both direct includes and section groups containing includes.
-    The remove list can contain section group names to exclude entire groups.
-
-    Returns:
-        Tuple[List[str], List[str]]: (included_dirs, standalone_files)
-    """
-    yaml = YAML()
-    with open(filename, "r", encoding="utf-8") as f:
-        data = yaml.load(f)
-
-    included_dirs = []
-    standalone_files = []
-
-    def process_nav_value(value):
-        """Recursively process nav values to find !include directives."""
-        if isinstance(value, str):
-            if m := re.match(r'!include\s+([^"]+)', value):
-                included_dirs.append(m.group(1))  # Path from !include
-            elif value.endswith(".md") and not value.endswith("-print.md"):
-                standalone_files.append(
-                    os.path.join("docs", value)
-                )  # Direct .md file reference
-        elif isinstance(value, list):
-            # Section group - process each item in the list
-            for item in value:
-                if isinstance(item, dict):
-                    for _, subvalue in item.items():
-                        process_nav_value(subvalue)
-
-    for d in data["nav"]:
-        if isinstance(d, dict):
-            key, value = next(iter(d.items()))
-            # Skip this entire nav item (including section groups) if key is in remove list
-            if key not in remove:
-                process_nav_value(value)
-
-    return included_dirs, standalone_files
 
 
 def generate_hfp(
@@ -952,59 +948,6 @@ def generate_hfp(
         f.write(doc.toprettyxml(indent="  "))
 
 
-def table_captions(body: str) -> str:
-    """
-    Find table captions and references. Adapt for use with
-
-        https://github.com/flywire/caption
-
-    Captions will have the format
-
-        Table: caption_text {: #anchor_name }
-
-    where the attr-list colon is optional ({ #anchor_name } is also accepted, as
-    the web caption plugin accepts both).
-
-    References are links to the anchor name, but without a link text:
-
-        [](#anchor_name)
-
-    The flywire/caption Markdown extension uses its own ids of the form
-
-        _table-X
-
-    so we need to rewrite our ids to theirs. Also, flywire/caption has
-    no automatic renumbering of table _references_, so fill that out.
-    """
-    anchors = {}
-    idx_list = []
-
-    def replace_table_captions(match, idx_list):
-        idx = len(idx_list) + 1  # ⎕IO ← 1
-        caption_text, anchor_name = match.groups()
-        idx_list.append(idx)
-        anchors[anchor_name] = idx
-        return f"Table: {caption_text}"
-
-    # Update table references
-    def replace_table_refs(match):
-        anchor_name = match.group(1)
-        if anchor_name in anchors:
-            idx = anchors[anchor_name]
-            return f"[Table {idx}](#_table-{idx})"
-        return match.group(0)  # Return the original match if not in anchors
-
-    # Rework caption ids.
-    body = re.sub(
-        r"Table:\s*(.*?)\s*\{:?\s*#(\S+)\s*\}",
-        lambda match: replace_table_captions(match, idx_list),
-        body,
-    )
-    return re.sub(
-        r"\[\]\(#(\S+)\)", replace_table_refs, body
-    )  # Update table references
-
-
 def fix_links_html(html: str, version: str = None) -> str:
     """
     Applies the link transformations to an HTML document:
@@ -1051,11 +994,14 @@ def fix_links_html(html: str, version: str = None) -> str:
         if href.endswith("/"):
             href = href[:-1]
 
-        path, name = os.path.split(href)
-        base, ext = os.path.splitext(name)
+        # Links into a guide whose site alias differs from its CHM directory
+        href = "/".join(CHM_DIR_FOR_ALIAS.get(seg, seg) for seg in href.split("/"))
+
+        path, name = posixpath.split(href)
+        base, ext = posixpath.splitext(name)
 
         if ext == ".md":  # Link to another sub-site: change ".md" to ".htm"
-            return os.path.join(path, f"{base}.htm") + anchor
+            return posixpath.join(path, f"{base}.htm") + anchor
 
         if (
             ext == ""
@@ -1195,7 +1141,7 @@ def fix_key_notation_link(html: str, page: str) -> str:
     link is not given target="_blank".
     """
     soup = BeautifulSoup(html, "html.parser")
-    relative = os.path.relpath(
+    relative = posixpath.relpath(
         "language-reference-guide/key-to-notation.htm", os.path.dirname(page)
     )
     changed = False
@@ -1480,24 +1426,36 @@ def add_langref_disambiguation_pages(root: Node, project: str) -> None:
         print("  No additional symbol files needed to be added")
 
 
-if __name__ == "__main__":
+def main(argv: List[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
-        description="Generate a CHM bundle from a mkdocs site"
+        description="Generate a CHM bundle from the Zensical project"
     )
     parser.add_argument(
-        "--mkdocs-yml", type=str, required=True, help="Path to the mkdocs.yml file"
+        "--project",
+        type=Path,
+        default=None,
+        help="Directory holding zensical.toml (default: docsite.find_project())",
     )
     parser.add_argument(
         "--project-dir", type=str, required=True, help="Name of output directory"
     )
     parser.add_argument(
-        "--assets-dir", type=str, default="assets", help="Name of assets directory"
+        "--assets-dir",
+        type=str,
+        default=str(HERE / "assets"),
+        help="Name of assets directory",
     )
     parser.add_argument(
-        "--welcome", type=str, default="welcome.md", help="Path to welcome.md file"
+        "--welcome",
+        type=str,
+        default=str(HERE / "welcome.md"),
+        help="Path to welcome.md file",
     )
     parser.add_argument(
-        "--config", type=str, help="JSON config file for additional options"
+        "--config",
+        type=str,
+        default=str(HERE / "config.json"),
+        help="JSON config file for additional options",
     )
     parser.add_argument("--git-info", type=str, help="Git branch and commit info")
     parser.add_argument("--build-date", type=str, help="Build date")
@@ -1507,14 +1465,17 @@ if __name__ == "__main__":
         default=65001,
         help="CodePage to use (default: 65001 for UTF-8)",
     )
+    parser.add_argument(
+        "--no-compile",
+        action="store_true",
+        help="Write the CHM project only; do not run chmcmd",
+    )
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
-    if not args.mkdocs_yml.endswith("mkdocs.yml"):
-        sys.exit('--> expected a "mkdocs.yml" file')
-
-    if not os.path.isfile(args.mkdocs_yml):
-        sys.exit(f"--> file {args.mkdocs_yml} not found.")
+    project = args.project if args.project is not None else find_project()
+    if not (project / "zensical.toml").is_file():
+        sys.exit(f"--> no zensical.toml in {project}")
 
     if not os.path.isfile(args.welcome):
         sys.exit(f"--> welcome file {args.welcome} not found.")
@@ -1531,61 +1492,36 @@ if __name__ == "__main__":
         except (json.JSONDecodeError, FileNotFoundError) as e:
             sys.exit(f"--> Error reading config file: {e}")
 
-    # Parse mkdocs.yml
-    yml_data = parse_mkdocs_yml(args.mkdocs_yml, remove=excludes)
+    site = Site.load(project)
+    nav_data = load_nav(site, exclude=excludes)
 
-    # Find top-level dirs and standalone files from nav
-    included_dirs, standalone_files = find_nav_files_and_dirs(
-        args.mkdocs_yml, remove=excludes
-    )
-
-    version = yml_data["extra"].get("version_majmin")
+    extra = dict(site.config.get("project", {}).get("extra", {}))
+    version = extra.get("version_majmin")
     if not version:
-        sys.exit(f"--> source mkdocs.yml has no Dyalog version set")
+        sys.exit("--> zensical.toml has no Dyalog version set (extra.version_majmin)")
 
-    # Find all source Markdown files from included directories
-    md_files_from_dirs, image_files = find_source_files(
-        os.path.dirname(args.mkdocs_yml), included_dirs
-    )
-
-    # Add standalone Markdown files from nav, with absolute paths
-    standalone_files_abs = [
-        os.path.abspath(os.path.join(os.path.dirname(args.mkdocs_yml), f))
-        for f in standalone_files
+    # The pages to convert, as (absolute source path, CHM topic path), welcome first
+    doc_pages = chm_pages(site, nav_data)
+    pages = [(os.path.abspath(args.welcome), "welcome.htm")] + [
+        (str(site.docs / src), out) for src, out in doc_pages
     ]
-
-    # Filter out -print.md files from standalone files
-    excluded_print_standalone = [
-        f for f in standalone_files_abs if f.endswith("-print.md")
-    ]
-    standalone_files_abs = [
-        f for f in standalone_files_abs if not f.endswith("-print.md")
-    ]
-
-    if excluded_print_standalone:
-        print(
-            f"\nExcluded {len(excluded_print_standalone)} -print.md standalone files:"
-        )
-        for f in sorted(excluded_print_standalone):
-            print(f"  - {os.path.basename(f)}")
-
-    md_files = md_files_from_dirs + standalone_files_abs
-
-    # Add welcome.md to the start of the files list
-    md_files.insert(0, os.path.abspath(args.welcome))
+    md_files = [src for src, _ in pages]
 
     # Modify nav to include welcome page at the start
-    yml_data["nav"].insert(0, "welcome.md")
+    nav_data["nav"].insert(0, "welcome.md")
 
     # Copy images and other static assets into the project
     assets, css, css_files = static_assets(args.assets_dir, args.project_dir)
 
     # Filter out unused images, considering both MD and CSS references
-    image_files = filter_unused_images(md_files, css_files, image_files)
-    copied_images = copy_images(image_files, project=args.project_dir)
+    images = dict(chm_images(site, doc_pages))
+    used = filter_unused_images(md_files, css_files, list(images))
+    copied_images = copy_images(
+        [(src, images[src]) for src in used], project=args.project_dir
+    )
 
-    # Add git info and build date to macros
-    macros = yml_data.get("extra", {})
+    # Add git info and build date to the variables
+    macros = extra
     if args.git_info:
         macros["git_info"] = args.git_info
     if args.build_date:
@@ -1593,17 +1529,16 @@ if __name__ == "__main__":
 
     # Convert to HTML
     html_files, excluded_files = convert_to_html(
-        md_files,
+        pages,
         css,
         macros=macros,
-        transforms=[table_captions],
         project=args.project_dir,
-        top_level_files=standalone_files_abs,
+        site=site,
         version=version,
     )
 
-    # Remove excluded files from md_files for indexing
-    md_files = [f for f in md_files if f not in excluded_files]
+    # Remove excluded files from the pages for indexing
+    pages = [p for p in pages if p[0] not in excluded_files]
 
     if excluded_files:
         print(
@@ -1613,15 +1548,13 @@ if __name__ == "__main__":
             print(f"  - {os.path.basename(f)}")
 
     # Generate the CHM ToC
-    generate_toc(yml_data, project=args.project_dir)
+    generate_toc(nav_data, project=args.project_dir)
 
     # Generate the index
-    idx = generate_index_data(md_files)
+    idx = generate_index_data(pages)
     write_index_data(idx, f"{args.project_dir}/_index.hhk")
 
-    print(f"Converted {len(md_files)} Markdown files to HTML.")
-
-    # No additional redirect helper pages
+    print(f"Converted {len(html_files)} Markdown files to HTML.")
 
     # Generate the CHM project config file
     chm_name = "dyalog.chm"
@@ -1635,6 +1568,14 @@ if __name__ == "__main__":
         codepage=args.codepage,
     )
 
+    if args.no_compile:
+        return
+
     # Run the compiler
     output = Popen(["chmcmd", "dyalog.hfp"], cwd=args.project_dir)
-    output.wait()
+    if output.wait() != 0:
+        sys.exit("--> chmcmd failed")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,7 +1,7 @@
 # The repository's one Python environment: the Zensical build stack, the
 # conversion and check tooling under tools/, its tests, and the deploy tool.
 #   uv sync                 build + tooling, plus pytest (dev is uv's default group)
-#   uv sync --all-groups    also mike (deploy)
+#   uv sync --all-groups    also mike (deploy) and the CHM build dependencies
 #
 # The project itself packages tools/dyalog_caption.py and tools/dyalog_vars.py:
 # Python-Markdown imports these extensions by module name when Zensical builds,
@@ -37,6 +37,16 @@ dev = ["pytest==9.1.1"]
 # version selector reads.
 deploy = [
     "mike @ git+https://github.com/squidfunk/mike.git@2d4ad799442f4592db8ad53b179bfb33db8c69ac",
+]
+# tools/chm/build_chm.py: renders pages itself with Pygments highlighting (a
+# CHM has no client-side highlighter), and trims and minifies each page's
+# inlined CSS and HTML. Versions as in the documentation repository's
+# tools/requirements-docs.txt.
+chm = [
+    "pygments",  # also a Zensical dependency; its version is resolved there
+    "cssutils==2.14.0",
+    "htmlmin==0.1.12",
+    "csscompressor==0.9.5",
 ]
 
 [tool.setuptools]

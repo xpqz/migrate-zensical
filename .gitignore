@@ -12,3 +12,6 @@ __pycache__/
 
 # OS
 .DS_Store
+
+# CHM build output (tools/chm/build_chm.py --project-dir out/chm)
+/out/

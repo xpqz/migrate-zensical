@@ -19,8 +19,9 @@ td.Dyalog {
     font-family: 'APL385 Unicode';
 }
 
-/* Style the right-aligned command */
-.command {
+/* Style the right-aligned command (in a site title: the calling syntax) */
+.command,
+h1.heading>code {
     float: right;
     /* Align to the right */
     color: black;
@@ -69,7 +70,9 @@ td {
     text-align: left;
 }
 
-/* Style the heading container for the Language Reference */
+/* Style the heading container for the Language Reference. A site title with
+   a calling syntax, h1:has(> span.title-name), gets class "heading" from
+   build_chm.py: the CHM viewer's browser engine does not support :has(). */
 .heading {
     overflow: hidden;
     /* Clearfix for floated children */
@@ -79,8 +82,9 @@ td {
     padding-left: 5pt;
 }
 
-/* Style the left-aligned name */
-.name {
+/* Style the left-aligned name (in a site title: span.title-name) */
+.name,
+h1.heading>span.title-name {
     float: left;
     /* Align to the left */
     color: black;
@@ -224,11 +228,13 @@ div.admonition.note p.admonition-title {
     background-color: #2A3244;
 }
 
-/* Hint admonition */
-div.admonition.hint {
+/* Hint admonition (the site's tip) */
+div.admonition.hint,
+div.admonition.tip {
     border-color: #FFA300;
 }
-div.admonition.hint p.admonition-title {
+div.admonition.hint p.admonition-title,
+div.admonition.tip p.admonition-title {
     background-color: #FFA300;
 }
 
@@ -248,11 +254,14 @@ div.admonition.warning p.admonition-title {
     background-color: #CA2E51;
 }
 
-/* Legacy admonition */
-div.admonition.legacy {
+/* Legacy admonition (the site's note: the corpus has no other notes; this
+   overrides the note rule above) */
+div.admonition.legacy,
+div.admonition.note {
     border-color: #505050;
 }
-div.admonition.legacy p.admonition-title {
+div.admonition.legacy p.admonition-title,
+div.admonition.note p.admonition-title {
     background-color: #505050;
 }
 
@@ -280,11 +289,14 @@ div.admonition.macos p.admonition-title {
     background-color: #7370A9;
 }
 
-/* Windows admonition */
-div.admonition.windows {
+/* Windows admonition (the site's info titled "Dyalog on ...": build_chm.py
+   adds class "os") */
+div.admonition.windows,
+div.admonition.info.os {
     border-color: #7370A9;
 }
-div.admonition.windows p.admonition-title {
+div.admonition.windows p.admonition-title,
+div.admonition.info.os p.admonition-title {
     background-color: #7370A9;
 }
 
