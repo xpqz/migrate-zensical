@@ -1,0 +1,4111 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://xpqz.github.io/migrate-zensical/22.0/windows-ui-guide/session-menubar/">
+      
+      
+      
+        <link rel="prev" href="../session-gui/">
+      
+      
+        <link rel="next" href="../session-popup-menu/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../documentation-theme-zensical/images/dyalog-ide-cube-2025.2.svg">
+      <meta name="generator" content="zensical-0.1.1">
+    
+    
+      
+        <title>Session MenuBar - Documentation</title>
+      
+    
+    
+      
+        
+      
+      <link rel="stylesheet" href="../../assets/stylesheets/classic/main.0006804e.min.css">
+      
+        
+          
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/classic/palette.813d4b3f.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+    
+    
+      <link rel="stylesheet" href="../../documentation-theme-zensical/css/dyalog.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer" aria-hidden="true"></label>
+    <div data-md-component="skip">
+      <a href="#__skip" class="md-skip">
+        Skip to content
+      </a>
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+          <aside class="md-banner md-banner--warning">
+            <div class="md-banner__inner md-grid md-typeset">
+              
+  You're not viewing the latest version.
+  <a href="../../..">
+    <strong>Click here to go to latest.</strong>
+  </a>
+
+            </div>
+            <script>var el=document.querySelector("[data-md-component=outdated]"),base=new URL("../..",location),outdated=__md_get("__outdated",sessionStorage,base);!0===outdated&&el&&(el.hidden=!1)</script>
+          </aside>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Documentation" class="md-header__button md-logo" aria-label="Documentation" data-md-component="logo">
+      
+  <img src="../../documentation-theme-zensical/images/dyalog-logo_orange.svg" alt="Documentation">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+      <span class="md-visually-hidden">Navigation</span>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Session MenuBar
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-moon" viewBox="0 0 24 24"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+          <span class="md-visually-hidden">Search</span>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog" aria-label="Search">
+  <button type="button" class="md-search__button">
+    Search
+  </button>
+</div>
+      
+    
+    <div class="md-header__source">
+      
+        <a href="https://github.com/xpqz/migrate-zensical" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      
+    </div>
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Documentation" class="md-nav__button md-logo" aria-label="Documentation" data-md-component="logo">
+      
+  <img src="../../documentation-theme-zensical/images/dyalog-logo_orange.svg" alt="Documentation">
+
+    </a>
+    Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/xpqz/migrate-zensical" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_1" id="__nav_1_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Release Notes
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_1">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Release Notes
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../release-notes/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  v21.0 Release Notes
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    
+  
+  
+  
+  
+    <a href="../../earlier-release-notes/release-notes-v20-0/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Earlier Release Notes
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+  
+
+      
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Core Reference
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_2">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Core Reference
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../language-reference-guide/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Dyalog APL Language
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../programming-reference-guide/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Programming
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Code Tooling
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_3">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Code Tooling
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../net-interface-guide/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  .NET Interface
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../compiler-user-guide/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Compiler
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../shared-code-files-user-guide/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Shared Code Files
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Dyalog for Microsoft Windows
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+            <label class="md-nav__title" for="__nav_4">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Dyalog for Microsoft Windows
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../windows-installation-and-configuration-guide/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Installation/Configuration
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_2" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  User Interface
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        
+          <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="true">
+            <label class="md-nav__title" for="__nav_4_2">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  User Interface
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Introduction
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../apl-keyboards/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  APL Keyboards
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../session-manager/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Session Manager
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../session-gutter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Session Gutter
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../multiline-session-input/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Multi-line Session Input
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../unicode-edition-keyboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Unicode Edition Keyboard
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ime-configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  IME Configuration
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../classic-edition-keyboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Classic Edition Keyboard
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../keyboard-shortcuts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Keyboard Shortcuts
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../session-colour-scheme/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Session Colour Scheme
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../the-session-window/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  The Session Window
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../language-bar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Language Bar
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../entering-and-executing-expressions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Entering and Executing Expressions
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../value-tips/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Value Tips
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../value-tips-external/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Value Tips for External Functions
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../value-tips-configuring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Configuring Value Tips
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../session-gui/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Session GUI
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+        <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Session MenuBar
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Session MenuBar
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+
+  
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-file-menu" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The File Menu
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-edit-menu" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The Edit Menu
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-view-menu" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The View Menu
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-window-menu" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The Window Menu
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-session-menu" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The Session Menu
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-log-menu" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The Log Menu
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-action-menu" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The Action Menu
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-options-menu" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The Options Menu
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-tools-menu" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The Tools Menu
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-threads-menu" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The Threads Menu
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-layout-menu" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The Layout Menu
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-help-menu" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The Help Menu
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../session-popup-menu/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Session Popup Menu
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../session-toolbars/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  The Session Toolbars
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../session-statusbar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Session StatusBar
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../status-window/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Status Window
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../workspace-explorer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Workspace Explorer
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../browsing-classes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Browsing Classes
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../browsing-type-libraries/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Browsing Type Libraries
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../browsing-net-classes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Browsing .NET Classes
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../find-objects-tool/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Find Objects Tool
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../object-properties-dialog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Object Properties Dialog Box
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../editor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  The Editor
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tracer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  The Tracer
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../threads-tool/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  The Threads Tool
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../debugging-threads/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Debugging Threads
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../event-viewer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  The Event Viewer
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../the-session-object/session-object/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  The Session Object
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user-commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  User Commands
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../file-explorer-integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  File Explorer Integration
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../object-reference/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Object Reference
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../interface-guide/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Interfaces
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../net-framework-interface-guide/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  .NET Framework Interface
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Dyalog for Unix
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_5">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Dyalog for Unix
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../unix-installation-and-configuration-guide/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Installation/Configuration
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../unix-user-guide/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  User Interface
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  About
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_6">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  About
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../conventions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Conventions
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../licences-overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Third-party Licences
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../trademarks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Trademarks
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-file-menu" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The File Menu
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-edit-menu" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The Edit Menu
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-view-menu" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The View Menu
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-window-menu" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The Window Menu
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-session-menu" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The Session Menu
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-log-menu" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The Log Menu
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-action-menu" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The Action Menu
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-options-menu" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The Options Menu
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-tools-menu" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The Tools Menu
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-threads-menu" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The Threads Menu
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-layout-menu" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The Layout Menu
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-help-menu" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The Help Menu
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+  
+
+
+  <nav class="md-path" aria-label="Navigation" >
+    <ol class="md-path__list">
+      
+        
+  
+  
+    <li class="md-path__item">
+      <a href="../.." class="md-path__link">
+        
+  
+  <span class="md-ellipsis">
+    Dyalog v21.0
+  </span>
+
+      </a>
+    </li>
+  
+
+      
+      
+        
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+      
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+      <li class="md-path__item">
+        <a href="../../windows-installation-and-configuration-guide/" class="md-path__link">
+          
+  
+  <span class="md-ellipsis">
+    Dyalog for Microsoft Windows
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+    
+  
+
+      
+        
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+      <li class="md-path__item">
+        <a href="../" class="md-path__link">
+          
+  
+  <span class="md-ellipsis">
+    User Interface
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ol>
+  </nav>
+
+              
+              <article class="md-content__inner md-typeset">
+                <a id="__skip" tabindex="-1"></a>
+                
+                  
+
+  
+  
+    
+      
+    
+    <a href="https://github.com/xpqz/migrate-zensical/raw/main/zensical/docs/windows-ui-guide/session-menubar.md" title="View source of this page" class="md-content__button md-icon">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 18c.56 0 1 .44 1 1s-.44 1-1 1-1-.44-1-1 .44-1 1-1m0-3c-2.73 0-5.06 1.66-6 4 .94 2.34 3.27 4 6 4s5.06-1.66 6-4c-.94-2.34-3.27-4-6-4m0 6.5a2.5 2.5 0 0 1-2.5-2.5 2.5 2.5 0 0 1 2.5-2.5 2.5 2.5 0 0 1 2.5 2.5 2.5 2.5 0 0 1-2.5 2.5M9.27 20H6V4h7v5h5v4.07c.7.08 1.36.25 2 .49V8l-6-6H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h4.5a8.2 8.2 0 0 1-1.23-2"/></svg>
+    </a>
+  
+
+
+<h1 id="the-session-menubar">The Session MenuBar</h1>
+<p>The Session MenuBar (<code>⎕SE.mb</code>) contains a set of menus as follows. Unless specified, the descriptions refer to the Unicode Edition; the keyboard shortcuts are different in the Classic Edition.</p>
+<h2 id="the-file-menu">The File Menu</h2>
+<p>The <em>File</em> menu (<code>⎕SE.mb.file</code>) provides a means to execute those APL System Commands that are concerned with the active and saved workspaces. The contents of a typical File menu and the operations they perform are illustrated below.</p>
+<table id="file-menu-operations">
+<caption style="caption-side:top">Table 1: File Menu Operations</caption><thead>
+<tr>
+<th>Item</th>
+<th>Action</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>New</td>
+<td><code>[WSClear]</code></td>
+<td>Prompts for confirmation, then clears the workspace</td>
+</tr>
+<tr>
+<td>Open</td>
+<td><code>[WSLoad]</code></td>
+<td>Prompts for a workspace file name, then loads it</td>
+</tr>
+<tr>
+<td>Copy</td>
+<td><code>[WSCopy]</code></td>
+<td>Prompts for a workspace file name, then copies it</td>
+</tr>
+<tr>
+<td>Save</td>
+<td><code>[WSSave]</code></td>
+<td>Saves the active workspace</td>
+</tr>
+<tr>
+<td>Save As</td>
+<td><code>[WSSaveas]</code></td>
+<td>Prompts for a workspace file name, then saves it</td>
+</tr>
+<tr>
+<td>Export</td>
+<td><code>[Makeexe]</code></td>
+<td>Creates a bound executable, an OLE Server, an ActiveX Control, or a .NET Assembly. See <a href="../../windows-installation-and-configuration-guide/creating-executables/">Creating Executables and COM Servers</a></td>
+</tr>
+<tr>
+<td>Export to Memory</td>
+<td><code>[MakeMemoryAssembly]</code></td>
+<td>Creates an <em>in-memory</em> .NET Assembly</td>
+</tr>
+<tr>
+<td>Close AppDomain</td>
+<td><code>[CloseAppDomain]</code></td>
+<td>Closes .NET App Domain</td>
+</tr>
+<tr>
+<td>Drop</td>
+<td><code>[WSDrop]</code></td>
+<td>Prompts for a workspace file name, then erases it</td>
+</tr>
+<tr>
+<td>Edit Text File</td>
+<td><code>[EditTextFile]</code></td>
+<td>Displays the <em>Open Source File</em> dialog to select Dyalog script file (<em>.dyalog</em>) or an arbitrary text file to open in the Editor. See <a href="../editor/#editing-scripts-and-text-files">Editing Scripts and Text Files</a></td>
+</tr>
+<tr>
+<td>Print</td>
+<td><code>[PrintFnsInNS]</code></td>
+<td>Prints functions and operators in current namespace</td>
+</tr>
+<tr>
+<td>Print Setup</td>
+<td><code>[PrintSetup]</code></td>
+<td>Invokes the print set-up dialog box</td>
+</tr>
+<tr>
+<td>Continue</td>
+<td><code>[Continue]</code></td>
+<td>Saves the active workspace in CONTINUE.DWS and exits APL</td>
+</tr>
+<tr>
+<td>Exit</td>
+<td><code>[Off]</code></td>
+<td>Exits APL</td>
+</tr>
+</tbody>
+</table>
+<h2 id="the-edit-menu">The Edit Menu</h2>
+<p>The <em>Edit</em> menu (<code>⎕SE.mb.edit</code>) provides a means to recall previously entered input lines for re-execution and for copying text to and from the clipboard.</p>
+<table id="edit-menu-operations">
+<caption style="caption-side:top">Table 2: Edit menu operations</caption><thead>
+<tr>
+<th>Item</th>
+<th>Action</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Back</td>
+<td><code>[Undo]</code></td>
+<td>Displays the previous input line. Repeated use of this command cycles back through the input history</td>
+</tr>
+<tr>
+<td>Forward</td>
+<td><code>[Redo]</code></td>
+<td>Displays the next input line. Repeated use of this command cycles forward through the input history</td>
+</tr>
+<tr>
+<td>Cut</td>
+<td><code>[Delete]</code></td>
+<td>Cuts the selected text to the clipboard</td>
+</tr>
+<tr>
+<td>Copy</td>
+<td><code>[Copy]</code></td>
+<td>Copies the selection to the clipboard</td>
+</tr>
+<tr>
+<td>Paste</td>
+<td><code>[Paste]</code></td>
+<td>Pastes the text contents of the clipboard into the session log at the current location. The new lines are <em>marked</em> and may be executed by pressing Enter</td>
+</tr>
+<tr>
+<td>Paste Unicode</td>
+<td><code>[PasteUnicode]</code></td>
+<td>Same as <em>Paste</em> , but gets the Unicode text from the clipboard and converts to <code>⎕AV</code> . <strong>Classic Edition only</strong></td>
+</tr>
+<tr>
+<td>Paste Non-Unicode</td>
+<td><code>[PasteAnsi]</code></td>
+<td>Same as <em>Paste</em> , but gets the ANSI text from the clipboard and converts to <code>⎕AV</code> . <strong>Classic Edition only</strong></td>
+</tr>
+<tr>
+<td>Find</td>
+<td><code>[Find]</code></td>
+<td>Displays the <em>Find</em> dialog</td>
+</tr>
+<tr>
+<td>Replace</td>
+<td><code>[Replace]</code></td>
+<td>Displays the <em>Find/Replace</em> dialog box</td>
+</tr>
+</tbody>
+</table>
+<h2 id="the-view-menu">The View Menu</h2>
+<p>The <em>View</em> menu (<code>⎕SE.mb.view</code>) toggles the visibility of the Session Toolbar, StatusBar, and Language Bar.</p>
+<table id="view-menu-operations">
+<caption style="caption-side:top">Table 3: View menu operations</caption><thead>
+<tr>
+<th>Item</th>
+<th>Action</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Toolbar</td>
+<td>&nbsp;</td>
+<td>Shows/Hides Session toolbars</td>
+</tr>
+<tr>
+<td>Statusbar</td>
+<td>&nbsp;</td>
+<td>Shows/Hides Session status bars</td>
+</tr>
+<tr>
+<td>LanguageBar</td>
+<td>&nbsp;</td>
+<td>Shows/Hides Language Bar</td>
+</tr>
+</tbody>
+</table>
+<h2 id="the-window-menu">The Window Menu</h2>
+<p>This contains a single action (<code>⎕SE.mb.windows</code>) which is to close all of the Edit and Trace windows and the Status window.</p>
+<table id="window-menu-operations">
+<caption style="caption-side:top">Table 4: Window menu operations</caption><thead>
+<tr>
+<th>Item</th>
+<th>Action</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Close all Windows</td>
+<td><code>[CloseAll]</code></td>
+<td>Closes all Edit and Trace windows</td>
+</tr>
+</tbody>
+</table>
+<p><code>[CloseAll]</code> removes all Trace windows but does not reset the state indicator.</p>
+<p>In addition, the <em>Window</em> menu will contain options to switch the focus to any subsidiary windows that are docked in the Session as illustrated above.</p>
+<h2 id="the-session-menu">The Session Menu</h2>
+<p>The <em>Session</em> menu (<code>⎕SE.mb.session</code>) provides access to the system operations that allow you to load a session (<code>⎕SE</code>) from a session file and to save your current session (<code>⎕SE</code>) to a session file. If you use these facilities rarely, you may wish to move them to (say) the <em>Options</em> menu or even dispense with them entirely.</p>
+<table id="session-menu-operations">
+<caption style="caption-side:top">Table 5: Session menu operations</caption><thead>
+<tr>
+<th>Item</th>
+<th>Action</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Open</td>
+<td><code>[SELoad]</code></td>
+<td>Prompts for a session file name, then loads the session from it, replacing the current one. Sets the File property of <code>⎕SE</code> to the name of the file from which the session was loaded</td>
+</tr>
+<tr>
+<td>Save</td>
+<td><code>[SESave]</code></td>
+<td>Saves the current session (as defined by <code>⎕SE</code> ) to the session file specified by the File property of <code>⎕SE</code></td>
+</tr>
+<tr>
+<td>Save As</td>
+<td><code>[SESaveAs]</code></td>
+<td>Prompts for a session file name, then saves the current session (as defined by <code>⎕SE</code> ) in it. Resets the File property of <code>⎕SE</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="the-log-menu">The Log Menu</h2>
+<p>The <em>Log</em> menu (<code>⎕SE.mb.log</code>) provides access to the system operations that manipulate Session log files.</p>
+<table id="log-menu-operations">
+<caption style="caption-side:top">Table 6: Log menu operations</caption><thead>
+<tr>
+<th>Item</th>
+<th>Action</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Clear</td>
+<td><code>[NewLog]</code></td>
+<td>Prompts for confirmation, then empties the current Session log</td>
+</tr>
+<tr>
+<td>Open</td>
+<td><code>[OpenLog]</code></td>
+<td>Prompts for a Session log file, then loads it into memory, replacing the current Session log</td>
+</tr>
+<tr>
+<td>Save</td>
+<td><code>[SaveLog]</code></td>
+<td>Saves the current Session log in the current log file, replacing its previous contents</td>
+</tr>
+<tr>
+<td>Save As</td>
+<td><code>[SaveLogAs]</code></td>
+<td>Prompts for a file name, then saves the current Session log in it</td>
+</tr>
+<tr>
+<td>Print</td>
+<td><code>[PrintLog]</code></td>
+<td>Prints the contents of the Session log</td>
+</tr>
+</tbody>
+</table>
+<h2 id="the-action-menu">The Action Menu</h2>
+<p>The <em>Action</em> menu (<code>⎕SE.mb.action</code>) may be used to perform a variety of operations on the <em>current object</em> or the <em>current line</em>. The current object is the object whose name contains the cursor. The current line is that line that contains the cursor. The <em>Edit</em>, <em>Copy Object</em>, <em>Paste Object</em> and <em>Print Object</em> items operate on the current object. For example, if the name <code>SALES</code> appears in the session and the cursor is placed somewhere within it, <code>SALES</code> is the current object and will be copied to the clipboard by selecting <em>Copy object</em> or opened up for editing by selecting <em>Edit</em>.</p>
+<table id="actions-menu-operations">
+<caption style="caption-side:top">Table 7: Action menu operations</caption><thead>
+<tr>
+<th>Item</th>
+<th>Action</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Edit</td>
+<td><code>[Edit]</code></td>
+<td>Edit the current object</td>
+</tr>
+<tr>
+<td>Trace</td>
+<td><code>[Trace]</code></td>
+<td>Executes the current line under the control of the Tracer</td>
+</tr>
+<tr>
+<td>Execute</td>
+<td><code>[Execute]</code></td>
+<td>Executes the current line</td>
+</tr>
+<tr>
+<td>Copy Object</td>
+<td><code>[ObjCopy]</code></td>
+<td>Copies the contents of the current object to the clipboard</td>
+</tr>
+<tr>
+<td>Paste Object</td>
+<td><code>[ObjPaste]</code></td>
+<td>Pastes the contents of the clipboard into the current object, replacing its previous value</td>
+</tr>
+<tr>
+<td>Print Object</td>
+<td><code>[ObjPrint]</code></td>
+<td>Prints the current object. If the object is being edited, the version of the object displayed in the edit window is printed</td>
+</tr>
+<tr>
+<td>Clear Stops</td>
+<td><code>[ClearTSM]</code></td>
+<td>Clears all <code>⎕STOP</code> , <code>⎕MONITOR</code> and <code>⎕TRACE</code> settings</td>
+</tr>
+<tr>
+<td>Interrupt</td>
+<td><code>[Interrupt]</code></td>
+<td>Generates a weak interrupt</td>
+</tr>
+<tr>
+<td>Reset</td>
+<td><code>[Reset]</code></td>
+<td>Performs <code>)RESET</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="the-options-menu">The Options Menu</h2>
+<p>The <em>Options</em> menu (<code>⎕SE.mb.options</code>) provides configuration options.</p>
+<table id="options-menu-operations">
+<caption style="caption-side:top">Table 8: Options menu operations</caption><thead>
+<tr>
+<th>Item</th>
+<th>Action</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Expose Root Properties</td>
+<td><code>[ExposeRoot]</code></td>
+<td>Exposes the names of the properties, methods and events of the Root object</td>
+</tr>
+<tr>
+<td>Line Numbers</td>
+<td><code>[LineNumbers]</code></td>
+<td>Toggle the display of line numbers in edit and trace windows on/off</td>
+</tr>
+<tr>
+<td>Disable traps in session</td>
+<td><code>[DisableTrapsAtSuspension]</code></td>
+<td>Disables the error trapping mechanism used by <code>:Trap</code> and <code>⎕TRAP</code>. This can be useful in debugging applications</td>
+</tr>
+<tr>
+<td>Configure</td>
+<td><code>[Configure]</code></td>
+<td>Displays the <em>Configuration</em> dialog box</td>
+</tr>
+<tr>
+<td>Colours</td>
+<td><code>[ChooseColors]</code></td>
+<td>Displays the <em>Colours Selection</em> dialog box</td>
+</tr>
+</tbody>
+</table>
+<p>The value associated with the <em>Expose Root</em> option reflects the value of this setting in your current workspace and is saved in it. When you change this value through the <em>Options</em> menu, you are changing it in the current workspace only. The default value of this items is defined by the <strong>PropertyExposeRoot</strong> configuration parameter, which can be set using the <em>Object Syntax</em> tab of the <em>Configuration</em> dialog.</p>
+<h2 id="the-tools-menu">The Tools Menu</h2>
+<p>The <em>Tools</em> menu (<code>⎕SE.mb.tools</code>) provides access to various session tools and dialog boxes.</p>
+<table id="tools-menu-operations">
+<caption style="caption-side:top">Table 9: Tools Menu Operations</caption><thead>
+<tr>
+<th>Item</th>
+<th>Action</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Explorer</td>
+<td><code>[Explorer]</code></td>
+<td>Displays the <em>Workspace Explorer</em> tool</td>
+</tr>
+<tr>
+<td>Search</td>
+<td><code>[WSSearch]</code></td>
+<td>Displays the <em>Workspace Search</em> tool</td>
+</tr>
+<tr>
+<td>Status</td>
+<td><code>[Status]</code></td>
+<td>Displays or hides the <em>Status</em> window</td>
+</tr>
+<tr>
+<td>AutoStatus</td>
+<td><code>[AutoStatus]</code></td>
+<td>Toggle; if checked, causes the <em>Status</em> window to be displayed when a new message is generated for it</td>
+</tr>
+<tr>
+<td>Event Viewer</td>
+<td><code>[EventViewer]</code></td>
+<td>Displays or hides the <em>Event Viewer</em></td>
+</tr>
+<tr>
+<td>Properties</td>
+<td><code>[ObjProps]</code></td>
+<td>Displays a property sheet for the current object</td>
+</tr>
+</tbody>
+</table>
+<h2 id="the-threads-menu">The Threads Menu</h2>
+<p>The <em>Threads</em> menu (<code>⎕SE.mb.threads</code>) provides access to various session tools and dialog boxes.</p>
+<table id="threads-menu-operations">
+<caption style="caption-side:top">Table 10: Threads Menu Operations</caption><thead>
+<tr>
+<th>Item</th>
+<th>Action</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Show Threads</td>
+<td><code>[Threads]</code></td>
+<td>Displays the <em>Threads Tool</em></td>
+</tr>
+<tr>
+<td>Show Stack</td>
+<td><code>[Stack]</code></td>
+<td>Displays the <em>SI Stack</em> window</td>
+</tr>
+<tr>
+<td>Show Token Pool</td>
+<td><code>[TokenPool]</code></td>
+<td>Displays the <em>Token Pool</em> window</td>
+</tr>
+<tr>
+<td>Auto Refresh</td>
+<td><code>[ThreadsAutoRefresh]</code></td>
+<td>Refreshes the <em>Threads Tool</em> on every thread switch</td>
+</tr>
+<tr>
+<td>Pause on Error</td>
+<td><code>[ThreadsPauseOnError]</code></td>
+<td>Pauses all threads on error</td>
+</tr>
+<tr>
+<td>Pause all Threads</td>
+<td><code>[ThreadsPauseAll]</code></td>
+<td>Pauses all threads</td>
+</tr>
+<tr>
+<td>Resume all Threads</td>
+<td><code>[ThreadsResumeAll]</code></td>
+<td>Resumes all threads</td>
+</tr>
+<tr>
+<td>Restart all Threads</td>
+<td><code>[ThreadsRestartAll]</code></td>
+<td>Restarts all threads</td>
+</tr>
+</tbody>
+</table>
+<h2 id="the-layout-menu">The Layout Menu</h2>
+<p>The <em>Layout</em> menu (<code>⎕SE.mb.layout</code>) selects the layout of the Session and of the tools that are docked in it, including the Editor and the Debugger.</p>
+<table id="debugger-layout-menu-operations">
+<caption style="caption-side:top">Table 11: Layout Menu Operations</caption><thead>
+<tr>
+<th>Item</th>
+<th>Action</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Open…</td>
+<td>&nbsp;</td>
+<td>Displays the <em>Open Session layout</em> dialog box, from which a Session layout file (<em>.layout</em>) can be selected</td>
+</tr>
+<tr>
+<td>Classic</td>
+<td>&nbsp;</td>
+<td>Selects Classic Dyalog mode, in which the Debugger is a separate window containing the Tracer, with the Left Argument pane docked to its left and the Right Argument pane docked to its right</td>
+</tr>
+<tr>
+<td>Debugger at the bottom</td>
+<td>&nbsp;</td>
+<td>Docks the Debugger at the bottom of the Session window (default)</td>
+</tr>
+<tr>
+<td>Classic with Vertical Inline Tracing</td>
+<td>&nbsp;</td>
+<td>As <em>Classic</em>, but with the Left Argument pane docked above the Tracer and the Right Argument pane docked below it</td>
+</tr>
+</tbody>
+</table>
+<p>The selected layout is saved when Dyalog exits and is restored the next time it starts; see the <a href="../../windows-installation-and-configuration-guide/configuration-parameters/layout-file/">LAYOUT_FILE</a> parameter.</p>
+<h2 id="the-help-menu">The Help Menu</h2>
+<p>The <em>Help</em> menu (<code>⎕SE.mb.help</code>) provides access to the help system which is packaged as a single <em>Microsoft HTML Help</em> compiled help file named <code>help\dyalog.chm.</code></p>
+<table id="help-menu-operations">
+<caption style="caption-side:top">Table 12: Help menu operations</caption><thead>
+<tr>
+<th>Label</th>
+<th>Action</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Getting Started</td>
+<td><code>[GettingStarted]</code></td>
+<td>Opens your web browser on the <code>getting-started</code> page on the Dyalog web site</td>
+</tr>
+<tr>
+<td>Dyalog Help</td>
+<td><code>[WelcomeHelp]</code></td>
+<td>Opens <code>help\dyalog.chm</code> , starting at the Welcome page</td>
+</tr>
+<tr>
+<td>Language Elements</td>
+<td><code>[LangHelp]</code></td>
+<td>Opens <code>help\dyalog.chm</code> , starting at the first topic in the Language Reference section</td>
+</tr>
+<tr>
+<td>GUI Overview</td>
+<td><code>[GuiHelp]</code></td>
+<td>Opens <code>help\dyalog.chm</code> , starting at the first topic in the Object Reference section</td>
+</tr>
+<tr>
+<td>Documentation Centre</td>
+<td><code>[DocCenter]</code></td>
+<td>Opens your web browser on <code>help\index.html</code> which displays an index to the on-line PDF documentation and selected internet links</td>
+</tr>
+<tr>
+<td>Dyalog Web Site</td>
+<td><code>[DyalogWeb]</code></td>
+<td>Opens your web browser on the Dyalog home page</td>
+</tr>
+<tr>
+<td>Email Dyalog</td>
+<td><code>[DyalogEmail]</code></td>
+<td>Opens your email client and creates a new message to Dyalog Support</td>
+</tr>
+<tr>
+<td>Latest Enhancements</td>
+<td><code>[RelNotes]</code></td>
+<td>Opens <code>help\dyalog.chm</code> , starting at the first topic in the Version 21.0 Release Notes section. Previous Release Notes are also included for your convenience.</td>
+</tr>
+<tr>
+<td>Read Me</td>
+<td><code>[ReadMe]</code></td>
+<td>Opens <strong>help\dyalog_readme.htm</strong> in your default web browser. <strong>setup_readme.htm</strong> is also included in this directory</td>
+</tr>
+<tr>
+<td>Third Party Licences</td>
+<td><code>[LicenceHelp]</code></td>
+<td>Opens <code>help\dyalog.chm</code> , starting at the first topic in the Licences for third-party components</td>
+</tr>
+<tr>
+<td>About</td>
+<td><code>[About]</code></td>
+<td>Displays an <em>About</em> dialog box</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Made with <a href="https://zensical.org/" target="_blank" rel="noopener"><strong>Zensical</strong></a><br/>Copyright &copy; 1982-2026 <strong><a href="https://dyalog.com" target="_blank" rel="noopener">Dyalog Limited</a></strong> (<button type="button" class="copy" title="Copy build info to the clipboard" data-done="copied" data-fail="copy failed" onclick="var b=this,s=b.nextElementSibling;navigator.clipboard?navigator.clipboard.writeText(b.textContent.trim()).then(function(){s.textContent=b.dataset.done},function(){s.textContent=b.dataset.fail}):s.textContent=b.dataset.fail">2026-11-17 tooling-port:7fc2363f</button><span class="copy-status" role="status"></span>).<br/>Except where otherwise noted, content on this site is licensed under a <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener"><strong>Creative Commons Attribution 4.0 International</strong></a> licence.
+    </div>
+  
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog" role="status" aria-atomic="true">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      
+      
+        
+        
+      <script id="__config" type="application/json">{"annotate":null,"base":"../..","features":["content.action.view","content.code.copy","navigation.indexes","navigation.instant","navigation.path","navigation.prune","navigation.sections","navigation.tracking"],"redirect":null,"search":"../../assets/javascripts/workers/search.719e0d91.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","clipboard.error":"Could not copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":{"provider":"mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.3cb411a8.min.js"></script>
+      
+    
+  </body>
+</html>

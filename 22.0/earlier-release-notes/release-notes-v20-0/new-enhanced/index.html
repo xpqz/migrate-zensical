@@ -1,0 +1,3134 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://xpqz.github.io/migrate-zensical/22.0/earlier-release-notes/release-notes-v20-0/new-enhanced/">
+      
+      
+      
+        <link rel="prev" href="../announcements/deprecated-functionality/">
+      
+      
+        <link rel="next" href="../minor-updates/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../documentation-theme-zensical/images/dyalog-ide-cube-2025.2.svg">
+      <meta name="generator" content="zensical-0.1.1">
+    
+    
+      
+        <title>New and Enhanced Features - Documentation</title>
+      
+    
+    
+      
+        
+      
+      <link rel="stylesheet" href="../../../assets/stylesheets/classic/main.0006804e.min.css">
+      
+        
+          
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/classic/palette.813d4b3f.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+    
+    
+      <link rel="stylesheet" href="../../../documentation-theme-zensical/css/dyalog.css">
+    
+    <script>__md_scope=new URL("../../..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer" aria-hidden="true"></label>
+    <div data-md-component="skip">
+      <a href="#__skip" class="md-skip">
+        Skip to content
+      </a>
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+          <aside class="md-banner md-banner--warning">
+            <div class="md-banner__inner md-grid md-typeset">
+              
+  You're not viewing the latest version.
+  <a href="../../../..">
+    <strong>Click here to go to latest.</strong>
+  </a>
+
+            </div>
+            <script>var el=document.querySelector("[data-md-component=outdated]"),base=new URL("../../..",location),outdated=__md_get("__outdated",sessionStorage,base);!0===outdated&&el&&(el.hidden=!1)</script>
+          </aside>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="Documentation" class="md-header__button md-logo" aria-label="Documentation" data-md-component="logo">
+      
+  <img src="../../../documentation-theme-zensical/images/dyalog-logo_orange.svg" alt="Documentation">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+      <span class="md-visually-hidden">Navigation</span>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              New and Enhanced Features
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-moon" viewBox="0 0 24 24"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+          <span class="md-visually-hidden">Search</span>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog" aria-label="Search">
+  <button type="button" class="md-search__button">
+    Search
+  </button>
+</div>
+      
+    
+    <div class="md-header__source">
+      
+        <a href="https://github.com/xpqz/migrate-zensical" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      
+    </div>
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="Documentation" class="md-nav__button md-logo" aria-label="Documentation" data-md-component="logo">
+      
+  <img src="../../../documentation-theme-zensical/images/dyalog-logo_orange.svg" alt="Documentation">
+
+    </a>
+    Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/xpqz/migrate-zensical" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_1" id="__nav_1_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Release Notes
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="true">
+            <label class="md-nav__title" for="__nav_1">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Release Notes
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../../release-notes/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  v21.0 Release Notes
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_1_2" id="__nav_1_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Earlier Release Notes
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_1_2_label" aria-expanded="true">
+            <label class="md-nav__title" for="__nav_1_2">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Earlier Release Notes
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1_2_1" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  v20.0 Release Notes
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_1_2_1" id="__nav_1_2_1_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        
+          <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_1_2_1_label" aria-expanded="true">
+            <label class="md-nav__title" for="__nav_1_2_1">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  v20.0 Release Notes
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../system-requirements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  System Requirements
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../announcements/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Announcements
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+        <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  New and Enhanced Features
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  New and Enhanced Features
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+
+  
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#syntax-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Syntax Changes
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Syntax Changes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#array-notation" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Array Notation
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#language-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Language Changes
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Language Changes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#primitive-functionsoperators" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Primitive Functions/Operators
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#system-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        System Functions
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#i-beams" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        I-beams
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#development-environment-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Development Environment Changes
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Development Environment Changes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#inline-tracing" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Inline Tracing
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuration-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Configuration Parameters
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#command-shortcuts" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Command Shortcuts
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#home-and-end-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Home and End Keys
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#microsoft-windows-ide" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Microsoft Windows IDE
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tty-interface" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        TTY Interface
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interfaces-and-libraries" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Interfaces and Libraries
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Interfaces and Libraries">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pcre-library" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PCRE Library
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#net-interface" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        .NET Interface
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../minor-updates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Minor Updates and Bug Fixes
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../interoperability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Interoperability
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../release-notes-v19-0/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  v19.0 Release Notes
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Core Reference
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_2">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Core Reference
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../../language-reference-guide/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Dyalog APL Language
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../../programming-reference-guide/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Programming
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Code Tooling
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_3">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Code Tooling
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../../net-interface-guide/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  .NET Interface
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../../compiler-user-guide/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Compiler
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../../shared-code-files-user-guide/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Shared Code Files
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Dyalog for Microsoft Windows
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_4">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Dyalog for Microsoft Windows
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../../windows-installation-and-configuration-guide/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Installation/Configuration
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../../windows-ui-guide/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  User Interface
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../../object-reference/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Object Reference
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../../interface-guide/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Interfaces
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../../net-framework-interface-guide/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  .NET Framework Interface
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Dyalog for Unix
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_5">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Dyalog for Unix
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../../unix-installation-and-configuration-guide/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Installation/Configuration
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../../unix-user-guide/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  User Interface
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  About
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_6">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  About
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../conventions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Conventions
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../licences-overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Third-party Licences
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../trademarks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Trademarks
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#syntax-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Syntax Changes
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Syntax Changes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#array-notation" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Array Notation
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#language-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Language Changes
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Language Changes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#primitive-functionsoperators" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Primitive Functions/Operators
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#system-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        System Functions
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#i-beams" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        I-beams
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#development-environment-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Development Environment Changes
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Development Environment Changes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#inline-tracing" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Inline Tracing
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuration-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Configuration Parameters
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#command-shortcuts" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Command Shortcuts
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#home-and-end-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Home and End Keys
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#microsoft-windows-ide" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Microsoft Windows IDE
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tty-interface" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        TTY Interface
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interfaces-and-libraries" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Interfaces and Libraries
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Interfaces and Libraries">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pcre-library" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PCRE Library
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#net-interface" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        .NET Interface
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+  
+
+
+  <nav class="md-path" aria-label="Navigation" >
+    <ol class="md-path__list">
+      
+        
+  
+  
+    <li class="md-path__item">
+      <a href="../../.." class="md-path__link">
+        
+  
+  <span class="md-ellipsis">
+    Dyalog v21.0
+  </span>
+
+      </a>
+    </li>
+  
+
+      
+      
+        
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+    
+      
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+      <li class="md-path__item">
+        <a href="../../../release-notes/" class="md-path__link">
+          
+  
+  <span class="md-ellipsis">
+    Release Notes
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+    
+  
+
+      
+        
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+    
+      
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+      <li class="md-path__item">
+        <a href="../" class="md-path__link">
+          
+  
+  <span class="md-ellipsis">
+    Earlier Release Notes
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+    
+  
+
+      
+        
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+      <li class="md-path__item">
+        <a href="../" class="md-path__link">
+          
+  
+  <span class="md-ellipsis">
+    v20.0 Release Notes
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ol>
+  </nav>
+
+              
+              <article class="md-content__inner md-typeset">
+                <a id="__skip" tabindex="-1"></a>
+                
+                  
+
+  
+  
+    
+      
+    
+    <a href="https://github.com/xpqz/migrate-zensical/raw/main/zensical/docs/earlier-release-notes/release-notes-v20-0/new-enhanced.md" title="View source of this page" class="md-content__button md-icon">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 18c.56 0 1 .44 1 1s-.44 1-1 1-1-.44-1-1 .44-1 1-1m0-3c-2.73 0-5.06 1.66-6 4 .94 2.34 3.27 4 6 4s5.06-1.66 6-4c-.94-2.34-3.27-4-6-4m0 6.5a2.5 2.5 0 0 1-2.5-2.5 2.5 2.5 0 0 1 2.5-2.5 2.5 2.5 0 0 1 2.5 2.5 2.5 2.5 0 0 1-2.5 2.5M9.27 20H6V4h7v5h5v4.07c.7.08 1.36.25 2 .49V8l-6-6H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h4.5a8.2 8.2 0 0 1-1.23-2"/></svg>
+    </a>
+  
+
+
+<h1 id="new-features-changes-and-enhancements">New Features, Changes, and Enhancements</h1>
+<p>This page describes the changes and new features in Dyalog v20.0 compared with Dyalog v19.0.</p>
+<h2 id="syntax-changes">Syntax Changes</h2>
+<h3 id="array-notation">Array Notation</h3>
+<p><a href="https://docs.dyalog.com/20.0/programming-reference-guide/introduction/arrays/array-notation/">Array notation</a> is a literal syntax for most arrays (including nested and high-rank arrays) and namespaces. Array notation is an extension of APL syntax, and, as such, can be used inside and around all other APL expressions, and wherever an APL expression can appear (for example in the Session, in functions, and in namespace scripts). It can also be used in the Editor to manipulate arrays directly.</p>
+<p>You can edit variables using array notation in the following ways:</p>
+<ul>
+<li>Invoke the <em>Edit</em> command (<strong>&lt;ED&gt;</strong>) from within the Editor.</li>
+<li>Call the system command <code>)ED</code> and prefix the variable name with a diamond character, for example, <code>)ED ⋄foo</code></li>
+<li>Call the system function <code>⎕ED</code> with a left argument <code>'⋄'</code>, for example, <code>'⋄' ⎕ED 'foo'</code>.</li>
+</ul>
+<p>In addition, in the Microsoft Windows IDE, array notation can be accessed in the following ways:</p>
+<ul>
+<li>Click the <img alt="" height="20" src="../img200/session-arraynotation.png" vertical-align:text-bottom width="20" /> icon in the <strong>Session</strong> toolbar – this button toggles on/off the use of array notation for output (when possible).</li>
+<li>Click the <img alt="" height="20" src="../img200/object-arraynotation.png" vertical-align:text-bottom width="20" /> icon in the <strong>Object</strong> toolbar when the cursor is over the name of an array – this opens the array in the Editor in the same way as <code>)ED ⋄foo</code>.</li>
+<li>Click the <img alt="" height="20" src="../img200/object-arraynotation.png" vertical-align:text-bottom width="20" /> icon in the Editor's toolbar – this displays the contents of the Editor using array notation.</li>
+<li>Select <strong>Show as Array Notation</strong> from the Editor's <strong>Syntax</strong> menu – this displays the contents of the Editor using array notation.</li>
+</ul>
+<p>When using array notation in the Editor, the <em>Reformat</em> command (<strong>&lt;RD&gt;</strong>) evaluates the Editor's content and regenerates it using array notation.</p>
+<p>Setting the <code>APLAN_FOR_OUTPUT</code> configuration parameter to <code>1</code> sets use of array notation for output to be on; this is equivalent to setting <code>]APLAN.Output on</code> at start-up time. In the Microsoft Windows IDE, this can be overridden using the toolbar icons/menu items.</p>
+<p>Setting the <code>APLAN_FOR_EDITOR</code> configuration parameter to <code>1</code> sets use of array notation for editors to be on; this is equivalent to setting <code>]APLAN.Editor on</code> at start-up time.</p>
+<h2 id="language-changes">Language Changes</h2>
+<h3 id="primitive-functionsoperators">Primitive Functions/Operators</h3>
+<p>A new primitive operator, <a href="https://docs.dyalog.com/20.0/language-reference-guide/primitive-operators/behind/"><em>behind</em></a>, has been added. This completes the set of <a href="https://docs.dyalog.com/20.0/language-reference-guide/primitive-operators/operator-syntax/#function-composition">function composition</a> operators, which allow functions to be glued together to build up more complex functions:</p>
+<ul>
+<li>Glyph: <code>⍛</code> (Classic: <code>⎕U235B</code>)</li>
+<li>Derived function equivalence:<ul>
+<li>monadic: <code>(f Y) g Y</code></li>
+<li>dyadic: <code>(f X) g Y</code></li>
+</ul>
+</li>
+</ul>
+<h3 id="system-functions">System Functions</h3>
+<p>The following system functions have been added:</p>
+<ul>
+<li><a href="https://docs.dyalog.com/20.0/language-reference-guide/system-functions/shell/"><code>⎕SHELL</code></a> – Execute External Program<br />
+This enables execution of external programs with more control and options than <a href="https://docs.dyalog.com/20.0/language-reference-guide/system-functions/start-unix-auxiliary-processor/"><code>⎕SH</code></a>/<a href="https://docs.dyalog.com/20.0/language-reference-guide/system-functions/start-windows-auxiliary-processor/"><code>⎕CMD</code></a>.</li>
+<li><a href="https://docs.dyalog.com/20.0/language-reference-guide/system-functions/vget/"><code>⎕VGET</code></a> – Value Get<br />
+This enables values to be read for names in a source namespace/namespaces.</li>
+<li><a href="https://docs.dyalog.com/20.0/language-reference-guide/system-functions/vset/"><code>⎕VSET</code></a> – Value Set<br />
+This enables values to be set for names in a target namespace/namespaces.</li>
+</ul>
+<p>The following system functions have been enhanced:</p>
+<ul>
+<li><a href="https://docs.dyalog.com/20.0/language-reference-guide/system-functions/dt/"><code>⎕DT</code></a> – Date-Time<br />
+Additional conversion types have been added:<ul>
+<li>15 – Go UnixMicro</li>
+<li>16 – Go UnixNano</li>
+<li>17 – APL+Win and APL64 workspace timestamp</li>
+<li>21 – Apollo NCS UUID</li>
+<li>22 – OSF DCE UUID</li>
+<li>70  – AmigaOS</li>
+</ul>
+</li>
+<li><a href="https://docs.dyalog.com/20.0/language-reference-guide/system-functions/fstie/"><code>⎕FSTIE</code></a> – File Share Tie<br />
+A new variant option, <strong>Mode</strong>, has been added. This specifies the intended purpose of the tie, and can affect when/how errors are generated.</li>
+<li><a href="https://docs.dyalog.com/20.0/language-reference-guide/system-functions/ftie/"><code>⎕FTIE</code></a> – Exclusive File Tie<br />
+A new variant option, <strong>Mode</strong>, has been added. This specifies the intended purpose of the tie, and can affect when/how errors are generated.</li>
+<li>
+<p><a href="https://docs.dyalog.com/20.0/language-reference-guide/system-functions/fix/"><code>⎕FIX</code></a> and <a href="https://docs.dyalog.com/20.0/language-reference-guide/system-functions/fx/"><code>⎕FX</code></a> – Fix Script/Definition<br />
+The rules around whether a function can be fixed have been tightened to prevent dfns with unmatched parentheses and brackets from being fixed. This is to accommodate array notation, which changes the meaning of parentheses and brackets that span more than one statement. TradFns will continue to fix as before, but subtle differences in how the code behaves might not be backwards-compatible and could have unexpected results.</p>
+<div class="admonition tip">
+<p class="admonition-title">Hints and Recommendations</p>
+<p>If the enhanced restrictions on <code>⎕FIX</code> and <code>⎕FX</code> cause problems for you, please contact <a href="mailto:support@dyalog.com">support@dyalog.com</a> to discuss tools and techniques for mitigation.</p>
+</div>
+</li>
+<li>
+<p><a href="https://docs.dyalog.com/20.0/language-reference-guide/system-functions/mkdir/"><code>⎕MKDIR</code></a> – Make Directory<br />
+A new variant option, <strong>Unique</strong>, has been added. This specifies whether the base name in the right argument is modified so that the name is unique.</p>
+</li>
+<li><a href="https://docs.dyalog.com/20.0/language-reference-guide/system-functions/nget/"><code>⎕NGET</code></a> – Read Text File<br />
+If <code>Y</code> is a 2-item vector, the second element (which specifies <code>flags</code> for the operation) can now be set to <code>2</code>. In this situation, the first element of the result <code>R</code> is a matrix, with each row corresponding to a line in the text file specified within <code>X</code>.</li>
+<li><a href="https://docs.dyalog.com/20.0/language-reference-guide/system-functions/ninfo/"><code>⎕NINFO</code></a> – Native File Information  <ul>
+<li>Several of the properties can now be set by extending the appropriate element in the left argument from a <code>propertyNumber</code> to a <code>(propertyNumber newValue)</code> pair.</li>
+<li>A new variant option, <strong>ProgressCallBack</strong>, has been added. This causes <code>⎕NINFO</code> to invoke an APL callback function as the file operations (for example, a query relating to a file's size, name, or modification date) proceed.</li>
+</ul>
+</li>
+<li><a href="https://docs.dyalog.com/20.0/language-reference-guide/system-functions/nput/"><code>⎕NPUT</code></a> – Write Text File<br />
+The single/first element of <code>X</code> (which specifies <code>content</code>) can now be a matrix. In this situation, the resulting text file will include one line for each row of the matrix, with trailing spaces stripped.</li>
+<li><a href="https://docs.dyalog.com/20.0/language-reference-guide/system-functions/ns/"><code>⎕NS</code></a> – Namespace  <ul>
+<li>The left argument <code>X</code> has been extended to allow references to namespaces to be specified. It can also now be an array in which each element identifies a namespace. </li>
+<li>The right argument <code>Y</code> has been extended to allow multiple references to namespaces to be specified.</li>
+<li>A new variant option, <strong>Trigger</strong>, has been added. This specifies whether any triggers should run when <code>⎕NS</code> modifies names in the target namespace.</li>
+</ul>
+</li>
+</ul>
+<h3 id="i-beams">I-beams</h3>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Any service provided using an I&#8209;Beam should be considered as "experimental" and subject to change – without notice - from one release to the next. Any use of I&#8209;Beams in applications should, therefore, be carefully isolated in cover-functions that can be adjusted if necessary.</p>
+</div>
+<p>The following I&#8209;beams have been added:</p>
+<ul>
+<li><a href="https://docs.dyalog.com/20.0/language-reference-guide/primitive-operators/i-beam/log-use-of-deprecated-features/"><code>13⌶</code></a> – Log Use of Deprecated Features<br />
+Records information in the log file set by <code>109⌶</code> about the specified deprecated feature names or keywords</li>
+<li><a href="https://docs.dyalog.com/20.0/language-reference-guide/primitive-operators/i-beam/monadic-operator-generator/"><code>43⌶</code></a> – Monadic Operator Generator<br />
+Generates a monadic operator with specified functionality. The exact functionaity of the generated operator depend on the right argument. Current options are:  <ul>
+<li><code>43⌶632</code> – Generics Operator<br />Generates a .NET-specific operator that can create concrete versions of generic classes and execute generic methods<br />This is likely to be superseded by a new language construct in Dyalog v21.0.</li>
+</ul>
+</li>
+<li><a href="https://docs.dyalog.com/20.0/language-reference-guide/primitive-operators/i-beam/log-file-for-deprecations/"><code>109⌶</code></a> – Deprecated Feature Log File<br />
+Manages the file used to log the use of deprecated features.</li>
+<li><a href="https://docs.dyalog.com/20.0/language-reference-guide/primitive-operators/i-beam/generate-uuid/"><code>120⌶</code></a> – Generate UUID<br />
+Generates a UUID (Universally Unique IDentifier) according to the RFC 9562 specification.</li>
+<li><a href="https://docs.dyalog.com/20.0/language-reference-guide/primitive-operators/i-beam/scan-for-deprecated-files/"><code>3535⌶</code></a> – Scan For Deprecated Files<br />
+Scans the specified directory (and, optionally, sub-directories) for deprecated saved workspaces, component files, and external variables.</li>
+<li><a href="https://docs.dyalog.com/20.0/language-reference-guide/primitive-operators/i-beam/unicode-normalisation/"><code>5581⌶</code></a> – Unicode Normalisation<br />
+Applies the specified Unicode normalisation form to given character data.</li>
+<li><a href="https://docs.dyalog.com/20.0/language-reference-guide/primitive-operators/i-beam/shell-process-control/"><code>8373⌶</code></a> – Shell Process Control<br />
+Provides a way to determine the process IDs of processes started by <code>⎕SHELL</code>, as well as enabling the sending of signals to any of those processes.</li>
+</ul>
+<p>The following <em>I-beams</em> have been removed:</p>
+<ul>
+<li><code>819⌶</code> – Case Convert (introduced in Dyalog v15.0)<br />
+The functionality provided by this <em>I-beam</em> is available through the <a href="https://docs.dyalog.com/20.0/language-reference-guide/system-functions/c/"><code>⎕C</code></a> system function.</li>
+<li><code>8468⌶</code> – Hash Table Size (introduced in Dyalog v19.0)<br />
+Temporary functionality used for identification of potential side-effects of a change that has now been implemented. No longer relevant.</li>
+<li><code>8469⌶</code> – Lookup Table Size (introduced in Dyalog v19.0)<br />
+Temporary functionality used for identification of potential side-effects of a change that has now been implemented. No longer relevant.</li>
+</ul>
+<h2 id="development-environment-changes">Development Environment Changes</h2>
+<h3 id="inline-tracing">Inline Tracing</h3>
+<p><a href="https://docs.dyalog.com/20.0/windows-ui-guide/tracer/inline-tracing/">Inline Tracing</a> is an extension to tracing that allows you to step through the execution of individual primitives within expressions, examining intermediate results and arguments of sub-expressions. It enables an in-depth inspection of complex expressions.</p>
+<p>Inline tracing can be initiated in the following ways:</p>
+<ul>
+<li>Invoke the <em>Inline Tracing</em> command (<strong>&lt;IT&gt;</strong>) from within the Session when the cursor is within the expression of interest.</li>
+</ul>
+<p>In addition, in the Microsoft Windows IDE, inline tracing can be initiated in the following ways:</p>
+<ul>
+<li>Click the <img alt="" height="20" src="../img200/tracer-inlinetracing.png" vertical-align:text-bottom width="20" /> icon in the <strong>Tracer</strong> toolbar</li>
+<li>Select <strong>Trace Inline...</strong> from the Session's <strong>Action</strong> menu.</li>
+<li>Select <strong>Action</strong> &gt; <strong>Trace Inline...</strong> from the Session's context ("right-click") menu.</li>
+</ul>
+<h3 id="configuration-parameters">Configuration Parameters</h3>
+<p>The following configuration parameters have been added:</p>
+<ul>
+<li><code>APLAN_FOR_EDITOR</code><br />
+This initialises editors using array notation when possible (unless it is overridden within the session). The default is <code>0</code> (array notation is not in use). </li>
+<li><code>APLAN_FOR_OUTPUT</code><br />
+This displays session output using array notation when possible (unless it is overridden within the session). The default is <code>0</code> (array notation is not in use).</li>
+<li><code>DYALOG_SHELL_SUBPROCESS</code><br />
+This improves the performance of <code>⎕SHELL</code> on AIX. When set to <code>1</code> (the default on AIX), the interpreter starts a (small) child process that handles calls to <code>⎕SHELL</code>, mitigating some of the performance issues seen on AIX when <code class="language-nonAPL">fork()</code>ing large processes.</li>
+</ul>
+<h3 id="command-shortcuts">Command Shortcuts</h3>
+<p>The following command shortcuts have been extended:</p>
+<ul>
+<li>The <em>Reformat</em> command (<strong>&lt;RD&gt;</strong>) will now reformat and indent an array when array notation is switched on (previously this functionality was restricted to functions); it will also execute any expressions within the array notation and replace the text with a representation of their results.</li>
+<li>The <em>Undo All</em> command (<strong>&lt;UA&gt;</strong>) will now exit multi-line input (previously this only "unmarked" input lines within multi-line input).</li>
+</ul>
+<h3 id="home-and-end-keys">Home and End Keys</h3>
+<p>The actions of the <kbd>Home</kbd> and <kbd>End</kbd> keys have been enhanced to provide finer granularity.</p>
+<p>When the cursor is placed in a line in the Session:</p>
+<ul>
+<li><kbd>Home</kbd> moves the cursor left to whichever of these it encounters first from its starting position:<ul>
+<li>the start of the content of the line</li>
+<li>the six space prompt (except when in the <strong>Editor</strong>, in which case this is skipped)</li>
+<li>the left edge of the session</li>
+</ul>
+</li>
+<li><kbd>End</kbd> moves the cursor right to whichever of these it encounters first from its starting position:<ul>
+<li>the end of the content of the line excluding trailing space characters</li>
+<li>the end of the content of the line including trailing space characters</li>
+<li>the six space prompt (only when the cursor is on a blank line)</li>
+</ul>
+</li>
+</ul>
+<p>Pressing <kbd>Home</kbd> or <kbd>End</kbd> multiple times progresses through the list in the order shown.</p>
+<h3 id="microsoft-windows-ide">Microsoft Windows IDE</h3>
+<p>The following changes have been made to the Microsoft Windows IDE:</p>
+<ul>
+<li>A new menu, <strong>Layout</strong>, provides options for the location (or undocking) of the <strong>Debugger</strong> window.</li>
+<li>A new keyboard shortcut has been added to toggle inline tracing:<ul>
+<li>key code: <strong>&lt;IT&gt;</strong></li>
+<li>keystroke: <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>Enter</kbd></li>
+</ul>
+</li>
+<li>A new icon (<img alt="" height="20" src="../img200/object-arraynotation.png" vertical-align:text-bottom width="20" />) has been added to the <strong>Object</strong> toolbar. This enables array notation to be used when editing an object, and replaces the previous Array Editor icon.</li>
+<li>A new icon (<img alt="" height="20" src="../img200/session-arraynotation.png" vertical-align:text-bottom width="20" />) has been added to the <strong>Session</strong> toolbar to toggle the use of array notation.</li>
+<li>The Session caption can now include the current thread by adding the <code>{TID}</code> field to the <code>⎕SE.Caption</code> property.</li>
+<li>In the <strong>Configuration</strong> dialog box's <strong>Keyboard Shortcuts</strong> tab, the <strong>Available shortcuts</strong> now include function keys (code F1-F48). These can be used in conjunction with <code>⎕PFKEY</code> to define keyboard shortcuts for function key actions.</li>
+<li>The left bracket that appears in the Session gutter when entering multi-line input now includes a close icon at the bottom (<img alt="" height="20" src="../img200/multilineinput-gutter-cross.png" vertical-align:text-bottom width="20" />). Clicking this cancels the multi-line input.</li>
+<li>The appearance/layout of several of the dialog boxes has been adjusted, but their options and functionality have not been changed.</li>
+</ul>
+<h3 id="tty-interface">TTY Interface</h3>
+<p>The following changes have been made to the TTY interface:</p>
+<ul>
+<li>A new keyboard shortcut has been added to toggle inline tracing:<ul>
+<li>key code: <strong>&lt;IT&gt;</strong></li>
+<li>keystroke – terminal emulator under Linux GUIs: <em>&lt;undefined&gt;</em></li>
+<li>keystroke – PuTTY terminal emulator: <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>Enter</kbd></li>
+</ul>
+</li>
+<li>The <em>Left Limit</em> command (<strong>&lt;LL&gt;</strong>) and <em>Right Limit</em> command (<strong>&lt;RL&gt;</strong>) have been enhanced to match the extended behaviour of the <kbd>Home</kbd> and <kbd>End</kbd> keys respectively (see <a href="#home-and-end-keys">Home and End Keys</a>).</li>
+</ul>
+<h2 id="interfaces-and-libraries">Interfaces and Libraries</h2>
+<h3 id="pcre-library">PCRE Library</h3>
+<p>The Perl Compatible Regular Expressions (PCRE) library used by the interpreter has been upgraded from PCRE v8.45 to PCRE2 v10.45.</p>
+<p>The new version of PCRE is not 100% compatible with the previous version. Although it is unlikely that typical uses will be affected, advanced users of <code>⎕S</code> or <code>⎕R</code> might want to consult the PCRE documentation and run tests.</p>
+<h3 id="net-interface">.NET Interface</h3>
+<p>In .NET, a <em>generic</em> class is a class that has type parameters which must be given values to create a concrete version of the class. Similarly, a generic method has type parameters which must be specified before the method can be called. </p>
+<p>The introduction of <a href="https://docs.dyalog.com/20.0/language-reference-guide/primitive-operators/i-beam/monadic-operator-generator/"><code>43⌶632</code></a> means that the .NET interface now supports creating concrete versions of generic classes, instantiating them, and calling generic methods. For more information, see the <a href="https://docs.dyalog.com/20.0/files/dotNET_Interface_Guide.pdf"><em>.NET Interface Guide</em></a>.</p>
+<p>The .NET Framework interface does not support generic classes.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Made with <a href="https://zensical.org/" target="_blank" rel="noopener"><strong>Zensical</strong></a><br/>Copyright &copy; 1982-2026 <strong><a href="https://dyalog.com" target="_blank" rel="noopener">Dyalog Limited</a></strong> (<button type="button" class="copy" title="Copy build info to the clipboard" data-done="copied" data-fail="copy failed" onclick="var b=this,s=b.nextElementSibling;navigator.clipboard?navigator.clipboard.writeText(b.textContent.trim()).then(function(){s.textContent=b.dataset.done},function(){s.textContent=b.dataset.fail}):s.textContent=b.dataset.fail">2026-11-17 tooling-port:7fc2363f</button><span class="copy-status" role="status"></span>).<br/>Except where otherwise noted, content on this site is licensed under a <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener"><strong>Creative Commons Attribution 4.0 International</strong></a> licence.
+    </div>
+  
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog" role="status" aria-atomic="true">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      
+      
+        
+        
+      <script id="__config" type="application/json">{"annotate":null,"base":"../../..","features":["content.action.view","content.code.copy","navigation.indexes","navigation.instant","navigation.path","navigation.prune","navigation.sections","navigation.tracking"],"redirect":null,"search":"../../../assets/javascripts/workers/search.719e0d91.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","clipboard.error":"Could not copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":{"provider":"mike"}}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.3cb411a8.min.js"></script>
+      
+    
+  </body>
+</html>

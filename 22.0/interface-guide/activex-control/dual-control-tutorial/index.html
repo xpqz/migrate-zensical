@@ -1,0 +1,3898 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://xpqz.github.io/migrate-zensical/22.0/interface-guide/activex-control/dual-control-tutorial/">
+      
+      
+      
+        <link rel="prev" href="../overview/">
+      
+      
+        <link rel="next" href="../../dde/introduction/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../documentation-theme-zensical/images/dyalog-ide-cube-2025.2.svg">
+      <meta name="generator" content="zensical-0.1.1">
+    
+    
+      
+        <title>The Dual Control Tutorial - Documentation</title>
+      
+    
+    
+      
+        
+      
+      <link rel="stylesheet" href="../../../assets/stylesheets/classic/main.0006804e.min.css">
+      
+        
+          
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/classic/palette.813d4b3f.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+    
+    
+      <link rel="stylesheet" href="../../../documentation-theme-zensical/css/dyalog.css">
+    
+    <script>__md_scope=new URL("../../..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer" aria-hidden="true"></label>
+    <div data-md-component="skip">
+      <a href="#__skip" class="md-skip">
+        Skip to content
+      </a>
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+          <aside class="md-banner md-banner--warning">
+            <div class="md-banner__inner md-grid md-typeset">
+              
+  You're not viewing the latest version.
+  <a href="../../../..">
+    <strong>Click here to go to latest.</strong>
+  </a>
+
+            </div>
+            <script>var el=document.querySelector("[data-md-component=outdated]"),base=new URL("../../..",location),outdated=__md_get("__outdated",sessionStorage,base);!0===outdated&&el&&(el.hidden=!1)</script>
+          </aside>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="Documentation" class="md-header__button md-logo" aria-label="Documentation" data-md-component="logo">
+      
+  <img src="../../../documentation-theme-zensical/images/dyalog-logo_orange.svg" alt="Documentation">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+      <span class="md-visually-hidden">Navigation</span>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              The Dual Control Tutorial
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-moon" viewBox="0 0 24 24"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+          <span class="md-visually-hidden">Search</span>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog" aria-label="Search">
+  <button type="button" class="md-search__button">
+    Search
+  </button>
+</div>
+      
+    
+    <div class="md-header__source">
+      
+        <a href="https://github.com/xpqz/migrate-zensical" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      
+    </div>
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="Documentation" class="md-nav__button md-logo" aria-label="Documentation" data-md-component="logo">
+      
+  <img src="../../../documentation-theme-zensical/images/dyalog-logo_orange.svg" alt="Documentation">
+
+    </a>
+    Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/xpqz/migrate-zensical" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_1" id="__nav_1_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Release Notes
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_1">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Release Notes
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../../release-notes/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  v21.0 Release Notes
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    
+  
+  
+  
+  
+    <a href="../../../earlier-release-notes/release-notes-v20-0/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Earlier Release Notes
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+  
+
+      
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Core Reference
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_2">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Core Reference
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../../language-reference-guide/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Dyalog APL Language
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../../programming-reference-guide/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Programming
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Code Tooling
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_3">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Code Tooling
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../../net-interface-guide/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  .NET Interface
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../../compiler-user-guide/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Compiler
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../../shared-code-files-user-guide/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Shared Code Files
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Dyalog for Microsoft Windows
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+            <label class="md-nav__title" for="__nav_4">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Dyalog for Microsoft Windows
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../../windows-installation-and-configuration-guide/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Installation/Configuration
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../../windows-ui-guide/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  User Interface
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../../object-reference/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Object Reference
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_4" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Interfaces
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        
+          <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="true">
+            <label class="md-nav__title" for="__nav_4_4">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Interfaces
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../introduction/overview/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Introduction
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../gui-tutorial/introduction/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  GUI Tutorial
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../graphics/introduction/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Graphics
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../composite-controls/toolcontrol-and-toolbutton/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Composite Controls
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../hints-and-tips/using-hints/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Hints and Tips
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../grid-object/using-the-grid-object/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Grid Object
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../mdi/introduction/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  MDI
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../docking/introduction/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Docking
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../ole-client/introduction/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  OLE Client
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../ole-server/introduction/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  OLE Server
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_4_12" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4_4_12" id="__nav_4_4_12_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  ActiveX Control
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_4_4_12_label" aria-expanded="true">
+            <label class="md-nav__title" for="__nav_4_4_12">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  ActiveX Control
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Introduction
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Overview
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+        <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  The Dual Control Tutorial
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  The Dual Control Tutorial
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+
+  
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Methods
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#properties" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Properties
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#events" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Events
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#introducing-the-dual-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Introducing the Dual Control
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#preparing-a-working-directory" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Preparing a Working Directory
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-started" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Getting Started
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#changing-dual-into-an-activex-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Changing Dual into an ActiveX Control
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing-the-dual-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Testing the Dual Control
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#defining-and-exporting-properties" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Defining and Exporting Properties
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#setting-properties-from-vb" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Setting Properties from VB
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#defining-and-exporting-events" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Defining and Exporting Events
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#using-events-from-vb" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Using Events from VB
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../dde/introduction/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  DDE
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../../net-framework-interface-guide/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  .NET Framework Interface
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Dyalog for Unix
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_5">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Dyalog for Unix
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../../unix-installation-and-configuration-guide/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Installation/Configuration
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+  
+    <a href="../../../unix-user-guide/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  User Interface
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  About
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_6">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  About
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../conventions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Conventions
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../licences-overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Third-party Licences
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../trademarks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Trademarks
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Methods
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#properties" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Properties
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#events" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Events
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#introducing-the-dual-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Introducing the Dual Control
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#preparing-a-working-directory" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Preparing a Working Directory
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-started" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Getting Started
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#changing-dual-into-an-activex-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Changing Dual into an ActiveX Control
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing-the-dual-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Testing the Dual Control
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#defining-and-exporting-properties" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Defining and Exporting Properties
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#setting-properties-from-vb" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Setting Properties from VB
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#defining-and-exporting-events" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Defining and Exporting Events
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#using-events-from-vb" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Using Events from VB
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+  
+
+
+  <nav class="md-path" aria-label="Navigation" >
+    <ol class="md-path__list">
+      
+        
+  
+  
+    <li class="md-path__item">
+      <a href="../../.." class="md-path__link">
+        
+  
+  <span class="md-ellipsis">
+    Dyalog v21.0
+  </span>
+
+      </a>
+    </li>
+  
+
+      
+      
+        
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+      
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+      <li class="md-path__item">
+        <a href="../../../windows-installation-and-configuration-guide/" class="md-path__link">
+          
+  
+  <span class="md-ellipsis">
+    Dyalog for Microsoft Windows
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+    
+  
+
+      
+        
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+      <li class="md-path__item">
+        <a href="../../" class="md-path__link">
+          
+  
+  <span class="md-ellipsis">
+    Interfaces
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+      <li class="md-path__item">
+        <a href="../introduction/" class="md-path__link">
+          
+  
+  <span class="md-ellipsis">
+    ActiveX Control
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ol>
+  </nav>
+
+              
+              <article class="md-content__inner md-typeset">
+                <a id="__skip" tabindex="-1"></a>
+                
+                  
+
+  
+  
+    
+      
+    
+    <a href="https://github.com/xpqz/migrate-zensical/raw/main/zensical/docs/interface-guide/activex-control/dual-control-tutorial.md" title="View source of this page" class="md-content__button md-icon">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 18c.56 0 1 .44 1 1s-.44 1-1 1-1-.44-1-1 .44-1 1-1m0-3c-2.73 0-5.06 1.66-6 4 .94 2.34 3.27 4 6 4s5.06-1.66 6-4c-.94-2.34-3.27-4-6-4m0 6.5a2.5 2.5 0 0 1-2.5-2.5 2.5 2.5 0 0 1 2.5-2.5 2.5 2.5 0 0 1 2.5 2.5 2.5 2.5 0 0 1-2.5 2.5M9.27 20H6V4h7v5h5v4.07c.7.08 1.36.25 2 .49V8l-6-6H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h4.5a8.2 8.2 0 0 1-1.23-2"/></svg>
+    </a>
+  
+
+
+<h1 id="the-dual-control-tutorial">The Dual Control Tutorial</h1>
+<p>The ActiveX control we will use in this example is deliberately an extremely simple one; so that the intricacies of the control itself do not get in the way of the principles involved. In practice, there are actually very few restrictions concerning the complexity of the ActiveX control, and it is perfectly possible to package complete multiple-window Dyalog APL applications in this way.</p>
+<p>Your ActiveX control will be called a <em>Dyalog Dual Control</em> and is based on the Dyalog APL TrackBar object.</p>
+<p>The Dual control allows the user to enter a number using a slider, whilst displaying its value in two different units. For example, you could use it to enter a temperature value which is displayed in both Centigrade and Fahrenheit units. Equally, the same control could be used to enter a measurement of length which is concurrently displayed in centimetres and inches.</p>
+<p><img alt="" src="../../img/dual-overview.png" /></p>
+<h2 id="methods">Methods</h2>
+<p>None (the Dual control provides no methods.)</p>
+<h2 id="properties">Properties</h2>
+<p>The Dual control provides the following properties:</p>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Caption1</td>
+<td>A text string that describes the primary units. This is displayed in the top left corner of the object.</td>
+</tr>
+<tr>
+<td>Caption2</td>
+<td>A text string that describes the secondary or derived units. This is displayed in the bottom left corner of the object.</td>
+</tr>
+<tr>
+<td>Value1</td>
+<td>The current value of the control measured in primary units</td>
+</tr>
+<tr>
+<td>Value2</td>
+<td>The current value of the control measured in secondary units.</td>
+</tr>
+<tr>
+<td>Intercept</td>
+<td>Used to derive Value2 from Value1</td>
+</tr>
+<tr>
+<td>Gradient</td>
+<td>Used to derive Value2 from Value1</td>
+</tr>
+<tr>
+<td>Min</td>
+<td>The minimum value of Value1</td>
+</tr>
+<tr>
+<td>Max</td>
+<td>The maximum value of Value1</td>
+</tr>
+</tbody>
+</table>
+<p>Value2 is derived from Value 1 using the expression:
+<pre class="highlight"><code class="language-apl">      Value2←Intercept+Gradient×Value1</code></pre></p>
+<h2 id="events">Events</h2>
+<p>Your Dual control will generate a <em>ChangeValue1</em> event whenever the user alters Value1 using the slider.</p>
+<p>The event message will contain a single parameter (the new value) which may be modified by the host application.</p>
+<p>In other words, every time the value in the control changes, the host application may detect this as an event and has the opportunity to override the user.</p>
+<p>Your Dual control will also generate a <em>ChangeValue2</em> event whenever the derived value in the control (Value2) changes. This event is reported for information only.</p>
+<h2 id="introducing-the-dual-control">Introducing the Dual Control</h2>
+<p>To save time, the basic APL code for the Dual control has already been written. Two workspaces are provided in the <code>samples\activex</code> subdirectory named <code>dualbase.dws</code> and <code>dualfns.dws</code>. You will use these workspaces to build the ActiveX control yourself.</p>
+<h2 id="preparing-a-working-directory">Preparing a Working Directory</h2>
+<p>To run this tutorial you will need to save files to a directory on your computer to which you have write access. This example uses a directory named <code>c:\MyWS</code>.</p>
+<p>The directory is required to store the workspace and ActiveXControl, <code>Dual.ocx</code> as you develop them.</p>
+<p>A Dyalog ActiveXControl uses  the dynamic-link library version of the Dyalog interpreter  which must be present in the same directory as the <code>.ocx</code> file, so you must copy the appropriate version here before you can start the tutorial. You may use either the Development DLL or the Run-Time DLL. If you choose to use the Development DLL, you will also need to copy the DyaRes DLL which it uses.</p>
+<p>For the names of these files corresponding to the version of Dyalog that you are using, see <a href="../../../windows-installation-and-configuration-guide/files-and-directories/">Files and Directories</a>.</p>
+<div class="admonition info">
+<p class="admonition-title">Information</p>
+<p>Under Microsoft Windows 7 and later, you have to have administrator privileges to register a COM component. Therefore, you must run Dyalog as administrator. If you fail to do this, the registration process will fail. If so, you can continue the process where you left off by closing Dyalog, restarting as administrator, and reloading the workspace.</p>
+</div>
+<h2 id="getting-started">Getting Started</h2>
+<ul>
+<li>
+<p>Load the <code>samples\activex\dualbase.dws</code> workspace:
+    <pre class="highlight"><code class="language-apl">      )LOAD dualbase
+C:\Program Files (x86)\Dyalog\Dyalog APL 15.0 Unicode\...</code></pre></p>
+</li>
+<li>
+<p>Run the function <code>TEST</code> and observe how the 2 Dual controls behave.</p>
+</li>
+<li>
+<p>View the function <code>TEST</code> and observe how 2 separate instances of the <code>Dual</code> namespace <code>F.D1</code> and <code>F.D2</code> have been created using <code>⎕OR</code> and <code>⎕NS</code>.</p>
+</li>
+<li>
+<p>Using the Dyalog APL Workspace Explorer, open up the various namespaces. See how <code>F.D1</code> and <code>F.D2</code> are clones of <code>Dual</code>.</p>
+</li>
+<li>
+<p>Open the function <code>Dual.Create</code> and see how the individual components of the control are defined.</p>
+</li>
+<li>
+<p>Close the Form <code>F</code>.</p>
+</li>
+</ul>
+<h2 id="changing-dual-into-an-activex-control">Changing Dual into an ActiveX Control</h2>
+<p>Change the name of the workspace to Dual in a directory to which you have write-access:
+<pre class="highlight"><code class="language-apl">      )WSID c:\MyWS\Dual</code></pre></p>
+<p>Make a new namespace called <code>F</code>
+<pre class="highlight"><code class="language-apl">      )NS F</code></pre></p>
+<p>Using the Workspace Explorer, move the <code>Dual</code> namespace into <code>F</code>, so that <code>Dual</code> is a child namespace of <code>F</code>.</p>
+<p>Now edit the function <code>F.Dual.Create</code> and make the following changes:</p>
+<p>Remove all references to the local variable <code>POSITION</code>. This change is required because an ActiveX control has no say in its position within its parent. (Hint: use the Search/Replace dialog to remove all occurrences of <code>POSITION+</code>)</p>
+<p>Remove the right argument, <code>SIZE</code> and change <code>Create[1]</code> from:
+<pre class="highlight"><code class="language-apl">      H W←SIZE</code></pre></p>
+<p>to
+<pre class="highlight"><code class="language-apl">      H W←Size</code></pre></p>
+<p>This change allows the control to fit itself within the space allocated by the host application.</p>
+<p>Change <code>Create[4]</code> from:
+<pre class="highlight"><code class="language-apl">      CH←⊃##.GetTextSize 'W'</code></pre></p>
+<p>to
+<pre class="highlight"><code class="language-apl">      CH←⊃GetTextSize 'W'</code></pre></p>
+<p>The original code was designed to pick up the character height from the parent Form. The ActiveXControl object does this automatically via its own GetTextSize method.</p>
+<p>After making these changes, the Create function should be as follows:
+<pre class="highlight"><code class="language-apl">     ∇ Create;H;W;POS;SH;CH;Y1;Y2
+[1]    H W←Size
+[2]    SH←40 ⍝ Default TrackBar height
+[3]    POS←2↑⌊0.5×0⌈(H-SH)
+[4]    CH←⊃GetTextSize'W'
+[5]    'Slider'⎕WC'TrackBar'(POS)('Size'SH W)
+[6]    Slider.(Limits AutoConf)←(Min,Max)0
+[7]    Slider.(TickSpacing TickAlign)←10 'Top'
+[8]    Slider.onThumbDrag←'ChangeValue'
+[9]    Slider.onScroll←'ChangeValue'
+[10]   Y1←POS[1]-CH+1
+[11]   Y2←POS[1]+SH+1
+[12]   'Cap1'⎕WC'Text'Caption1(Y1,0)('AutoConf' 0)
+[13]   'Cap2'⎕WC'Text'Caption2(Y2,0)('AutoConf' 0)
+[14]   'V1'⎕WC'Text'(⍕Value1)(Y1,W)
+                    ('HAlign' 2)('AutoConf' 0)
+[15]   CalcValue2
+[16]   'V2'⎕WC'Text'(⍕Value2)(Y2,W)
+                    ('HAlign' 2)('AutoConf' 0)
+     ∇</code></pre></p>
+<p>Open the function <code>F.Dual.Build</code>. This function turns the Dual's parent namespace into a Form (an ActiveXControl  requires a parent Form) and turns Dual itself into an ActiveXControl. It then attaches functions Create and Configure as callbacks on the Create and Configure events of the ActiveXControl object itself.
+<pre class="highlight"><code class="language-apl">     ∇ Build
+[1]    ##.⎕WC'Form'('Coord' 'Pixel')('KeepOnClose' 1)
+[2]    ⎕WC'ActiveXControl'('Size' 80 200)
+                          ('KeepOnClose' 1)
+[3]    ⎕WS'Event' 'Create' 'Create'
+[4]    ⎕WS'Event' 'Configure' 'Configure'
+[5]    ⎕NQ'' 'Create'
+     ∇</code></pre></p>
+<p>Run function <code>F.Dual.Build</code>. You should see a Form containing a single instance of the Dual control. Please resist any temptation to play with it at this stage; we want it to be in its default state for when we save it.</p>
+<p>Type the following expression; the ClassID, which uniquely identifies your control (and so will not be the same as that shown below), is allocated when you create the ActiveXControl object:
+<pre class="highlight"><code class="language-apl">        F.Dual.ClassID
+{002F9614-50F7-4F3B-BB0B-FA3316964E78}</code></pre></p>
+<p>Save the workspace (<code>c:\MyWS\Dual.dws</code>).</p>
+<p>From the Session <em>File</em> menu, select <em>Export</em>, choose where you want to save your OCX, and then click Save. It is a good idea to clear the <em>Runtime application</em> checkbox so that you can debug the control if anything goes wrong.</p>
+<p><img alt="" src="../../img/dual-export.png" /></p>
+<p><img alt="" src="../../img/dual-export-1.png" /></p>
+<h2 id="testing-the-dual-control">Testing the Dual Control</h2>
+<p>This section describes how you can test and exercise the Dual control using any appropriate version of Microsoft Visual Studio, such as Microsoft Visual Studio Community 2015, and  language (e.g. Visual Basic) of your choice. This tool is henceforth referred to herein as VB.</p>
+<ul>
+<li>Start VB and create a new <em>Windows Forms Application Project</em>.</li>
+<li>Click the right mouse button in the General section of the Toolbox window and select  <em>Choose Items ...</em> from the pop-up menu. In the <em>Choose Toolbox Items</em> dialog box, click the <em>COM Components</em> tab.</li>
+<li>Locate the control named <em>Dyalog Dual Control</em>, enable its check box and click <em>OK</em>. This adds a tool for the Dual control to the VB Toolbox.</li>
+<li>Click on the new tool and drag it onto your Form. An instance of the Dual control will appear.</li>
+<li>Repeat this step to position a second instance of the Dual control on your VB Form.</li>
+<li>Click the <em>Start Debugging</em> button.</li>
+<li>Exercise the two Dual controls.</li>
+<li>Click the <em>Stop Debugging</em> button.</li>
+<li>Click on one of the Dual controls and scroll through its Property list. All the properties listed are standard VB ones; there are no properties (or indeed methods and events) exported. We will learn how to do this next.</li>
+</ul>
+<p>Close but <strong>do not</strong> save the project.</p>
+<h2 id="defining-and-exporting-properties">Defining and Exporting Properties</h2>
+<p>Back in the Dyalog Session, change space into the <code>F.Dual</code> namespace.
+<pre class="highlight"><code class="language-apl">      )CS F.Dual</code></pre></p>
+<p>The properties we wish to export are:</p>
+<table>
+    <tr>
+        <td>Caption1</td>
+        <td>Description of the primary set of units</td>
+    </tr>
+    <tr>
+        <td>Caption2</td>
+        <td>Description of the secondary set of units</td>
+    </tr>
+    <tr>
+        <td>Value1</td>
+        <td>The primary value in the control</td>
+    </tr>
+    <tr>
+        <td>Min</td>
+        <td>Minimum for Value1</td>
+    </tr>
+    <tr>
+        <td>Max</td>
+        <td>Maximum for Value1</td>
+    </tr>
+    <tr>
+        <td>Intercept</td>
+        <td>Used to derive the secondary value (Value2)</td>
+    </tr>
+    <tr>
+        <td>Gradient</td>
+        <td>Used to derive the secondary value (Value2)</td>
+    </tr>
+</table>
+
+<p>Although we could export all these properties as variables, it is generally more useful to employ <em>Get</em> and <em>Put</em> functions. The reason for this is that there is no mechanism to detect when the host application changes a property/variable; nor is there any mechanism to prevent it assigning an inappropriate value. The <em>Get</em> and <em>Put</em> functions you need are listed below. To save you time, you can copy them in from the workspace <code>samples\activex\dualfns.dws</code>.
+<pre class="highlight"><code class="language-apl">      )COPY dualfns
+C:\Program Files (x86)\Dyalog\Dyalog APL 15.0 Unicode\...
+
+     ∇ R←GetCaption1
+[1]    R←Caption1
+
+     ∇ SetCaption1 C
+[1]    Cap1.Text←Caption1←C
+
+     ∇ R←GetCaption2
+[1]    R←Caption2
+
+     ∇ SetCaption2 C
+[1]    Cap2.Text←Caption2←C
+
+     ∇ R←GetIntercept
+[1]    R←Intercept
+
+     ∇ SetIntercept I
+[1]    Intercept←I
+[2]    CalcValue2
+[3]    V2.Text←⍕Value2
+
+     ∇ R←GetGradient
+[1]    R←Gradient
+
+     ∇ SetGradient G
+[1]    Gradient←G
+[2]    CalcValue2
+[3]    V2.Text←⍕Value2
+
+     ∇ R←GetValue1
+[1]    R←Value1
+
+     ∇ SetValue1 V
+[1]    1 ⎕NQ'' 'ChangeValue'V</code></pre></p>
+<p>The <code>Get</code> functions need no explanation; they simply return the value of the corresponding variable. The <code>Set</code> functions assign a new value to the corresponding variable and update the control accordingly. <code>SetValue1</code> does this by enqueuing a Scroll event to the Slider, which in turn invokes the <code>ChangeValue</code> callback.</p>
+<p>Display the <em>Object Properties</em> dialog box for the function <code>GetCaption1</code>. (Hint: use the Workspace Explorer).</p>
+<p>Select the <em>COM Properties</em> tab. As you have not yet defined any OLE attributes, the default display is as follows:</p>
+<p><img alt="" src="../../img/dual-getcaption1-a.png" /></p>
+<p>Check the <em>Exported</em> option button.</p>
+<p>Change the data type for the <em>Result</em> to VT_BSTR (a text string).</p>
+<p>Check the <em>Prop Get</em> radio button to indicate that this is a <em>Property Get</em> function and enter the name of the property (<code>Caption1</code>) to which it applies.</p>
+<p>It is not necessary for the property name referenced by the <em>Get</em> and <em>Put</em> functions to correspond to a variable name, although in this case it does.</p>
+<p>The final <em>COM Properties</em> dialog box for <code>GetCaption1</code> should appear as follows. Click <em>OK</em> to save your changes.</p>
+<p><img alt="" src="../../img/dual-getcaption1-b.png" /></p>
+<p>Now do the same for the <code>SetCaption1</code> function. This function takes an argument which it expects to be a character vector. It must therefore be defined as having a single parameter of data type VT_BSTR; the parameter name is unimportant. However, you must ensure that the <em>Optional</em> button is unchecked.</p>
+<p>In APL terms, the function does not return a result. However, in OLE terms the result is defined to be of type VT_VOID. Alternatively, you may just leave this field empty.</p>
+<p>The OLE properties for <code>SetCaption1</code> should appear as follows:</p>
+<p><img alt="" src="../../img/dual-setcaption1.png" /></p>
+<p>An alternative way to define the syntax for exported functions is to use the <em>COM Functions</em> tab in the Properties dialog box for the ActiveXControl object itself. (Hint: using the Workspace Explorer, open <code>F</code> so that its contents, <code>Dual</code>, are displayed in the right-hand list, select <code>Dual</code>, then click <em>Props</em>).</p>
+<p>The <em>COM Functions</em> tab should appear as follows:</p>
+<p><img alt="" src="../../img/dual-com-functions-a.png" /></p>
+<p>The right-hand Combo box allows you to view and edit their syntax for the exported functions you have already defined. The left-hand Combo box displays the list of other non-exported functions that are defined in the ActiveXControl.</p>
+<p>Select <code>GetCaption2</code> from the left-hand Combo box, and then click <em>Add</em>. The dialog box will change to display the default syntax for <code>GetCaption2</code>. Alter the <em>Result</em> data type to VT_BSTR, select <em>Prop Get</em>, and enter the name of the property, <code>Caption2</code>, so that the dialog box appears as follows:</p>
+<p><img alt="" src="../../img/dual-com-functions-b.png" /></p>
+<p>The third way to define the syntax for exported functions is to use the SetFnInfo method of the ActiveXControl object. This allows you to export functions using APL code, which in some circumstances may be more convenient than filling in dialog boxes.</p>
+<p>The SetFnInfo method requires the name of the function, its syntax, a help id, a code which specifies its type (0 = method, 2 = property get, 4 = property put) and, if appropriate, the name of the property to which it applies, that is
+<pre class="highlight"><code class="language-apl">      SetFnInfo fn syntax helpid type property</code></pre></p>
+<p>The function <code>syntax</code> is a nested array whose first element defines the function's result and whose subsequent elements define each of its parameters. Each syntax specifier is a single character string that defines a data type, or a pair of character strings. If so, the first string for the result defines a help string, and the first string for each parameter defines its name.</p>
+<p>The following table describes the information we must specify for each of the functions to be exported:</p>
+<p><strong>Exported Functions</strong></p>
+<table>
+    <tr>
+        <th rowspan="2">Function</th>
+        <th rowspan="2">Result</th>
+        <th colspan="2">Parameter</th>
+        <th rowspan="2">Get/Put</th>
+        <th rowspan="2">Property</th>
+    </tr>
+    <tr>
+        <th>Name</th>
+        <th>Type</th>
+    </tr>
+    <tr>
+        <td>GetCaption1</td>
+        <td>VT_BSTR</td>
+        <td>&#160;</td>
+        <td>&#160;</td>
+        <td>Get(2)</td>
+        <td>Caption1</td>
+    </tr>
+    <tr>
+        <td>GetCaption2</td>
+        <td>VT_BSTR</td>
+        <td>&#160;</td>
+        <td>&#160;</td>
+        <td>Get(2)</td>
+        <td>Caption2</td>
+    </tr>
+    <tr>
+        <td>GetGradient</td>
+        <td>VT_R8</td>
+        <td>&#160;</td>
+        <td>&#160;</td>
+        <td>Get(2)</td>
+        <td>Gradient</td>
+    </tr>
+    <tr>
+        <td>GetIntercept</td>
+        <td>VT_R8</td>
+        <td>&#160;</td>
+        <td>&#160;</td>
+        <td>Get(2)</td>
+        <td>Intercept</td>
+    </tr>
+    <tr>
+        <td>GetValue1</td>
+        <td>VT_I4</td>
+        <td>&#160;</td>
+        <td>&#160;</td>
+        <td>Get(2)</td>
+        <td>Value1</td>
+    </tr>
+    <tr>
+        <td>SetCaption1</td>
+        <td>VT_VOID</td>
+        <td>Caption1</td>
+        <td>VT_BSTR</td>
+        <td>Put(4)</td>
+        <td>Caption1</td>
+    </tr>
+    <tr>
+        <td>SetCaption2</td>
+        <td>VT_VOID</td>
+        <td>Caption2</td>
+        <td>VT_BSTR</td>
+        <td>Put(4)</td>
+        <td>Caption2</td>
+    </tr>
+    <tr>
+        <td>SetGradient</td>
+        <td>VT_VOID</td>
+        <td>Gradient</td>
+        <td>VT_R8</td>
+        <td>Put(4)</td>
+        <td>Gradient</td>
+    </tr>
+    <tr>
+        <td>SetIntercept</td>
+        <td>VT_VOID</td>
+        <td>Intercept</td>
+        <td>VT_R8</td>
+        <td>Put(4)</td>
+        <td>Intercept</td>
+    </tr>
+    <tr>
+        <td>SetValue1</td>
+        <td>VT_VOID</td>
+        <td>Value1</td>
+        <td>VT_I4</td>
+        <td>Put(4)</td>
+        <td>Value1</td>
+    </tr>
+</table>
+
+<p>From this table we can easily construct the corresponding SetFnInfo statements. For example, the statement for <code>GetCaption1</code> is:
+<pre class="highlight"><code class="language-apl">      SetFnInfo 'GetCaption1' 'VT_BSTR' ¯1 2 'Caption1'</code></pre></p>
+<p>The <code>¯1</code> in the 3rd element of the right argument specifies that there is no help id.</p>
+<p>Open the function <code>F.Dual.EXPORT</code>; this contains statements to export all the <em>Get</em> and <em>Put</em> functions we need.</p>
+<p>Run the function and save the workspace.
+<pre class="highlight"><code class="language-apl">      )CS
+#
+      F.Dual.EXPORT
+            )SAVE
+c:\MyWS\Dual.dws saved Mon Aug  1 14:52:14 2016
+</code></pre></p>
+<p>Then, re-export the workspace, updating your <code>.ocx</code> file with all the new information.</p>
+<p><img alt="" src="../../img/dual-export-2.png" /></p>
+<h2 id="setting-properties-from-vb">Setting Properties from VB</h2>
+<p>Start VB and create a new Windows Forms Application Project.</p>
+<p>If the Dyalog Dual Control is not already in the Toolbox, click the right mouse button in the General section of the Toolbox window and select  <em>Choose Items ...</em> from the pop-up menu. In the <em>Choose Toolbox Items</em> dialog box, click the <em>COM Components</em> tab.</p>
+<p>Locate the control named <em>Dyalog DUAL Control</em>, enable its checkbox and click <em>OK</em>. This adds a tool for the Dual control to the VB Toolbox.</p>
+<p>Click on the Dyalog Dual tool and drag it onto your Form. An instance of the Dual control will appear.</p>
+<p>In the Properties dialog box, change the default Dual1 properties to the following:</p>
+<table>
+    <tr>
+        <td>Caption1</td>
+        <td>Centimetres</td>
+    </tr>
+    <tr>
+        <td>Caption2</td>
+        <td>Inches</td>
+    </tr>
+    <tr>
+        <td>Gradient</td>
+        <td>0.3937</td>
+    </tr>
+    <tr>
+        <td>Intercept</td>
+        <td>0</td>
+    </tr>
+</table>
+
+<p>Double-click the left mouse button over your Form (<em>Form1</em>). This will bring up the code editor dialog box. Edit the <code>Form1_Load()</code> subroutine, entering the program statements shown below. This code will be run when VB starts your application and loads the Form <em>Form1</em>. It illustrates how you can change the properties of your Dyalog APL ActiveX control dynamically.</p>
+<p><img alt="" src="../../img/dual-form1-load-1.png" /></p>
+<p>Now test your application by clicking <em>Start Debugging</em>. When you have finished, click  <em>Stop Debugging</em>.</p>
+<p>Close but <strong>do not</strong> save the project. This is necessary to allow you to rebuild the Dual ActiveX control which is (currently) loaded in your VB application. Otherwise, Dyalog will be unable to overwrite the <code>.ocx</code> file.</p>
+<h2 id="defining-and-exporting-events">Defining and Exporting Events</h2>
+<p>Back in Dyalog, using the Workspace Explorer, open the callback function <code>F.Dual.ChangeValue</code> and alter <code>ChangeValue[2]</code> from:
+<pre class="highlight"><code class="language-apl">    Value1←⊃¯1↑MSG</code></pre></p>
+<p>to
+<pre class="highlight"><code class="language-apl">    Value1←⊃4 ⎕NQ '' 'ChangeValue1' (⊃¯1↑MSG)</code></pre></p>
+<p>Then close the function. Previously, the <code>ChangeValue</code> function simply accepted the new value (of the TrackBar thumb) that it received as the last element of the event message. Now it generates an external ChangeValue1 event for the host application using <code>4 ⎕NQ</code>. The host may in turn modify the new value which is returned as the result of the expression. Thus, not only can Dyalog APL generate events which are detectable by the host application, it can also accept modifications.</p>
+<p>Again using the Workspace Explorer, open the Properties dialog box for the Dual object itself and select the <em>COM Events</em> tab.</p>
+<p>Enter the name of the event <code>ChangeValue1</code> into the edit box labelled <em>Name</em>.</p>
+<p>Click <em>Add</em></p>
+<p>Click the right mouse button over the <em>Result</em> row and select <em>Insert</em></p>
+<p>In the column labelled <em>Param Name</em> enter  <code>Value1</code>, then change the <em>Type</em> to VT_I4 and the <em>Modifier</em> to VT_PTR. This defines a parameter named <code>Value1</code> that supplies a pointer to an integer. The fact that it is a <em>pointer</em> means that the (integer) parameter may be modified by the host application.</p>
+<p>The final appearance of this dialog box should be as follows:</p>
+<p><img alt="" src="../../img/dual-com-events.png" /></p>
+<p>Click <em>OK</em>, change back to the root space, and save the workspace.
+<pre class="highlight"><code class="language-apl">      )CS #
+      )SAVE</code></pre></p>
+<p>Select <em>File/Export</em> and rebuild your <code>.ocx</code> file.</p>
+<p><img alt="" src="../../img/dual-com-events-1.png" /></p>
+<h2 id="using-events-from-vb">Using Events from VB</h2>
+<p>Back in VB, create a new Windows Application Project.</p>
+<p>Check that the <em>Dyalog DUAL Control</em> tool is available in the ToolBox.</p>
+<p>If not:</p>
+<ul>
+<li>click the right mouse button in the General section of the Toolbox window and select  <em>Choose Items ...</em> from the pop-up menu. In the <em>Choose Toolbox Items</em> dialog box, click the <em>COM Components</em> tab.</li>
+<li>locate the control named <em>Dyalog DUAL Control</em>, set its checkbox on and click <em>OK</em>. This adds a tool for the Dual control to the VB Toolbox.</li>
+</ul>
+<p>Click on the <em>Dyalog DUAL Control</em> tool and drag it onto your Form. An instance of the Dual control will appear.</p>
+<p>Select the label tool and add a label object (<em>Label1</em>) to the Form. Select its Font property and change it to 14-point bold.</p>
+<p><img alt="" src="../../img/dual-com-events-2.png" /></p>
+<p>View the code window and choose the object AxDual1 and its only event ChangeValue1. Enter a line of code to set the Caption property of the Label object Label1 to the String equivalent of the event parameter Value1.</p>
+<p>Enter the following code, and then close the code window, that is
+<pre class="highlight"><code class="language-apl">Label1.Text = Str(e.Value1)</code></pre></p>
+<p><img alt="" src="../../img/dual-com-events-3.png" /></p>
+<p>Start the application using <em>Start Debugging</em>. Exercise the Dual control and observe that VB updates the Label1 control in response to the ChangeValue1 events. When you have finished, select <em>Stop Debugging</em>.</p>
+<p><img alt="" src="../../img/dual-com-events-4.png" /></p>
+<p>In the code window, add the following line of code to the <code>AxDual1_ChangeValue</code> subroutine:
+<pre class="highlight"><code class="language-apl">e.Value1=2 * (e.Value1\2)</code></pre></p>
+<p><img alt="" src="../../img/dual-com-events-5.png" /></p>
+<p>Start the application using <em>Start Debugging</em>. Exercise the Dual control and observe that now the slider moves in increments of 2. When you have finished, select <em>Stop Debugging</em></p>
+<p><img alt="" src="../../img/dual-com-events-6.png" /></p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Made with <a href="https://zensical.org/" target="_blank" rel="noopener"><strong>Zensical</strong></a><br/>Copyright &copy; 1982-2026 <strong><a href="https://dyalog.com" target="_blank" rel="noopener">Dyalog Limited</a></strong> (<button type="button" class="copy" title="Copy build info to the clipboard" data-done="copied" data-fail="copy failed" onclick="var b=this,s=b.nextElementSibling;navigator.clipboard?navigator.clipboard.writeText(b.textContent.trim()).then(function(){s.textContent=b.dataset.done},function(){s.textContent=b.dataset.fail}):s.textContent=b.dataset.fail">2026-11-17 tooling-port:7fc2363f</button><span class="copy-status" role="status"></span>).<br/>Except where otherwise noted, content on this site is licensed under a <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener"><strong>Creative Commons Attribution 4.0 International</strong></a> licence.
+    </div>
+  
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog" role="status" aria-atomic="true">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      
+      
+        
+        
+      <script id="__config" type="application/json">{"annotate":null,"base":"../../..","features":["content.action.view","content.code.copy","navigation.indexes","navigation.instant","navigation.path","navigation.prune","navigation.sections","navigation.tracking"],"redirect":null,"search":"../../../assets/javascripts/workers/search.719e0d91.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","clipboard.error":"Could not copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":{"provider":"mike"}}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.3cb411a8.min.js"></script>
+      
+    
+  </body>
+</html>
