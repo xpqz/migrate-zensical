@@ -196,6 +196,30 @@ def test_titles_keep_plain_h1():
     assert build_chm.mark_example_headings(html) == html
 
 
+def test_title_syntax_gets_the_pre_july_float_classes():
+    html = '<h1 id="x"><span class="title-name">N</span> <code>S</code></h1><p><code>c</code></p>'
+    soup = BeautifulSoup(build_chm.mark_title_syntax(html), "html.parser")
+    h1 = soup.find("h1")
+    assert h1["class"] == ["syntax"]
+    # The old IE engine drops a right float that follows inline text onto the
+    # next line, so the name floats left as it did before July.
+    assert h1.find("span")["class"] == ["title-name", "name"]
+    assert h1.find("code")["class"] == ["command"]
+    assert not soup.find("p").find("code").has_attr("class")
+
+
+def test_title_syntax_multiline_and_untitled_pages():
+    html = '<h1><span class="title-name">Bind</span> <code>A<br>B</code></h1>'
+    assert '<code class="command">A<br/>B</code>' in build_chm.mark_title_syntax(html)
+    plain = "<h1>Basic Usage</h1>"
+    assert build_chm.mark_title_syntax(plain) == plain
+
+
+def test_title_syntax_keeps_title_extraction():
+    out = build_chm.mark_title_syntax('<h1><span class="title-name">N</span> <code>S</code></h1>')
+    assert build_chm.extract_h1(out, for_title=True) == "N"
+
+
 def test_images_come_from_included_guides(site):
     for image in ("net-interface-guide/img/a.png", "unix-user-guide/img/b.png"):
         (site.docs / image).parent.mkdir(parents=True, exist_ok=True)
