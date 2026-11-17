@@ -392,3 +392,26 @@ def test_case_mismatch_is_error_and_not_pruned(tmp_path):
 def test_fenced_multiline_img_ignored(tmp_path):
     body = "```html\n<img\n src=\"a/no.png\">\n```\n"
     assert [p.severity for p in used_by(tmp_path, body)] == ["warning"]
+
+
+def test_thumbnail_link_marks_both_used(tmp_path):
+    body = "[![t](a/thumb.png)](a/full.png)\n"
+    assert used_by(tmp_path, body, ("a/thumb.png", "a/full.png")) == []
+
+
+def test_thumbnail_missing_inner_is_error(tmp_path):
+    body = "[![t](a/gone.png)](a/full.png)\n"
+    probs = used_by(tmp_path, body, ("a/full.png",))
+    assert [(p.severity, p.line) for p in probs] == [("error", 1)]
+    assert "gone.png" in probs[0].message
+
+
+def test_thumbnail_missing_outer_is_not_error(tmp_path):
+    body = "[![t](a/pic.png)](a/gone.png)\n"
+    assert used_by(tmp_path, body) == []
+
+
+def test_escaped_bracket_in_alt_text(tmp_path):
+    assert used_by(tmp_path, "![a \\] b](a/pic.png)\n") == []
+    probs = used_by(tmp_path, "![a \\] b](a/gone.png)\n")
+    assert [p.severity for p in probs if p.severity == "error"] == ["error"]

@@ -176,7 +176,7 @@ def check_search_exclusions(site: Site) -> list[Problem]:
 
 
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"}
-_MD_TARGET = re.compile(r"(!?)\[[^\]]*\]\(\s*(?:<([^>]*)>|([^)\s]+))")
+_MD_TARGET = re.compile(r"\]\(\s*(?:<([^>]*)>|([^)\s]+))")
 _REF_DEF = re.compile(r"^ {0,3}\[[^\]]+\]:\s*(?:<([^>]*)>|(\S+))", re.MULTILINE)
 _HTML_TAG = re.compile(r"<([a-zA-Z][\w-]*)\b([^>]*)>")
 _HTML_ATTR = re.compile(
@@ -195,6 +195,35 @@ def _resolve(base_dir: str, target: str) -> str | None:
     if target.startswith("/"):
         return posixpath.normpath(target.lstrip("/"))
     return posixpath.normpath(posixpath.join(base_dir, target))
+
+
+def _escaped(text: str, i: int) -> bool:
+    """True if text[i] is preceded by an odd number of backslashes."""
+    j = i
+    while j > 0 and text[j - 1] == "\\":
+        j -= 1
+    return (i - j) % 2 == 1
+
+
+def _is_embedded(text: str, close: int) -> bool:
+    """Whether the link text closed by text[close] == "]" opens with "![".
+
+    Scans back over nested and escaped brackets, so a thumbnail
+    [![t](a.png)](b.png) classifies the inner target as an image and the
+    outer one as a plain link.
+    """
+    depth = 0
+    for i in range(close - 1, -1, -1):
+        c = text[i]
+        if c not in "[]" or _escaped(text, i):
+            continue
+        if c == "]":
+            depth += 1
+        elif depth:
+            depth -= 1
+        else:
+            return i > 0 and text[i - 1] == "!" and not _escaped(text, i - 1)
+    return False
 
 
 def _is_image(target: str) -> bool:
@@ -222,7 +251,8 @@ def _page_image_refs(site: Site, page: str) -> list[tuple[int, str, bool]]:
             found.append((text.count("\n", 0, pos) + 1, path, embedded))
 
     for m in _MD_TARGET.finditer(text):
-        add(m.start(), m[2] or m[3] or "", m[1] == "!")
+        if not _escaped(text, m.start()):
+            add(m.start(), m[1] or m[2] or "", _is_embedded(text, m.start()))
     for m in _REF_DEF.finditer(text):
         add(m.start(), m[1] or m[2] or "", False)
     for tag in _HTML_TAG.finditer(text):
