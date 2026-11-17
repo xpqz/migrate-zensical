@@ -30,6 +30,7 @@ permissions:
 
 jobs:
   build-assets:
+    if: false  # TEMP
     uses: ./.github/workflows/chm.yml
     with:
       generate_chm: true
@@ -38,10 +39,9 @@ jobs:
     secrets: inherit
 
   publish-site:
-    needs: build-assets
     uses: ./.github/workflows/publish.yml
     with:
       version_override: ${{ inputs.version_override || '22.0' }}
-      set_as_latest: ${{ inputs.set_as_latest }}
+      set_as_latest: ${{ inputs.set_as_latest == true }}
       site_url_override: ${{ inputs.site_url_override || 'https://xpqz.github.io/migrate-zensical/' }}
     secrets: inherit
