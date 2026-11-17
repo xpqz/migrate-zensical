@@ -166,7 +166,7 @@ jobs:
         run: |
           FILES="Jenkinsfile service.yml .rsync-exclude get_svn_docbin"
           PAGES="$RUNNER_TEMP/gh-pages"
-          git worktree add "$PAGES" gh-pages
+          git worktree add --quiet "$PAGES" gh-pages
           for f in $FILES; do
             # -p keeps get_svn_docbin executable.
             cp -p "tools/jenkins/$f" "$PAGES/$f"
