@@ -1,0 +1,62 @@
+name: Check
+
+# Runs the test suite and the content checks on every pull request and on
+# pushes to main. The platforms job builds the site on Windows and macOS,
+# weekly and on demand, since the day-to-day checks only run on Linux.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # The house style is a submodule under zensical/docs/.
+          submodules: recursive
+
+      - uses: astral-sh/setup-uv@v10.3.3
+
+      - name: Install all dependency groups
+        # The Python version comes from .python-version, the pins from uv.lock.
+        # All groups, so the CHM tests run instead of being skipped.
+        run: uv sync --all-groups --locked
+
+      - name: Tests
+        run: uv run pytest -q
+
+      - name: Content checks and build
+        run: uv run python tools/check.py
+
+  platforms:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - uses: astral-sh/setup-uv@v10.3.3
+
+      - name: Install all dependency groups
+        run: uv sync --all-groups --locked
+
+      - name: Tests
+        run: uv run pytest -q
+
+      - name: Build the site
+        working-directory: zensical
+        run: uv run zensical build --clean
