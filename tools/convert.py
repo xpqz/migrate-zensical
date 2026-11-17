@@ -361,7 +361,7 @@ def _remove(path):
 
 def _clean_owned(output, preserved):
     """Wipe convert-owned paths under the output, keeping docs/ and the
-    preserved asset directories (docs/ children) intact, so a re-run is
+    house-style submodule (docs/documentation-theme-zensical) intact, so a re-run is
     deterministic without disturbing the assets."""
     if not output.exists():
         return
