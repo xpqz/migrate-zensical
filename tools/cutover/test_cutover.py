@@ -18,6 +18,7 @@ from fixture_tree import (
     STUB_WORKFLOWS,
     THEME_GITLINK,
     THEME_URL,
+    UPSTREAM_URL,
     build_overlay_tree,
     build_tooling_repo,
     build_upstream_repo,
@@ -28,6 +29,8 @@ from fixture_tree import (
 CUTOVER_DIR = Path(cutover.__file__).resolve().parent
 
 VERSION = "22.0"
+REPO_URL = "https://github.com/Dyalog/documentation"
+COMMIT_B_ARGS = {"version": VERSION, "repo_url": REPO_URL, "theme_url": THEME_URL}
 
 
 @pytest.fixture
@@ -55,7 +58,7 @@ def show(repo, path, rev="HEAD"):
 def run_both_commits(upstream, tooling):
     plan = cutover.rename_plan(upstream, cutover.load_mounts(upstream))
     a = cutover.commit_renames(upstream, plan)
-    b = cutover.commit_transform(upstream, tooling, version=VERSION)
+    b = cutover.commit_transform(upstream, tooling, **COMMIT_B_ARGS)
     return a, b
 
 
@@ -132,6 +135,32 @@ def test_assert_pure_renames_rejects_additions(upstream):
         cutover.assert_pure_renames(upstream, sha)
 
 
+def test_assert_pure_renames_rejects_a_mode_change(upstream):
+    git(upstream, "mv", "docs/conventions.md", "docs/moved.md")
+    git(upstream, "update-index", "--chmod=+x", "docs/moved.md")
+    git(upstream, "commit", "-q", "-m", "Rename and make executable")
+    sha = git(upstream, "rev-parse", "HEAD").strip()
+    with pytest.raises(cutover.CutoverError, match="docs/moved.md"):
+        cutover.assert_pure_renames(upstream, sha)
+
+
+def test_assert_pure_renames_rejects_deletions(upstream):
+    git(upstream, "rm", "-q", "docs/conventions.md")
+    git(upstream, "commit", "-q", "-m", "Delete only")
+    sha = git(upstream, "rev-parse", "HEAD").strip()
+    with pytest.raises(cutover.CutoverError, match="docs/conventions.md"):
+        cutover.assert_pure_renames(upstream, sha)
+
+
+def test_assert_pure_renames_rejects_copies(upstream):
+    (upstream / "docs" / "copy.md").write_bytes((upstream / "docs" / "conventions.md").read_bytes())
+    git(upstream, "add", "docs/copy.md")
+    git(upstream, "commit", "-q", "-m", "Copy")
+    sha = git(upstream, "rev-parse", "HEAD").strip()
+    with pytest.raises(cutover.CutoverError, match="docs/copy.md"):
+        cutover.assert_pure_renames(upstream, sha)
+
+
 # --- commit B: transforms and tooling --------------------------------------
 
 
@@ -152,7 +181,7 @@ def test_commit_b_content_matches_the_conversion(upstream, tooling, tmp_path):
     assert tree_digest(upstream / "overrides") == tree_digest(oracle / "overrides")
     # zensical.toml is the conversion's, apart from the lines the cutover sets
     # deliberately: edit_uri and the version (asserted on their own below).
-    deliberate = ("edit_uri = ", "version_")
+    deliberate = ("edit_uri = ", "repo_url = ", "version_")
     expected = [line for line in (oracle / "zensical.toml").read_text(encoding="utf-8")
                 .splitlines() if not line.startswith(deliberate)]
     actual = [line for line in (upstream / "zensical.toml").read_text(encoding="utf-8")
@@ -206,6 +235,64 @@ def test_jenkins_files_survive(upstream, tooling):
     assert mode == "100755"
 
 
+@pytest.mark.parametrize("path, renamed", [
+    ("tools/jenkins/Jenkinsfile", "tools/jenkins/Jenkinsfile"),
+    ("language-bar/toc.json", "tools/language-bar/toc.json"),
+])
+def test_commit_b_refuses_to_revert_upstream_owned_files(upstream, tooling, path, renamed):
+    """An upstream change after the tooling copied a file it owns stops the
+    cutover before commit B, instead of being silently reverted."""
+    (upstream / path).write_text("changed upstream\n", encoding="utf-8", newline="\n")
+    git(upstream, "commit", "-q", "-am", "Upstream edit after the tooling copied it")
+    plan = cutover.rename_plan(upstream, cutover.load_mounts(upstream))
+    a = cutover.commit_renames(upstream, plan)
+    with pytest.raises(cutover.CutoverError, match=renamed) as raised:
+        cutover.commit_transform(upstream, tooling, **COMMIT_B_ARGS)
+    assert "re-sync the tooling copy from upstream" in str(raised.value).lower()
+    assert git(upstream, "rev-parse", "HEAD").strip() == a
+    assert git(upstream, "status", "--porcelain") == ""
+
+
+def test_upstream_owned_mode_change_is_refused(upstream, tooling):
+    git(upstream, "update-index", "--chmod=-x", "tools/jenkins/get_svn_docbin")
+    git(upstream, "commit", "-q", "-m", "Upstream drops the exec bit")
+    plan = cutover.rename_plan(upstream, cutover.load_mounts(upstream))
+    cutover.commit_renames(upstream, plan)
+    with pytest.raises(cutover.CutoverError, match="get_svn_docbin"):
+        cutover.commit_transform(upstream, tooling, **COMMIT_B_ARGS)
+
+
+@pytest.mark.parametrize("path, replaced", [
+    ("README.md", True),
+    ("CONTRIBUTE.md", True),
+    (".gitignore", True),
+    (".github/dependabot.yml", True),
+    (".github/workflows/mkdocs-publish.yml", True),
+    (".github/workflows/test-jenkins-simulation.yml", False),
+    (".github/workflows/nested/x.yml", False),
+    ("tools/buildgui/regen_properties.py", True),
+    ("tools/buildgui/ObjectMembers/NetType/PropList.apla", True),
+    ("tools/jenkins/Jenkinsfile", False),
+    ("tools/language-bar/toc.json", False),
+    ("img-src/x.svg", False),
+    (".github/ISSUE_TEMPLATE/content_error.md", False),
+    ("docs/README.md", False),
+])
+def test_intentionally_replaced(path, replaced):
+    assert cutover.intentionally_replaced(path) is replaced
+
+
+@pytest.mark.parametrize("file_mode", ["true", "false"])
+def test_commit_b_keeps_the_tooling_modes(upstream, tooling, file_mode):
+    """Modes come from the tooling commit, also where git ignores the working
+    tree's executable bit (core.fileMode false, as on Windows)."""
+    git(upstream, "config", "core.fileMode", file_mode)
+    run_both_commits(upstream, tooling)
+    for path in ("tools/chm/build_chm.py", "tools/jenkins/get_svn_docbin"):
+        assert git(upstream, "ls-files", "-s", path).split()[0] == "100755"
+    assert git(upstream, "ls-files", "-s", "tools/check.py").split()[0] == "100644"
+
+
 def test_stub_workflows_present(upstream, tooling):
     run_both_commits(upstream, tooling)
     cutover.assert_stub_workflows(upstream)
@@ -239,7 +326,7 @@ def test_commit_b_layout(upstream, tooling):
     # This repository's tooling replaces upstream's, minus the cutover itself,
     # the PoC project, planning notes and untracked files.
     assert show(upstream, "tools/buildgui/regen_properties.py") == b"# ported version\n"
-    assert show(upstream, "README.md") == b"# Zensical readme\n"
+    assert show(upstream, "README.md") == (CUTOVER_DIR / "README.root.md").read_bytes()
     assert "tools/check.py" in files and "uv.lock" in files
     assert not any(path.startswith(("tools/cutover/", "zensical/", "design/")) for path in files)
     assert "tools/scratch.txt" not in files
@@ -258,12 +345,30 @@ def test_commit_b_mounts_the_house_style(upstream, tooling):
     assert "documentation-assets" not in (upstream / ".gitmodules").read_text()
 
 
+def test_commit_b_uses_the_given_theme_url(upstream, tooling):
+    plan = cutover.rename_plan(upstream, cutover.load_mounts(upstream))
+    cutover.commit_renames(upstream, plan)
+    cutover.commit_transform(upstream, tooling, version=VERSION, repo_url=REPO_URL,
+                             theme_url="https://github.com/Dyalog/documentation-theme-zensical")
+    assert git(upstream, "config", "-f", ".gitmodules",
+               "submodule.docs/documentation-theme-zensical.url").strip() == \
+        "https://github.com/Dyalog/documentation-theme-zensical"
+
+
+def test_commit_b_installs_the_root_readme(upstream, tooling):
+    run_both_commits(upstream, tooling)
+    readme = show(upstream, "README.md").decode("utf-8")
+    for poc in ("zensical/", "design/", "tooling-port", "convert.py"):
+        assert poc not in readme
+    assert "CONTRIBUTE.md" in readme and "--recurse-submodules" in readme
+
+
 def test_commit_b_refuses_a_stale_overlay(upstream, tooling):
     plan = cutover.rename_plan(upstream, cutover.load_mounts(upstream))
     cutover.commit_renames(upstream, plan)
     (upstream / "docs" / "index.md").write_text("# Edited upstream\n")
     with pytest.raises(ValueError, match="index.md"):
-        cutover.commit_transform(upstream, tooling, version=VERSION)
+        cutover.commit_transform(upstream, tooling, **COMMIT_B_ARGS)
 
 
 # --- the whole run -----------------------------------------------------------
@@ -300,11 +405,61 @@ def test_cutover_branches(upstream, tooling, tmp_path):
     assert git(origin, "show-ref") == origin_refs
 
 
+@pytest.mark.parametrize("origin", [
+    "https://github.com/Dyalog/documentation.git",
+    "git@github.com:Dyalog/documentation.git",
+])
+def test_cutover_points_repo_url_at_the_origin(upstream, tooling, origin):
+    git(upstream, "remote", "set-url", "origin", origin)
+    cutover.cutover(upstream, "HEAD", tooling, "zensical-cutover", version=VERSION,
+                    init_submodule=False, check_command=None)
+    with open(upstream / "zensical.toml", "rb") as f:
+        assert tomllib.load(f)["project"]["repo_url"] == "https://github.com/Dyalog/documentation"
+
+
+@pytest.mark.parametrize("url, expected", [
+    ("https://github.com/Dyalog/documentation", "https://github.com/Dyalog/documentation"),
+    ("https://github.com/Dyalog/documentation.git", "https://github.com/Dyalog/documentation"),
+    ("https://github.com/dyalog/documentation/", "https://github.com/dyalog/documentation"),
+    ("git@github.com:Dyalog/documentation.git", "https://github.com/Dyalog/documentation"),
+    ("ssh://git@github.com/Dyalog/documentation.git", "https://github.com/Dyalog/documentation"),
+])
+def test_github_repo_url(url, expected):
+    assert cutover.github_repo_url(url) == expected
+
+
+@pytest.mark.parametrize("url", ["/tmp/documentation", "https://gitlab.com/a/b",
+                                 "https://github.com/Dyalog"])
+def test_github_repo_url_refuses_others(url):
+    with pytest.raises(cutover.CutoverError, match="GitHub"):
+        cutover.github_repo_url(url)
+
+
 def test_cutover_refuses_an_existing_release_branch(upstream, tooling):
     git(upstream, "branch", "v21.0")
-    with pytest.raises(cutover.CutoverError, match="v21.0"):
+    with pytest.raises(cutover.CutoverError, match="v21.0.*fresh clone"):
         cutover.cutover(upstream, "HEAD", tooling, "zensical-cutover", version=VERSION,
                         init_submodule=False, check_command=None)
+
+
+def test_main_prints_the_next_steps(upstream, tooling, monkeypatch, capsys):
+    monkeypatch.setattr(cutover, "cutover", lambda *args, **kwargs: ("base", "aaa", "bbb"))
+    assert cutover.main(["--upstream", str(upstream), "--freeze", "HEAD",
+                         "--tooling", str(tooling), "--version", VERSION]) == 0
+    out = capsys.readouterr().out
+    assert "version 22.0, repo_url https://github.com/Dyalog/documentation" in out
+    assert "TRUNK_VERSION in tools/jenkins/Jenkinsfile is 22.0" in out
+    assert THEME_URL in out and ".gitmodules" in out
+
+
+def test_main_reports_a_failing_git_command(upstream, tooling, monkeypatch, capsys):
+    def fail(*args, **kwargs):
+        raise subprocess.CalledProcessError(128, ["git", "cat-file"], stderr=b"fatal: bad object")
+    monkeypatch.setattr(cutover, "cutover", fail)
+    assert cutover.main(["--upstream", str(upstream), "--freeze", "HEAD",
+                         "--tooling", str(tooling), "--version", VERSION]) == 1
+    err = capsys.readouterr().err
+    assert err.startswith("cutover: ") and "fatal: bad object" in err
 
 
 def test_cutover_reports_a_failing_check(upstream, tooling):

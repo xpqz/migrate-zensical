@@ -1,13 +1,16 @@
 """Replay the move to Zensical on a fresh local clone of Dyalog/documentation.
 
     uv run python tools/cutover/cutover.py --upstream PATH --freeze REF \\
-        --tooling PATH --version X.Y [--branch NAME] [--uv "uvx uv@0.13.9"]
+        --tooling PATH --version X.Y [--branch NAME] [--theme-url URL] \\
+        [--uv "uvx uv@0.13.9"]
 
 --upstream is a fresh clone of the documentation repository, --freeze the
 commit that becomes the v21.0 release branch and the base of the cutover,
 --tooling this repository (its committed files are what gets copied),
 --version the version main documents from the cutover on (the trunk version,
-TRUNK_VERSION in tools/jenkins/Jenkinsfile, e.g. 22.0).
+TRUNK_VERSION in tools/jenkins/Jenkinsfile, e.g. 22.0), --theme-url the
+house-style repository the root .gitmodules names. The clone's origin must
+be the GitHub repository: zensical.toml's repo_url is derived from it.
 
 On the clone, in this order:
 
@@ -20,11 +23,17 @@ On the clone, in this order:
    is already in place), and language-bar/ to tools/language-bar/. Renames
    only, with the blobs unchanged, so `git log --follow` keeps each page's
    history; assert_pure_renames verifies it.
-4. Commit B: the content transforms, the content overlay, zensical.toml
-   (with --version as its version variables) and overrides/ at the root, the house-style submodule at
+4. Commit B: first refuses to continue if the tooling's copy of any file
+   upstream owns (the Jenkins files, language bar, image sources, issue
+   templates: every file both trees hold, except INTENTIONALLY_REPLACED)
+   differs from upstream's, since copying it would silently revert upstream.
+   Then the content transforms, the content overlay, zensical.toml (with
+   --version as its version variables and repo_url from the origin) and
+   overrides/ at the root, the house-style submodule at
    docs/documentation-theme-zensical, this repository's tooling (minus
    tools/cutover/, the PoC project under zensical/ and design/), and the
-   MkDocs-only and Docker files deleted. tools/jenkins/* stays.
+   MkDocs-only and Docker files deleted, and tools/cutover/README.root.md
+   as README.md. tools/jenkins/* stays.
 5. Asserts the workflow files old release branches dispatch exist, fetches
    the house-style submodule and runs `uv run python tools/check.py`.
 6. Prints the manual steps that remain, pushing among them.
@@ -33,15 +42,20 @@ On the clone, in this order:
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import os
 import re
 import shlex
 import shutil
 import subprocess
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
+from typing import Sequence
 
-import convert
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # tools/, for docsite
+
+import convert  # noqa: E402
+import docsite  # noqa: E402
 
 RELEASE_BRANCH = "v21.0"
 DEFAULT_BRANCH = "zensical-cutover"
@@ -73,7 +87,27 @@ DELETED = (
 # and .gitmodules (written for the root layout).
 NOT_COPIED = ("tools/cutover/", "zensical/", "design/", ".gitmodules")
 
-THEME = "documentation-theme-zensical"
+# Upstream files the tooling deliberately replaces with its own version: the
+# README and contributing guide, .gitignore (upstream's ignores *.toml and
+# *.lock), dependabot, the workflows and the GUI audit tools (ported). "*"
+# matches within one path segment, a trailing "/**" a whole directory. The
+# UPSTREAM_OWNED paths are carved out of these patterns. Every other file both
+# trees hold must be byte-identical, mode included: see upstream_owned_drift.
+INTENTIONALLY_REPLACED = (
+    "README.md",
+    "CONTRIBUTE.md",
+    ".gitignore",
+    ".github/dependabot.yml",
+    ".github/workflows/*.yml",
+    "tools/buildgui/**",
+)
+UPSTREAM_OWNED = (".github/workflows/test-jenkins-simulation.yml",)
+
+# Installed as README.md: the README for the repository after the cutover.
+ROOT_README = "README.root.md"
+
+THEME = docsite.ASSET_DIR
+DEFAULT_THEME_URL = "https://github.com/xpqz/documentation-theme-zensical"
 THEME_PATH = f"docs/{THEME}"
 THEME_PATHS_IN_TOOLING = (f"zensical/docs/{THEME}", THEME_PATH)
 
@@ -89,6 +123,10 @@ ROOT_EDIT_URI = 'edit_uri = "edit/main/docs"'
 NO_PUSH = "no_push"
 
 _VERSION_RE = re.compile(r"(\d+)\.(\d+)")
+_GITHUB_URL_RE = re.compile(
+    r"(?:https://github\.com/|git@github\.com:|ssh://git@github\.com/)"
+    r"([^/\s]+)/([^/\s]+?)(?:\.git)?/?")
+_REPO_URL_RE = re.compile(r'^repo_url = ".*"$', re.MULTILINE)
 
 
 class CutoverError(Exception):
@@ -115,6 +153,27 @@ def disable_push(repo: Path) -> None:
 
 def tracked_files(repo: Path) -> list[str]:
     return git(repo, "ls-files", "-z").split("\0")[:-1]
+
+
+def tree_blobs(repo: Path, rev: str = "HEAD") -> dict[str, tuple[str, str]]:
+    """{path: (mode, sha)} for every blob committed at rev (no gitlinks)."""
+    blobs = {}
+    for line in git(repo, "ls-tree", "-r", "-z", rev).split("\0")[:-1]:
+        meta, path = line.split("\t", 1)
+        mode, kind, sha = meta.split()
+        if kind == "blob":
+            blobs[path] = (mode, sha)
+    return blobs
+
+
+def github_repo_url(url: str) -> str:
+    """https://github.com/<owner>/<repo> for a GitHub clone URL (https or
+    ssh, with or without .git). Raises CutoverError for anything else."""
+    match = _GITHUB_URL_RE.fullmatch(url.strip())
+    if not match:
+        raise CutoverError(f"origin {url!r} is not a GitHub repository URL; repo_url "
+                           "derives from it, so clone the repository from GitHub")
+    return f"https://github.com/{match.group(1)}/{match.group(2)}"
 
 
 # --- commit A ------------------------------------------------------------------
@@ -205,11 +264,19 @@ def commit_renames(repo: Path, plan: list[tuple[str, str]]) -> str:
 
 
 def assert_pure_renames(repo: Path, sha: str) -> None:
-    """Raise unless every change in sha is a rename with unchanged content."""
-    status = git(repo, "-c", "diff.renameLimit=0", "-c", "diff.renames=true",
-                 "diff", "-M100%", "-l0", "--name-status", "--no-color",
-                 f"{sha}^", sha)
-    bad = [line for line in status.splitlines() if not line.startswith("R100\t")]
+    """Raise unless every change in sha is a rename with unchanged content
+    and mode."""
+    raw = git(repo, "-c", "diff.renameLimit=0", "-c", "diff.renames=true",
+              "diff", "-M100%", "-l0", "--raw", "-z", "--no-color", f"{sha}^", sha)
+    fields = raw.split("\0")[:-1]
+    bad = []
+    i = 0
+    while i < len(fields):
+        old_mode, new_mode, _old, _new, status = fields[i].lstrip(":").split()
+        paths = fields[i + 1:i + (3 if status[0] in "RC" else 2)]
+        i += 1 + len(paths)
+        if status != "R100" or old_mode != new_mode:
+            bad.append(f"{status} {old_mode}->{new_mode} " + " -> ".join(paths))
     if bad:
         raise CutoverError(f"{sha} is not renames only:\n  " + "\n  ".join(bad))
 
@@ -229,24 +296,53 @@ def version_variables(version: str) -> dict:
             "version_majmin": version, "version_condensed": int(maj + minor)}
 
 
-def _theme_gitlink(tooling: Path) -> tuple[str, str]:
-    """(commit, url) of the tooling repository's house-style submodule."""
+def intentionally_replaced(path: str) -> bool:
+    """Whether path matches INTENTIONALLY_REPLACED (and is not UPSTREAM_OWNED)."""
+    if path in UPSTREAM_OWNED:
+        return False
+    posix = PurePosixPath(path)
+    for pattern in INTENTIONALLY_REPLACED:
+        if pattern.endswith("/**"):
+            if path.startswith(pattern[:-2]):
+                return True
+        elif "*" in pattern:
+            glob = PurePosixPath(pattern)
+            if posix.parent == glob.parent and fnmatch.fnmatchcase(posix.name, glob.name):
+                return True
+        elif path == pattern:
+            return True
+    return False
+
+
+def upstream_owned_drift(repo: Path, tooling: Path) -> list[str]:
+    """The files both the tooling commit and repo's HEAD (commit A, so
+    upstream's language-bar/ is at tools/language-bar/) hold, outside
+    NOT_COPIED and INTENTIONALLY_REPLACED, whose content or mode differ."""
+    ours = tree_blobs(tooling)
+    theirs = tree_blobs(repo)
+    return sorted(path for path, blob in ours.items()
+                  if path in theirs and blob != theirs[path]
+                  and not path.startswith(NOT_COPIED) and not intentionally_replaced(path))
+
+
+def _theme_gitlink(tooling: Path) -> str:
+    """The commit of the tooling repository's house-style submodule."""
     for path in THEME_PATHS_IN_TOOLING:
         entry = git(tooling, "ls-tree", "HEAD", path).split()
         if entry and entry[0] == "160000":
-            url = git(tooling, "config", "-f", ".gitmodules", f"submodule.{path}.url").strip()
-            return entry[2], url
+            return entry[2]
     raise CutoverError(f"{tooling} has no {THEME} submodule")
 
 
-def _copy_tooling(tooling: Path, repo: Path) -> None:
+def _copy_tooling(tooling: Path, repo: Path) -> dict[str, str]:
     """Write the tooling repository's committed files into repo, replacing
-    what is there, except the NOT_COPIED paths and submodules."""
-    for line in git(tooling, "ls-tree", "-r", "-z", "HEAD").split("\0")[:-1]:
-        meta, path = line.split("\t", 1)
-        mode, kind, sha = meta.split()
-        if kind != "blob" or path.startswith(NOT_COPIED):
+    what is there, except the NOT_COPIED paths and submodules. Returns
+    {path: mode} for what was written."""
+    copied = {}
+    for path, (mode, sha) in tree_blobs(tooling).items():
+        if path.startswith(NOT_COPIED):
             continue
+        copied[path] = mode
         if mode not in ("100644", "100755"):
             raise CutoverError(f"{tooling}: {path} has unsupported mode {mode}")
         content = subprocess.run(["git", "-C", str(tooling), "cat-file", "blob", sha],
@@ -255,33 +351,62 @@ def _copy_tooling(tooling: Path, repo: Path) -> None:
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_bytes(content)
         dest.chmod(0o755 if mode == "100755" else 0o644)
+    return copied
 
 
-def _write_toml(repo: Path, merged: dict, template: Path, version: str) -> None:
+def _stage_modes(repo: Path, modes: dict[str, str]) -> None:
+    """Set each path's staged mode to the given one. The working tree's
+    executable bit carries no information where git does not track it
+    (core.fileMode false, as on Windows)."""
+    staged = {}
+    for line in git(repo, "ls-files", "-s", "-z").split("\0")[:-1]:
+        meta, path = line.split("\t", 1)
+        staged[path] = meta.split()[0]
+    for flag, mode in (("--chmod=+x", "100755"), ("--chmod=-x", "100644")):
+        paths = [path for path, want in modes.items() if want == mode and staged[path] != mode]
+        if paths:
+            git(repo, "update-index", flag, "--", *paths)
+
+
+def _write_toml(repo: Path, merged: dict, template: Path, version: str,
+                repo_url: str) -> None:
     merged["extra"].update(version_variables(version))
     text = convert.render_zensical_toml(merged, template.read_text(encoding="utf-8"))
     if text.count(POC_EDIT_URI) != 1:
         raise CutoverError(f"{template} must contain {POC_EDIT_URI} exactly once")
+    text, count = _REPO_URL_RE.subn(lambda _: f'repo_url = "{repo_url}"', text)
+    if count != 1:
+        raise CutoverError(f"{template} must contain one repo_url line")
     (repo / "zensical.toml").write_text(text.replace(POC_EDIT_URI, ROOT_EDIT_URI),
                                         encoding="utf-8")
 
 
-def commit_transform(repo: Path, tooling: Path, *, version: str) -> str:
+def commit_transform(repo: Path, tooling: Path, *, version: str, repo_url: str,
+                     theme_url: str = DEFAULT_THEME_URL) -> str:
     """Commit B on top of commit A: convert the content in place, swap the
-    tooling, set the version variables to version, and return the commit's
-    sha. The overlay, zensical.toml template
-    and theme override come from the tooling's tools/cutover/."""
+    tooling, set the version variables to version and repo_url, mount the
+    house style from theme_url, and return the commit's sha. The overlay,
+    zensical.toml template, theme override and root README come from the
+    tooling's tools/cutover/. Raises CutoverError, before writing anything,
+    if the tooling would revert an upstream-owned file."""
     repo, tooling = Path(repo), Path(tooling)
     cut = tooling / "tools" / "cutover"
     overlay = cut / "content"
     docs = repo / "docs"
 
     version_variables(version)  # refuse a malformed version before writing
+    drift = upstream_owned_drift(repo, tooling)
+    if drift:
+        raise CutoverError(
+            "the tooling's copies of these upstream-owned files differ from upstream "
+            "at the freeze commit, and copying them would revert upstream's changes:\n  "
+            + "\n  ".join(drift)
+            + "\nRe-sync the tooling copy from upstream (commit it), then rerun.")
     root_config, sub_configs = load_configs(repo)
     mounts = convert.mount_points(sub_configs)
     # The guides are already at their aliases, so docs/<rel> is the source page.
     convert.check_overlay(overlay, repo, {})
-    theme_sha, theme_url = _theme_gitlink(tooling)
+    theme_sha = _theme_gitlink(tooling)
 
     convert.remove_mathjax(docs, mounts)
     convert.transform_pages(docs, overlay)
@@ -290,7 +415,7 @@ def commit_transform(repo: Path, tooling: Path, *, version: str) -> str:
     shutil.copy2(cut / convert.OVERRIDES_DIR / "main.html",
                  repo / convert.OVERRIDES_DIR / "main.html")
     _write_toml(repo, convert.merge_configs(root_config, sub_configs),
-                cut / "zensical.toml.template", version)
+                cut / "zensical.toml.template", version, repo_url)
 
     tracked = tracked_files(repo)
     doomed = [f"{guide}/mkdocs.yml" for guide in sub_configs] + [
@@ -298,13 +423,15 @@ def commit_transform(repo: Path, tooling: Path, *, version: str) -> str:
         if any(f == path or f.startswith(path + "/") for f in tracked)]
     git(repo, "rm", "-r", "-q", "--", *doomed)
 
-    _copy_tooling(tooling, repo)
+    copied = _copy_tooling(tooling, repo)
+    shutil.copyfile(cut / ROOT_README, repo / "README.md")
     (repo / ".gitmodules").write_text(
         f'[submodule "{THEME_PATH}"]\n\tpath = {THEME_PATH}\n\turl = {theme_url}\n',
         encoding="utf-8")
     (repo / THEME_PATH).mkdir(exist_ok=True)
     git(repo, "update-index", "--add", "--cacheinfo", f"160000,{theme_sha},{THEME_PATH}")
     git(repo, "add", "-A")
+    _stage_modes(repo, copied)
     git(repo, "commit", "-q", "-m", COMMIT_B_MESSAGE)
     return git(repo, "rev-parse", "HEAD").strip()
 
@@ -321,25 +448,31 @@ def assert_stub_workflows(repo: Path) -> None:
 
 
 def cutover(upstream: Path, freeze: str, tooling: Path, branch: str = DEFAULT_BRANCH,
-            *, version: str, init_submodule: bool = True,
-            check_command: list[str] | None = ("uv", "run", "python", "tools/check.py"),
+            *, version: str, theme_url: str = DEFAULT_THEME_URL,
+            init_submodule: bool = True,
+            check_command: Sequence[str] | None = ("uv", "run", "python", "tools/check.py"),
             ) -> tuple[str, str, str]:
     """Run the cutover on the clone at upstream; return the freeze commit,
     commit A and commit B."""
     upstream, tooling = Path(upstream).resolve(), Path(tooling).resolve()
     disable_push(upstream)
+    repo_url = github_repo_url(git(upstream, "remote", "get-url", "origin"))
     if git(upstream, "status", "--porcelain").strip():
         raise CutoverError(f"{upstream} has uncommitted changes")
     base = git(upstream, "rev-parse", "--verify", f"{freeze}^{{commit}}").strip()
     for name in (RELEASE_BRANCH, branch):
         if git(upstream, "branch", "--list", name).strip():
-            raise CutoverError(f"branch {name} already exists in {upstream}")
+            raise CutoverError(
+                f"branch {name} already exists in {upstream} (from an earlier run?). "
+                f"Start again from a fresh clone, or check out the original branch and "
+                f"delete it: git branch -D {RELEASE_BRANCH} {branch}")
     git(upstream, "branch", RELEASE_BRANCH, base)
     git(upstream, "checkout", "-q", "-b", branch, base)
 
     a = commit_renames(upstream, rename_plan(upstream, load_mounts(upstream)))
     assert_pure_renames(upstream, a)
-    b = commit_transform(upstream, tooling, version=version)
+    b = commit_transform(upstream, tooling, version=version, repo_url=repo_url,
+                         theme_url=theme_url)
     assert_stub_workflows(upstream)
 
     if init_submodule:
@@ -379,16 +512,21 @@ Cutover branch {branch} is ready in {upstream}:
   {b}  commit B (Zensical)
   {release} at {base}
 
+zensical.toml: version {version}, repo_url {repo_url}
+House style: {theme_url}
+
 Nothing has been pushed; every remote's push URL is no_push.
 Remaining manual steps, each needing explicit approval:
   - review the two commits;
-  - point repo_url in zensical.toml at the repository the site is built from;
   - push {release} and {branch}, and open the pull request into main;
   - on {release}, pin the documentation-assets submodule in mkdocs-publish.yml
     (tools/jenkins/RELEASE.md procedure E);
   - check that TRUNK_VERSION in tools/jenkins/Jenkinsfile is {version}, the
     version zensical.toml now carries: publish.yml and chm.yml refuse to
-    release any other version from the default branch.
+    release any other version from the default branch;
+  - move the house-style repository ({theme_url}) to the Dyalog
+    organisation, then point .gitmodules at its new URL and run
+    `git submodule sync`.
 """
 
 
@@ -403,17 +541,30 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--version", required=True,
                         help="the version main documents from now on, X.Y (TRUNK_VERSION)")
     parser.add_argument("--branch", default=DEFAULT_BRANCH)
+    parser.add_argument("--theme-url", default=DEFAULT_THEME_URL,
+                        help="the house-style repository for the root .gitmodules "
+                             f"(default {DEFAULT_THEME_URL})")
     parser.add_argument("--uv", default="uv", help='the uv command, e.g. "uvx uv@0.13.9"')
     args = parser.parse_args(argv)
     check = [*shlex.split(args.uv), "run", "python", "tools/check.py"]
     try:
         base, a, b = cutover(args.upstream, args.freeze, args.tooling, args.branch,
-                             version=args.version, check_command=check)
+                             version=args.version, theme_url=args.theme_url,
+                             check_command=check)
     except (CutoverError, ValueError, FileNotFoundError) as error:
         print(f"cutover: {error}", file=sys.stderr)
         return 1
+    except subprocess.CalledProcessError as error:
+        stderr = error.stderr.decode("utf-8", "replace") if isinstance(error.stderr, bytes) \
+            else (error.stderr or "")
+        print(f"cutover: {shlex.join(map(str, error.cmd))} exited {error.returncode}: "
+              f"{stderr.strip()}", file=sys.stderr)
+        return 1
     print(NEXT_STEPS.format(branch=args.branch, upstream=args.upstream.resolve(), a=a, b=b,
-                            release=RELEASE_BRANCH, base=base, version=args.version))
+                            release=RELEASE_BRANCH, base=base, version=args.version,
+                            repo_url=github_repo_url(
+                                git(args.upstream, "remote", "get-url", "origin")),
+                            theme_url=args.theme_url))
     return 0
 
 

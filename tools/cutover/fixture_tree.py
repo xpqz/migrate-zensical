@@ -348,6 +348,8 @@ UPSTREAM_FILES = {
 ASSETS_GITLINK = "c1825129a637f886413cef8bb3e60383f02dff74"
 THEME_GITLINK = "b5c2eef97ed26e3a376c0745ba0b63cfd129eea0"
 THEME_URL = "https://github.com/xpqz/documentation-theme-zensical"
+# The fetch URL of the fixture clone's origin; repo_url derives from it.
+UPSTREAM_URL = "https://github.com/Dyalog/documentation.git"
 
 # This repository's tracked files outside the content, in miniature.
 TOOLING_FILES = {
@@ -361,7 +363,10 @@ TOOLING_FILES = {
     "known-issues.txt": "# baseline\n",
     "unlisted-pages.txt": "# unlisted\n",
     "tools/check.py": "print('check')\n",
+    "tools/chm/build_chm.py": "#!/usr/bin/env python3\n",  # executable
     "tools/buildgui/regen_properties.py": "# ported version\n",
+    # Upstream-owned: carried by the tooling, identical to upstream's.
+    **JENKINS_FILES,
     "tools/language-bar/README.md": "# Language bar\n",
     "tools/language-bar/toc.json": "{}\n",
     "tools/cutover/convert.py": "# conversion, removed at cutover\n",
@@ -433,6 +438,8 @@ def build_upstream_repo(root: Path) -> Path:
     git(clone, "config", "user.name", GIT_IDENTITY["GIT_AUTHOR_NAME"])
     git(clone, "config", "user.email", GIT_IDENTITY["GIT_AUTHOR_EMAIL"])
     git(clone, "config", "commit.gpgsign", "false")
+    # The fetch URL a GitHub clone would have; nothing is fetched from it.
+    git(clone, "remote", "set-url", "origin", UPSTREAM_URL)
     return clone
 
 
@@ -440,16 +447,19 @@ def build_tooling_repo(root: Path, overlay: Path, cutover_dir: Path) -> Path:
     """A miniature of this repository, committed: the files the cutover
     copies, the paths it must not copy, the house-style gitlink, and
     tools/cutover/ holding overlay (as content/) plus the zensical.toml
-    template and theme override taken from cutover_dir."""
+    template, theme override and root README taken from cutover_dir."""
     tooling = root / "tooling"
     _write_files(tooling, TOOLING_FILES)
     cut = tooling / "tools" / "cutover"
     shutil.copytree(overlay, cut / "content")
     shutil.copy2(cutover_dir / "zensical.toml.template", cut / "zensical.toml.template")
+    shutil.copy2(cutover_dir / "README.root.md", cut / "README.root.md")
     (cut / "overrides").mkdir()
     shutil.copy2(cutover_dir / "overrides" / "main.html", cut / "overrides" / "main.html")
     _init_repo(tooling)
     git(tooling, "add", "-A")
+    git(tooling, "update-index", "--chmod=+x",
+        "tools/jenkins/get_svn_docbin", "tools/chm/build_chm.py")
     _add_gitlink(tooling, "zensical/docs/documentation-theme-zensical", THEME_GITLINK, THEME_URL)
     git(tooling, "commit", "-q", "-m", "Tooling")
     # An untracked file is not tooling: the cutover copies tracked files only.

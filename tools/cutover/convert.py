@@ -52,13 +52,17 @@ import copy
 import hashlib
 import re
 import shutil
+import sys
 from pathlib import Path, PurePosixPath
 
 import tomli_w
 import yaml
 from bs4 import BeautifulSoup, NavigableString
 
-import transforms
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # tools/, for docsite
+
+import docsite  # noqa: E402
+import transforms  # noqa: E402
 
 # The 14 sub-projects, in root-nav order. The root nav's !include lines are
 # the canonical enumeration; a source checkout missing any of these is an
@@ -92,7 +96,7 @@ SOURCE_ROOT = REPO_ROOT.parent / "documentation"
 
 # Directories under docs/ that convert does not own: the Zensical house style,
 # a git submodule (xpqz/documentation-theme-zensical).
-PRESERVED_DIRS = frozenset({"documentation-theme-zensical"})
+PRESERVED_DIRS = frozenset({docsite.ASSET_DIR})
 
 # The MathJax loader the monorepo carried in every sub-project. Nothing in the
 # corpus renders maths, so no copy is carried over.
@@ -461,7 +465,7 @@ def remove_mathjax(docs, mounts):
 
 def transform_pages(docs, overlay=CONTENT_OVERLAY):
     """Run transform_markdown over every page of a flattened docs tree in
-    place, skipping the preserved asset directories. Raises ValueError when a
+    place, skipping the house style (PRESERVED_DIRS). Raises ValueError when a
     page references a toolbar icon the overlay does not provide."""
     docs = Path(docs)
     provided_icons = {
@@ -494,9 +498,9 @@ def copy_content(source, output, mounts, overlay=CONTENT_OVERLAY):
     committed theme override is placed in a top-level overrides/
     (theme.custom_dir).
 
-    The preserved asset directories are neither copied nor transformed:
+    The house style (PRESERVED_DIRS) is neither copied nor transformed:
     regeneration wipes only the paths convert owns, so orphaned and stray
-    files do not survive a re-run while the assets are left intact. The source
+    files do not survive a re-run while the house style is left intact. The source
     tree is never written to.
     """
     source = Path(source)
