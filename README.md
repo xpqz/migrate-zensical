@@ -51,3 +51,8 @@ longer matches the source page it was written against; re-merge and update the `
 sidecar. Each guide is mounted at the path mkdocs-monorepo-plugin gave it on the live site, its
 slugified `site_name`: for the two .NET guides that is `net-interface-guide/` and
 `net-framework-interface-guide/`, not their directory names.
+
+The monorepo's `macros` plugin is not carried over: macros are not available. The corpus used it
+only for version numbers, so the `dyalog_vars` Markdown extension (`tools/dyalog_vars.py`)
+substitutes `{{ name }}` with the scalar of that name in `[project.extra]` instead, for example
+`{{ version_majmin }}`.

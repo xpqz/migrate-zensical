@@ -26,10 +26,12 @@ exclude_docs = """
 /documentation-theme-zensical/LICENCE
 """
 # privacy and minify are MkDocs plugins Zensical does not implement; search is
-# built in. Only macros (version-number substitution) remains.
+# built in. macros is deliberately absent: from Zensical 0.0.68 it makes a
+# build about 25 times slower on macOS, and the corpus used it only for
+# version numbers, which the dyalog_vars Markdown extension substitutes from
+# [project.extra] instead (see tools/dyalog_vars.py).
 plugins = [
     "search",
-    "macros",
 ]
 @@MARKDOWN_EXTENSIONS@@
 site_url = "https://docs.dyalog.com/"

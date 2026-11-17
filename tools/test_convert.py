@@ -392,10 +392,11 @@ def test_folds_markdown_extensions_into_a_superset_with_root_precedence(merged):
     }
 
 
-def test_drops_arithmatex_and_wires_the_caption_extension(merged):
+def test_drops_arithmatex_and_wires_the_caption_and_variables_extensions(merged):
     names = entry_names(merged["markdown_extensions"])
     assert "pymdownx.arithmatex" not in names
     assert "dyalog_caption" in names
+    assert "dyalog_vars" in names
 
 
 def test_folds_extra_with_root_precedence(merged):
@@ -453,7 +454,7 @@ def test_zensical_toml_takes_the_house_configuration_from_the_template(
     source_tree, out_dir, overlay
 ):
     project = (run(source_tree, out_dir, overlay), read_toml(out_dir))[1]
-    assert entry_names(project["plugins"]) == ["search", "macros"]
+    assert entry_names(project["plugins"]) == ["search"]
     assert project["extra_css"] == ["documentation-theme-zensical/css/dyalog.css"]
     # The submodule's README and LICENCE are repository files, not site pages.
     assert project["exclude_docs"].split() == [

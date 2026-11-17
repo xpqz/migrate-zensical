@@ -3,9 +3,9 @@
 #   uv sync                 build + tooling, plus pytest (dev is uv's default group)
 #   uv sync --all-groups    also mike (deploy)
 #
-# The project itself packages tools/dyalog_caption.py: Python-Markdown imports
-# the caption extension by module name when Zensical builds, so it must be
-# installed, not merely on a test path.
+# The project itself packages tools/dyalog_caption.py and tools/dyalog_vars.py:
+# Python-Markdown imports these extensions by module name when Zensical builds,
+# so they must be installed, not merely on a test path.
 [build-system]
 requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
@@ -40,7 +40,7 @@ deploy = [
 ]
 
 [tool.setuptools]
-py-modules = ["dyalog_caption"]
+py-modules = ["dyalog_caption", "dyalog_vars"]
 package-dir = { "" = "tools" }
 
 [tool.pytest.ini_options]

@@ -194,27 +194,3 @@ def test_main_returns_one_when_the_gate_fails(tmp_path):
     )
     assert rc == 1
 
-
-def _capture_build_env(monkeypatch, environ):
-    """Run run_build with subprocess.run stubbed; return the env it passed."""
-    seen = {}
-
-    def fake_run(cmd, **kwargs):
-        seen.update(kwargs.get("env") or {})
-        return check_flatten.subprocess.CompletedProcess(cmd, 0, "No issues found\n", "")
-
-    monkeypatch.setattr(check_flatten.subprocess, "run", fake_run)
-    monkeypatch.setattr(check_flatten.os, "environ", environ)
-    check_flatten.run_build(".")
-    return seen
-
-
-def test_run_build_uses_the_polling_watcher_by_default(monkeypatch):
-    env = _capture_build_env(monkeypatch, {"PATH": "/bin"})
-    assert env["ZENSICAL_POLL_WATCHER"] == "1"
-    assert env["PATH"] == "/bin"
-
-
-def test_run_build_keeps_an_explicit_watcher_choice(monkeypatch):
-    env = _capture_build_env(monkeypatch, {"ZENSICAL_POLL_WATCHER": "0"})
-    assert env["ZENSICAL_POLL_WATCHER"] == "0"

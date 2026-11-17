@@ -53,9 +53,6 @@ Run the tests of the tooling itself with `uv run pytest -q`.
 
 ### Platform notes
 
-- **macOS:** Zensical 0.1.1 can stall for minutes while registering file watchers. Set `ZENSICAL_POLL_WATCHER=1` for `zensical serve` and `zensical build`; `tools/check.py` already sets it for its own build.
-  - bash/zsh: `ZENSICAL_POLL_WATCHER=1 uv run zensical serve`
-  - PowerShell: `$env:ZENSICAL_POLL_WATCHER="1"; uv run zensical serve`
 - **Windows:** use PowerShell. If uv is configured to link packages with symlinks and `uv sync` fails (symlinks need Developer Mode or an elevated shell), have it copy instead: `$env:UV_LINK_MODE="copy"`. In PowerShell, `cd zensical` works as above, and `cd ..` returns to the root.
 - **Editor:** [Zensical Studio](https://marketplace.visualstudio.com/items?itemName=zensical.zensical-studio) (extension `zensical.zensical-studio` for VS Code, Cursor and Zed) gives preview and link diagnostics in its free tier. The repository recommends it when opened in VS Code (`.vscode/extensions.json`).
 
@@ -76,6 +73,7 @@ Run the tests of the tooling itself with `uv run pytest -q`.
 - **Search keywords:** reference pages end with a hidden block of search keywords. Add it with `uv run python tools/maintain/search_keywords.py PAGE…` (`--dry-run` to preview; pages are relative to the docs directory). Never add it to a page with `search: exclude: true`.
 - **Reordering the reference nav:** after adding a system function, system command or I-beam, run `uv run python tools/maintain/order_nav.py sysfns` (or `syscmds`, `ibeams`). More in [tools/maintain/README.md](tools/maintain/README.md). The Object Reference tables come from the audit tools in [tools/buildgui/README.md](tools/buildgui/README.md).
 - **Links** between pages are source-relative paths ending in `.md`. `zensical build --strict` validates them and their anchors.
+- **Variables:** macros are not available (no Jinja: no filters, expressions or `{% %}` blocks). Write `{{ name }}` for a scalar value from `[project.extra]` in `zensical/zensical.toml`; it is substituted everywhere on the page, code blocks included. The ones in use are `{{ version_majmin }}` (`21.0`), `{{ version_condensed }}` (`210`) and `{{ conga_version_condensed }}` (`36`). An unknown name is left as written and the build logs a warning.
 
 ## Issue
 

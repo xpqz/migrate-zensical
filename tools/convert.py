@@ -24,8 +24,8 @@ content and build config:
 - merges the root config and the 14 sub-project configs: each
   "!include ./<sub>/mkdocs.yml" nav entry replaced by that sub-project's nav
   path-prefixed with <sub>/, markdown_extensions folded into a superset
-  (minus arithmatex, plus the caption extension), extra folded with the root
-  winning conflicts,
+  (minus arithmatex, plus the caption and variables extensions), extra
+  folded with the root winning conflicts,
 - renders zensical.toml from tools/zensical.toml.template, which holds the
   house configuration (theme, palette, stylesheet, plugins, copyright) with
   its rationale in comments, and receives the merged site name, repository
@@ -119,6 +119,10 @@ DROPPED_EXTENSIONS = frozenset({"pymdownx.arithmatex"})
 # Named by importable module so Zensical hands it to Python-Markdown at build
 # time.
 CAPTION_EXTENSION = "dyalog_caption"
+
+# The Python-Markdown extension that replaces the monorepo's macros plugin:
+# {{ name }} substitution of [project.extra] scalars (see tools/dyalog_vars.py).
+VARIABLES_EXTENSION = "dyalog_vars"
 
 # Root config keys carried into the rendered zensical.toml header. repo_url is
 # not carried: the flattened source lives in this repository, so the template
@@ -222,7 +226,7 @@ def merge_configs(root_config, sub_configs):
     Nav: each "!include ./<name>/mkdocs.yml" string is replaced by that
     sub-project's nav, path-prefixed with its mount alias. markdown_extensions
     fold into a superset with root precedence, minus DROPPED_EXTENSIONS and
-    plus the caption extension. extra folds with the root winning conflicts.
+    plus the caption and variables extensions. extra folds with the root winning conflicts.
     site_name comes from the root. Everything else in the source
     configs (theme, stylesheets, scripts, plugins, copyright) is MkDocs house
     configuration that the template replaces, so it is not carried.
@@ -243,6 +247,9 @@ def merge_configs(root_config, sub_configs):
     # Python-Markdown extension Zensical can load (see tools/dyalog_caption.py).
     if CAPTION_EXTENSION not in seen:
         extensions.append(CAPTION_EXTENSION)
+    # Substitute the version variables the monorepo's macros plugin provided.
+    if VARIABLES_EXTENSION not in seen:
+        extensions.append(VARIABLES_EXTENSION)
     merged["markdown_extensions"] = extensions
 
     extra = {}
