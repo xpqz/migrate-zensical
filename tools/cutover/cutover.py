@@ -528,9 +528,8 @@ Remaining manual steps, each needing explicit approval:
   - check that TRUNK_VERSION in tools/jenkins/Jenkinsfile is {version}, the
     version zensical.toml now carries: publish.yml and chm.yml refuse to
     release any other version from the default branch;
-  - move the house-style repository ({theme_url}) to the Dyalog
-    organisation, then point .gitmodules at its new URL and run
-    `git submodule sync`.
+  - move the house-style repository to the Dyalog organisation, then point
+    .gitmodules at its new URL and run `git submodule sync`.
 """
 
 
