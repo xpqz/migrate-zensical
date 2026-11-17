@@ -14,6 +14,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Literal
 
+import yaml
+
 import check_flatten
 import docsite
 from docsite import Site
@@ -77,23 +79,104 @@ def _issue_problem(key: str, message: str, severity) -> Problem:
 
 def check_build(site: Site, baseline_path: Path,
                 runner=check_flatten.run_build) -> list[Problem]:
+    try:
+        baseline = check_flatten.load_baseline(baseline_path)
+    except FileNotFoundError:
+        return [Problem(str(baseline_path), None, "baseline file not found",
+                        "error")]
     output, returncode = runner(site.project)
-    baseline = check_flatten.load_baseline(baseline_path)
     result = check_flatten.assess(output, returncode, baseline)
     problems = [_issue_problem(k, "new build issue", "error")
                 for k in sorted(result.new)]
     problems += [_issue_problem(k, "baseline issue no longer reported; remove "
                                 "from known-issues.txt", "warning")
                  for k in sorted(result.resolved)]
-    # Reasons other than the new-issue tally (which the entries above cover).
     problems += [Problem("zensical build", None, r, "error")
-                 for r in result.reasons if "outside the baseline" not in r]
+                 for r in result.other_reasons]
+    return problems
+
+
+# type -> allowed quoted titles. The conversion renamed the MkDocs types:
+# Hint -> tip, Legacy -> note, the OS types -> info.
+ADMONITIONS = {
+    "info": {"Information", "Dyalog on Microsoft Windows", "Dyalog on Linux",
+             "Dyalog on Unix", "Dyalog on AIX", "Dyalog on macOS"},
+    "warning": {"Warning"},
+    "tip": {"Hints and Recommendations"},
+    "note": {"Legacy"},
+}
+
+_ADMONITION = re.compile(r'^\s*(?:!!!|\?\?\?\+?)\s*(.*)$')
+_ADMONITION_HEAD = re.compile(r'^(\S+)(?:\s+"([^"]*)")?\s*$')
+
+
+def check_admonitions(site: Site) -> list[Problem]:
+    problems = []
+    for page in site.pages():
+        for n, line in docsite.prose_lines(site.read(page)):
+            m = _ADMONITION.match(line)
+            if not m:
+                continue
+
+            def err(msg: str) -> None:
+                problems.append(Problem(page, n, msg, "error"))
+
+            head = _ADMONITION_HEAD.match(m[1].strip())
+            if not head:
+                err(f"malformed admonition header: {m[1].strip()!r}")
+                continue
+            kind, title = head[1], head[2]
+            allowed = ADMONITIONS.get(kind.lower())
+            if allowed is None:
+                err(f"unknown admonition type {kind!r} (valid: "
+                    f"{', '.join(sorted(ADMONITIONS))})")
+            elif title is None:
+                err(f"admonition {kind!r} is missing its quoted title "
+                    f"(expected one of {sorted(allowed)})")
+            elif title not in allowed:
+                err(f'admonition {kind!r} has title "{title}"; expected one '
+                    f"of {sorted(allowed)}")
+    return problems
+
+
+_HIDDEN_DIV = re.compile(
+    r"""<div\s+style\s*=\s*["']\s*display\s*:\s*none\s*;?\s*["']""",
+    re.IGNORECASE)
+
+
+def _excludes_search(text: str) -> bool:
+    if not text.startswith("---"):
+        return False
+    parts = text.split("\n---", 1)
+    if len(parts) < 2:
+        return False
+    try:
+        meta = yaml.safe_load(parts[0][3:])
+    except yaml.YAMLError:
+        return False
+    search = meta.get("search") if isinstance(meta, dict) else None
+    return isinstance(search, dict) and search.get("exclude") is True
+
+
+def check_search_exclusions(site: Site) -> list[Problem]:
+    problems = []
+    for page in site.pages():
+        text = site.read(page)
+        if not _excludes_search(text):
+            continue
+        for n, line in docsite.prose_lines(text):
+            if _HIDDEN_DIV.search(line):
+                problems.append(Problem(
+                    page, n, "page is excluded from search but has hidden "
+                    "search keywords; remove one", "error"))
+                break
     return problems
 
 
 # Cheap checks that need only the site; the build and unlisted checks take
 # extra inputs and are wired in main().
-CHECKS: list[Callable[[Site], list[Problem]]] = [check_nav_targets]
+CHECKS: list[Callable[[Site], list[Problem]]] = [
+    check_nav_targets, check_admonitions, check_search_exclusions]
 
 
 def main(argv: list[str] | None = None) -> int:

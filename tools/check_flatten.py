@@ -47,7 +47,9 @@ BASELINE_PATH = REPO_ROOT / "known-issues.txt"
 
 # Outcome of assessing one build. ok is the gate verdict; reasons explains a
 # failure; new and resolved are the baseline diff.
-Assessment = namedtuple("Assessment", "ok new resolved reasons")
+# other_reasons is reasons without the tally of new issues, for callers that
+# report each new issue individually.
+Assessment = namedtuple("Assessment", "ok new resolved reasons other_reasons")
 
 
 def parse_issues(build_output):
@@ -126,10 +128,12 @@ def assess(build_output, returncode, baseline):
             "the diagnostic format may have changed"
         )
 
+    other_reasons = list(reasons)
     if new:
         reasons.append(f"{len(new)} issue(s) outside the baseline")
 
-    return Assessment(ok=not reasons, new=new, resolved=resolved, reasons=reasons)
+    return Assessment(ok=not reasons, new=new, resolved=resolved,
+                      reasons=reasons, other_reasons=other_reasons)
 
 
 def run_build(project_dir):
