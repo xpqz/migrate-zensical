@@ -1,0 +1,32 @@
+name: Publish MkDocs Documentation
+
+# Dispatch stub. v20.0 and v21.0 are built with MkDocs from their release
+# branches, and GitHub only offers manual dispatch for workflows whose file
+# exists on the default branch. This file registers the name; choose the
+# vM.0 branch in "Run workflow" and that branch's own mkdocs-publish.yml
+# runs. Run on main it only fails. The v22 site is published by publish.yml.
+on:
+  workflow_dispatch:
+    inputs:
+      version_override:
+        description: 'Version override (leave empty to use mkdocs.yml value)'
+        required: false
+        default: ''
+        type: string
+      set_as_latest:
+        description: 'Set this version as the default/latest on staging (GitHub Pages). No effect on docs.dyalog.com'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  release-branch-only:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "::error::Run this workflow from a vM.0 release branch"
+          exit 1

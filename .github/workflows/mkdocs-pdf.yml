@@ -1,0 +1,32 @@
+name: Convert MkDocs to PDF and CHM
+
+# Dispatch stub. v20.0 is built with MkDocs from its release branch, and
+# GitHub only offers manual dispatch for workflows whose file exists on the
+# default branch. This file registers the name; the v20.0 branch's own
+# mkdocs-pdf.yml is what runs there (it is called by that branch's
+# full-release.yml). Run on main it only fails. v22 has no PDF output.
+on:
+  workflow_dispatch:
+    inputs:
+      generate_pdf:
+        type: boolean
+        default: true
+      generate_chm:
+        type: boolean
+        default: true
+      publish_release:
+        description: 'Publish release immediately instead of as a draft'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  release-branch-only:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "::error::Run this workflow from a vM.0 release branch"
+          exit 1
