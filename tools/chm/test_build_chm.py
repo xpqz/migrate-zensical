@@ -1,8 +1,8 @@
 """Tests for the CHM builder.
 
 build_chm needs the `chm` dependency group (pygments, cssutils, htmlmin,
-csscompressor); without it (a plain `uv sync`) these tests are skipped
-rather than failing the default suite. `uv sync --all-groups` installs it.
+csscompressor), one of uv's default groups; in an environment without it
+these tests are skipped rather than failing the suite.
 """
 
 import textwrap
@@ -13,6 +13,7 @@ for _module in ("pygments", "cssutils", "htmlmin", "csscompressor"):
     pytest.importorskip(_module, reason="needs the chm dependency group")
 
 import build_chm  # noqa: E402
+from bs4 import BeautifulSoup  # noqa: E402
 from docsite import Site  # noqa: E402
 
 TOML = textwrap.dedent('''\
@@ -174,11 +175,20 @@ def test_example_headings_get_example_class():
         '<h2 id="example">Example</h2><h4 id="e">Examples</h4>'
         '<h2 id="x">Example 1</h2><h1>Example</h1>'
     )
-    out = build_chm.mark_example_headings(html)
-    assert '<h2 class="example" id="example">' in out or '<h2 id="example" class="example">' in out
-    assert 'class="example"' in out.split("Examples")[0]
-    assert '<h2 id="x">Example 1</h2>' in out
-    assert "<h1>Example</h1>" in out
+    soup = BeautifulSoup(build_chm.mark_example_headings(html), "html.parser")
+    assert soup.find("h2", id="example")["class"] == ["example"]
+    assert soup.find("h4", id="e")["class"] == ["example"]
+    assert not soup.find("h2", id="x").has_attr("class")
+    assert not soup.find("h1").has_attr("class")
+
+
+def test_expand_macros_substitutes_like_the_site():
+    macros = {"version_majmin": "22.0", "build_date": "2026-11-17", "git_info": "main:abc",
+              "version": {"provider": "mike"}}
+    md = ("v{{ version_majmin }} {{build_date}} {{ git_info }} "
+          "{{ version }} {{ no_such_name }} {{ a-b }}")
+    assert build_chm.expand_macros(md, macros) == (
+        "v22.0 2026-11-17 main:abc {{ version }} {{ no_such_name }} {{ a-b }}")
 
 
 def test_titles_keep_plain_h1():

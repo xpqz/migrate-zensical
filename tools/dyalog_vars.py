@@ -4,13 +4,14 @@ The MkDocs site used the mkdocs-macros plugin, but the corpus only ever used
 it for plain variable substitution: `{{ version_majmin }}`,
 `{{ version_condensed }}` and `{{ conga_version_condensed }}`. From Zensical
 0.0.68 a build with the macros plugin enabled is about 25 times slower on
-macOS than one without, so this extension takes its place.
+macOS than one without (https://github.com/zensical/zensical/issues/1168),
+so this extension takes its place.
 
 Every scalar (str, int, float, bool) top-level key of `[project.extra]` in
 zensical.toml is available as `{{ name }}` (spacing inside the braces is
 free). Nothing else of Jinja is: no filters, expressions, `{% %}` blocks or
-nested keys. A `{{ name }}` with no matching variable is left as written and
-logged once as a warning.
+nested keys. A `{{ name }}` with no matching variable, or naming a table or
+array, is left as written and logged once as a warning.
 
 Substitution runs on the raw Markdown source, before fenced code is set
 aside, so variables are replaced inside code blocks too, as macros did.
@@ -27,6 +28,7 @@ from markdown.preprocessors import Preprocessor
 log = logging.getLogger("dyalog_vars")
 
 _VARIABLE_RE = re.compile(r"\{\{\s*([A-Za-z_][A-Za-z0-9_]*)\s*\}\}")
+_MISSING = object()
 _SCALARS = (str, int, float, bool)
 
 # Fenced code is stashed by pymdownx.superfences/fenced_code at priority 25;
@@ -42,31 +44,43 @@ _warned = set()
 
 
 def load_variables(config_file):
-    """Return the scalar top-level keys of [project.extra] in config_file."""
+    """Return the top-level keys of [project.extra] in config_file; only the
+    scalar ones are substituted."""
     path = os.path.realpath(config_file)
-    mtime = os.stat(path).st_mtime_ns
+    try:
+        mtime = os.stat(path).st_mtime_ns
+    except FileNotFoundError:
+        raise FileNotFoundError(
+            f"dyalog_vars: no config file {path}; run from the directory containing "
+            f"zensical.toml, or set config_file") from None
     cached = _cache.get(path)
     if cached and cached[0] == mtime:
         return cached[1]
     with open(path, "rb") as f:
         extra = tomllib.load(f).get("project", {}).get("extra", {})
-    variables = {k: v for k, v in extra.items() if isinstance(v, _SCALARS)}
+    variables = dict(extra)
     _cache[path] = (mtime, variables)
     return variables
 
 
 def substitute(text, variables):
-    """Replace each {{ name }} in text with the scalar variables[name]."""
+    """Replace each {{ name }} in text with the scalar variables[name]. Names
+    are identifiers; anything else in braces is not a variable."""
 
     def replace(match):
         name = match.group(1)
-        value = variables.get(name)
-        if not isinstance(value, _SCALARS):
-            if name not in _warned:
-                _warned.add(name)
-                log.warning("dyalog_vars: no variable %r in [project.extra]; left as written", name)
-            return match.group(0)
-        return str(value)
+        value = variables.get(name, _MISSING)
+        if isinstance(value, _SCALARS):
+            return str(value)
+        if name not in _warned:
+            _warned.add(name)
+            if value is _MISSING:
+                log.warning("dyalog_vars: no variable %r in [project.extra]; left as written",
+                            name)
+            else:
+                log.warning("dyalog_vars: %r in [project.extra] is not a scalar (it is a %s); "
+                            "left as written", name, type(value).__name__)
+        return match.group(0)
 
     return _VARIABLE_RE.sub(replace, text)
 

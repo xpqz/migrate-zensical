@@ -40,6 +40,12 @@ def test_add_keywords_keeps_existing_block():
     assert sk.add_keywords(md) == md
 
 
+def test_add_keywords_keeps_an_existing_hidden_div_written_differently():
+    # Any hidden div check.py recognises counts, not only the canonical spelling.
+    md = page("R←⎕A") + "\n<div style='display:none'>\n  ⎕A\n</div>\n"
+    assert sk.add_keywords(md) == md
+
+
 def test_add_keywords_leaves_search_excluded_page_alone():
     md = page("R←⎕A").replace("boost: 2", "exclude: true")
     assert sk.add_keywords(md) == md

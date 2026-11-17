@@ -8,6 +8,7 @@ import logging
 import os
 
 import markdown
+import pytest
 
 import dyalog_vars
 
@@ -54,6 +55,23 @@ def test_non_scalar_extra_ignored():
     assert dyalog_vars.substitute(text, variables) == text
 
 
+def test_non_scalar_is_logged_as_not_a_scalar(caplog):
+    with caplog.at_level(logging.WARNING, logger="dyalog_vars"):
+        dyalog_vars.substitute("{{ a_table_name }}", {"a_table_name": {"provider": "mike"}})
+    (message,) = [r.getMessage() for r in caplog.records if "a_table_name" in r.getMessage()]
+    assert "not a scalar" in message
+
+
+def test_only_identifiers_are_variables():
+    text = "{{ a-b }} {{ x.y }} {{ x | upper }}"
+    assert dyalog_vars.substitute(text, {"a": 1, "x": 2}) == text
+
+
+def test_missing_config_file_says_what_to_do(tmp_path):
+    with pytest.raises(FileNotFoundError, match="directory containing zensical.toml.*config_file"):
+        dyalog_vars.load_variables(str(tmp_path / "zensical.toml"))
+
+
 def test_scalars_render_as_their_text():
     variables = {"n": 210, "f": 3.6, "b": False}
     assert dyalog_vars.substitute("{{ n }} {{ f }} {{ b }}", variables) == "210 3.6 False"
@@ -88,6 +106,8 @@ def test_reads_project_extra_from_toml(tmp_path):
         "version_condensed": 210,
         "conga_version": 3.6,
         "generator": False,
+        # Not substitutable, but known: {{ version }} warns that it is not a scalar.
+        "version": {"provider": "mike"},
     }
 
 

@@ -177,6 +177,9 @@ it moves to `design/` before the first cutover rehearsal.
   differ; set `UV_LINK_MODE=copy` if needed (uv symlink mode unsupported).
 - Editor: recommend Zensical Studio (free tier) in the README and in
   `.vscode/extensions.json`.
+- No `macros` plugin: it makes builds ~10–25× slower on macOS since Zensical
+  0.0.68 ([zensical/zensical#1168](https://github.com/zensical/zensical/issues/1168));
+  `tools/dyalog_vars.py` substitutes the `[project.extra]` variables instead.
 
 ### What happens to each upstream tool
 

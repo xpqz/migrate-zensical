@@ -141,7 +141,8 @@ def check_admonitions(site: Site) -> list[Problem]:
     return problems
 
 
-_HIDDEN_DIV = re.compile(
+# A hidden keyword block's opening div. maintain/search_keywords.py uses it too.
+HIDDEN_DIV = re.compile(
     r"""<div\b[^>]*?\bstyle\s*=\s*["']\s*display\s*:\s*none\s*;?\s*["']""",
     re.IGNORECASE)
 
@@ -167,7 +168,7 @@ def check_search_exclusions(site: Site) -> list[Problem]:
         if not excludes_search(text):
             continue
         for n, line in docsite.prose_lines(text):
-            if _HIDDEN_DIV.search(line):
+            if HIDDEN_DIV.search(line):
                 problems.append(Problem(
                     page, n, "page is excluded from search but has hidden "
                     "search keywords; remove one", "error"))

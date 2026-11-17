@@ -25,6 +25,8 @@ import sys
 from collections import namedtuple
 from pathlib import Path
 
+import docsite
+
 # Strips SGR colour sequences from Zensical's diagnostic output.
 _ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
 
@@ -41,7 +43,6 @@ _SEVERITY_RE = re.compile(r"^\s*(?:Warning|Error):\s+(.*\S)\s*$")
 _COUNT_RE = re.compile(r"(?:(\d+)\s+issues?\s+found|(No)\s+issues?\s+found)")
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-PROJECT_DIR = REPO_ROOT / "zensical"
 BASELINE_PATH = REPO_ROOT / "known-issues.txt"
 
 # Outcome of assessing one build. ok is the gate verdict; reasons explains a
@@ -155,11 +156,12 @@ def run_build(project_dir):
 
 def main(argv=None, runner=run_build):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--project-dir", type=Path, default=PROJECT_DIR)
+    parser.add_argument("--project-dir", type=Path, default=None,
+                        help="the project to build (default: docsite.find_project())")
     parser.add_argument("--baseline", type=Path, default=BASELINE_PATH)
     args = parser.parse_args(argv)
 
-    output, returncode = runner(args.project_dir)
+    output, returncode = runner(args.project_dir or docsite.find_project())
     result = assess(output, returncode, load_baseline(args.baseline))
 
     for issue in sorted(result.resolved):

@@ -35,6 +35,12 @@ on:
 permissions:
   contents: write
 
+# Serialise release runs: each picks the first free tag and prunes drafts,
+# which two concurrent runs would race on.
+concurrency:
+  group: docs-release
+  cancel-in-progress: false
+
 jobs:
   build-chm:
     runs-on: ubuntu-latest
@@ -99,21 +105,22 @@ jobs:
           GIT_INFO: ${{ steps.git-info.outputs.GIT_INFO }}
           BUILD_DATE: ${{ steps.git-info.outputs.DATE }}
         run: |
-          mkdir -p chm/output
+          mkdir -p out/chm
           uv run python tools/chm/build_chm.py \
             --project "$PROJECT" \
-            --project-dir chm/output \
+            --project-dir out/chm \
             --git-info "$GIT_INFO" \
             --build-date "$BUILD_DATE"
-          ls -la chm/output/*.chm
+          ls -la out/chm/*.chm
 
       - name: Manage draft releases and create the release
+        # Without a CHM there is nothing to release: no asset-less releases.
+        if: ${{ inputs.generate_chm }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           BASE_TAG: ${{ steps.version.outputs.VERSION }}
           GIT_INFO: ${{ steps.git-info.outputs.GIT_INFO }}
-          GENERATE_CHM: ${{ inputs.generate_chm }}
           PUBLISH_RELEASE: ${{ inputs.publish_release }}
         run: |
           MAX_DRAFTS=5  # Keep this many most recent drafts
@@ -147,15 +154,8 @@ jobs:
 
           RELEASE_TAG=$(get_available_tag "$BASE_TAG")
 
-          ASSETS=()
-          PARTS=""
-          if [ "$GENERATE_CHM" = "true" ]; then
-            ASSETS+=(chm/output/*.chm)
-            PARTS="$PARTS CHM"
-          fi
-          PARTS=$(echo $PARTS | xargs)
-          RELEASE_NAME="Documentation ${PARTS} $RELEASE_TAG"
-          NOTES="Documentation ${PARTS} generated from ${GIT_INFO}"
+          RELEASE_NAME="Documentation CHM $RELEASE_TAG"
+          NOTES="Documentation CHM generated from ${GIT_INFO}"
 
           # Called from full-release.yml, publish_release is true so Jenkins
           # can pick the assets up straight away; otherwise leave a draft.
@@ -168,7 +168,7 @@ jobs:
 
           echo "Creating new ${RELEASE_TYPE} release: $RELEASE_TAG"
           gh release create "$RELEASE_TAG" \
-            "${ASSETS[@]}" \
+            out/chm/*.chm \
             "${DRAFT_FLAG[@]}" \
             --target "$GITHUB_SHA" \
             --title "$RELEASE_NAME" \

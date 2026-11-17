@@ -216,3 +216,13 @@ def test_run_build_decodes_output_as_utf8_whatever_the_locale(tmp_path):
     assert returncode == 0
     assert "⍳⎕ build" in output
     assert "�" in output
+
+
+def test_main_builds_the_project_docsite_finds(tmp_path, monkeypatch):
+    baseline = tmp_path / "known-issues.txt"
+    baseline.write_text("", encoding="utf-8")
+    monkeypatch.setenv("DOCS_PROJECT", str(tmp_path / "project"))
+    built = []
+    check_flatten.main(["--baseline", str(baseline)],
+                       runner=lambda project: (built.append(project), (CLEAN, 0))[1])
+    assert built == [tmp_path / "project"]

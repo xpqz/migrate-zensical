@@ -64,7 +64,7 @@ def keywords(syntax: str) -> str | None:
 
 
 def add_keywords(md: str) -> str:
-    if MARKER in md or '<div style="display: none;">' in md:
+    if MARKER in md or check.HIDDEN_DIV.search(md):
         return md
     if check.excludes_search(md):  # a keyword div there is a check.py error
         return md

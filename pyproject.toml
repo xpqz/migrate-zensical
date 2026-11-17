@@ -1,7 +1,8 @@
 # The repository's one Python environment: the Zensical build stack, the
 # conversion and check tooling under tools/, its tests, and the deploy tool.
-#   uv sync                 build + tooling, plus pytest (dev is uv's default group)
-#   uv sync --all-groups    also mike (deploy) and the CHM build dependencies
+#   uv sync                 build + tooling, plus pytest and the CHM build
+#                           dependencies (the default groups, dev and chm)
+#   uv sync --all-groups    also mike (deploy)
 #
 # The project itself packages tools/dyalog_caption.py and tools/dyalog_vars.py:
 # Python-Markdown imports these extensions by module name when Zensical builds,
@@ -48,6 +49,10 @@ chm = [
     "htmlmin==0.1.12",
     "csscompressor==0.9.5",
 ]
+
+[tool.uv]
+# A plain `uv sync` installs these, so the CHM tests run rather than skip.
+default-groups = ["dev", "chm"]
 
 [tool.setuptools]
 py-modules = ["dyalog_caption", "dyalog_vars"]

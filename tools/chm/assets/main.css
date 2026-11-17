@@ -217,14 +217,6 @@ div.admonition p.admonition-title {
     padding: 5px 20px;
 }
 
-/* Note admonition */
-div.admonition.note {
-    border-color: #2A3244;
-}
-div.admonition.note p.admonition-title {
-    background-color: #2A3244;
-}
-
 /* Hint admonition (the site's tip) */
 div.admonition.hint,
 div.admonition.tip {
@@ -251,8 +243,7 @@ div.admonition.warning p.admonition-title {
     background-color: #CA2E51;
 }
 
-/* Legacy admonition (the site's note: the corpus has no other notes; this
-   overrides the note rule above) */
+/* Legacy admonition (the site's note: the corpus has no other notes) */
 div.admonition.legacy,
 div.admonition.note {
     border-color: #505050;

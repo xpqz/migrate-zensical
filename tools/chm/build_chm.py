@@ -63,6 +63,7 @@ import yaml
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))  # tools/, for docsite
 
+import dyalog_vars  # noqa: E402
 from docsite import Site, find_project  # noqa: E402
 
 warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
@@ -367,16 +368,11 @@ def chm_images(site: Site, pages: List[Tuple[str, str]]) -> List[Tuple[str, str]
 
 def expand_macros(data: str, macros: dict) -> str:
     """
-    The mkdocs macro extension makes use of templates of the type {{ macro-id }} where
-    the substitution value is stored in the "extra:" section in the mkdocs.yml file.
+    Substitute {{ name }} variables as the site build does (dyalog_vars): the
+    scalars of [project.extra], plus the CHM-only build_date and git_info.
+    Unknown names are left as written.
     """
-
-    def replace(match):
-        key = match.group(1).strip()
-        value = macros.get(key)
-        return str(value) if not isinstance(value, dict) else match.group(0)
-
-    return re.sub(r"\{\{\s*(.*?)\s*}}", replace, data)
+    return dyalog_vars.substitute(data, macros)
 
 
 def purge_css(css: str, html_content: str) -> str:
