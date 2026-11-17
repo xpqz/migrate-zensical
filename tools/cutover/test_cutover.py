@@ -81,7 +81,8 @@ def test_rename_plan_maps_net_guides_to_aliases(upstream):
 
 def test_rename_plan_rejects_collisions(upstream):
     (upstream / "docs" / "compiler-user-guide").mkdir()
-    (upstream / "docs" / "compiler-user-guide" / "index.md").write_text("# Clash\n")
+    (upstream / "docs" / "compiler-user-guide" / "index.md").write_text(
+        "# Clash\n", encoding="utf-8", newline="\n")
     git(upstream, "add", "-A")
     git(upstream, "commit", "-q", "-m", "A root page where a guide will land")
     with pytest.raises(cutover.CutoverError, match="docs/compiler-user-guide/index.md"):
@@ -117,7 +118,8 @@ def test_commit_a_keeps_page_history(upstream):
 
 def test_assert_pure_renames_rejects_edits(upstream):
     git(upstream, "mv", "docs/conventions.md", "docs/moved.md")
-    (upstream / "docs" / "moved.md").write_text("# Conventions\n\nEdited.\n")
+    (upstream / "docs" / "moved.md").write_text(
+        "# Conventions\n\nEdited.\n", encoding="utf-8", newline="\n")
     git(upstream, "add", "-A")
     git(upstream, "commit", "-q", "-m", "Rename and edit")
     sha = git(upstream, "rev-parse", "HEAD").strip()
@@ -127,7 +129,7 @@ def test_assert_pure_renames_rejects_edits(upstream):
 
 def test_assert_pure_renames_rejects_additions(upstream):
     git(upstream, "mv", "docs/conventions.md", "docs/moved.md")
-    (upstream / "docs" / "new.md").write_text("# New\n")
+    (upstream / "docs" / "new.md").write_text("# New\n", encoding="utf-8", newline="\n")
     git(upstream, "add", "-A")
     git(upstream, "commit", "-q", "-m", "Rename and add")
     sha = git(upstream, "rev-parse", "HEAD").strip()
@@ -366,7 +368,8 @@ def test_commit_b_installs_the_root_readme(upstream, tooling):
 def test_commit_b_refuses_a_stale_overlay(upstream, tooling):
     plan = cutover.rename_plan(upstream, cutover.load_mounts(upstream))
     cutover.commit_renames(upstream, plan)
-    (upstream / "docs" / "index.md").write_text("# Edited upstream\n")
+    (upstream / "docs" / "index.md").write_text(
+        "# Edited upstream\n", encoding="utf-8", newline="\n")
     with pytest.raises(ValueError, match="index.md"):
         cutover.commit_transform(upstream, tooling, **COMMIT_B_ARGS)
 

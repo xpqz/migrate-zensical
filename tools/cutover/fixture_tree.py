@@ -227,52 +227,52 @@ def build_source_tree(root: Path) -> Path:
     src = root / "documentation"
 
     (src / "docs" / "javascripts").mkdir(parents=True)
-    (src / "mkdocs.yml").write_text(ROOT_MKDOCS, encoding="utf-8")
-    (src / "docs" / "index.md").write_text(INDEX_MD, encoding="utf-8")
-    (src / "docs" / "conventions.md").write_text("# Conventions\n", encoding="utf-8")
-    (src / "docs" / "javascripts" / "mathjax.js").write_text(MATHJAX_JS, encoding="utf-8")
+    (src / "mkdocs.yml").write_text(ROOT_MKDOCS, encoding="utf-8", newline="\n")
+    (src / "docs" / "index.md").write_text(INDEX_MD, encoding="utf-8", newline="\n")
+    (src / "docs" / "conventions.md").write_text("# Conventions\n", encoding="utf-8", newline="\n")
+    (src / "docs" / "javascripts" / "mathjax.js").write_text(MATHJAX_JS, encoding="utf-8", newline="\n")
 
     (src / "documentation-assets" / "css").mkdir(parents=True)
-    (src / "documentation-assets" / "css" / "main.css").write_text("body {}\n", encoding="utf-8")
+    (src / "documentation-assets" / "css" / "main.css").write_text("body {}\n", encoding="utf-8", newline="\n")
 
     rn = src / "release-notes"
     (rn / "docs" / "announcements").mkdir(parents=True)
     (rn / "docs" / "javascripts").mkdir(parents=True)
     (rn / "docs" / "images").mkdir(parents=True)
-    (rn / "mkdocs.yml").write_text(RELEASE_NOTES_MKDOCS, encoding="utf-8")
-    (rn / "docs" / "index.md").write_text("# Release Notes {{ version_majmin }}\n", encoding="utf-8")
-    (rn / "docs" / "announcements" / "index.md").write_text("# Announcements\n", encoding="utf-8")
+    (rn / "mkdocs.yml").write_text(RELEASE_NOTES_MKDOCS, encoding="utf-8", newline="\n")
+    (rn / "docs" / "index.md").write_text("# Release Notes {{ version_majmin }}\n", encoding="utf-8", newline="\n")
+    (rn / "docs" / "announcements" / "index.md").write_text("# Announcements\n", encoding="utf-8", newline="\n")
     (rn / "docs" / "announcements" / "deprecated-functionality.md").write_text(
         "# Deprecated\nSee [conventions](../../conventions.md).\n",
-        encoding="utf-8",
+        encoding="utf-8", newline="\n",
     )
-    (rn / "docs" / "system-requirements.md").write_text("# System Requirements\n", encoding="utf-8")
-    (rn / "docs" / "javascripts" / "mathjax.js").write_text(MATHJAX_JS, encoding="utf-8")
+    (rn / "docs" / "system-requirements.md").write_text("# System Requirements\n", encoding="utf-8", newline="\n")
+    (rn / "docs" / "javascripts" / "mathjax.js").write_text(MATHJAX_JS, encoding="utf-8", newline="\n")
     (rn / "docs" / "images" / "logo.png").write_bytes(PNG_BYTES)
 
     cu = src / "compiler-user-guide"
     (cu / "docs").mkdir(parents=True)
-    (cu / "mkdocs.yml").write_text(COMPILER_MKDOCS, encoding="utf-8")
-    (cu / "docs" / "index.md").write_text("# Compiler User Guide\n", encoding="utf-8")
-    (cu / "docs" / "basic-usage.md").write_text("# Basic Usage\n", encoding="utf-8")
+    (cu / "mkdocs.yml").write_text(COMPILER_MKDOCS, encoding="utf-8", newline="\n")
+    (cu / "docs" / "index.md").write_text("# Compiler User Guide\n", encoding="utf-8", newline="\n")
+    (cu / "docs" / "basic-usage.md").write_text("# Basic Usage\n", encoding="utf-8", newline="\n")
     # A page whose title is a raw-HTML heading (the pre-July object-reference
     # shape), to exercise the rewrite. Body left as plain text.
     (cu / "docs" / "raw-heading.md").write_text(
         '<h1 class="heading"><span class="name">Widget</span>'
         ' <span class="right">Object</span></h1>\n\nBody text.\n',
-        encoding="utf-8",
+        encoding="utf-8", newline="\n",
     )
-    (cu / "docs" / "styled-title.md").write_text(STYLED_TITLE_MD, encoding="utf-8")
-    (cu / "docs" / "examples.md").write_text(EXAMPLES_MD, encoding="utf-8")
-    (cu / "docs" / "toolbar.md").write_text(TOOLBAR_MD, encoding="utf-8")
+    (cu / "docs" / "styled-title.md").write_text(STYLED_TITLE_MD, encoding="utf-8", newline="\n")
+    (cu / "docs" / "examples.md").write_text(EXAMPLES_MD, encoding="utf-8", newline="\n")
+    (cu / "docs" / "toolbar.md").write_text(TOOLBAR_MD, encoding="utf-8", newline="\n")
 
     dn = src / "dotnet-interface-guide"
     (dn / "docs").mkdir(parents=True)
-    (dn / "mkdocs.yml").write_text(DOTNET_MKDOCS, encoding="utf-8")
-    (dn / "docs" / "index.md").write_text("# .NET Interface Guide\n", encoding="utf-8")
+    (dn / "mkdocs.yml").write_text(DOTNET_MKDOCS, encoding="utf-8", newline="\n")
+    (dn / "docs" / "index.md").write_text("# .NET Interface Guide\n", encoding="utf-8", newline="\n")
     (dn / "docs" / "installation.md").write_text(
         "# Installation\n\nSee [the compiler](../compiler-user-guide/index.md).\n",
-        encoding="utf-8",
+        encoding="utf-8", newline="\n",
     )
 
     return src
@@ -285,10 +285,10 @@ def build_overlay_tree(root: Path, source: Path) -> Path:
     overlay = root / "content"
     (overlay / "windows-ui-guide" / "img").mkdir(parents=True)
     (overlay / "windows-ui-guide" / "img" / "tbt-exec.png").write_bytes(PNG_BYTES)
-    (overlay / "index.md").write_text(INDEX_OVERLAY_MD, encoding="utf-8")
+    (overlay / "index.md").write_text(INDEX_OVERLAY_MD, encoding="utf-8", newline="\n")
     (overlay / "index.md.source-sha256").write_text(
         hashlib.sha256((source / "docs" / "index.md").read_bytes()).hexdigest() + "\n",
-        encoding="utf-8",
+        encoding="utf-8", newline="\n",
     )
     return overlay
 
@@ -394,17 +394,25 @@ def git(repo: Path, *args: str) -> str:
 
 
 def _write_files(root: Path, files: dict) -> None:
+    """Write each file with LF line endings on every platform."""
     for rel, content in files.items():
         path = root / rel
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(content, encoding="utf-8")
+        path.write_text(content, encoding="utf-8", newline="\n")
+
+
+def _configure(repo: Path) -> None:
+    """Identity, no signing, and no line-ending conversion, so blobs are the
+    bytes written on every platform (Windows runners set core.autocrlf)."""
+    git(repo, "config", "user.name", GIT_IDENTITY["GIT_AUTHOR_NAME"])
+    git(repo, "config", "user.email", GIT_IDENTITY["GIT_AUTHOR_EMAIL"])
+    git(repo, "config", "commit.gpgsign", "false")
+    git(repo, "config", "core.autocrlf", "false")
 
 
 def _init_repo(repo: Path) -> None:
     git(repo, "init", "-q", "-b", "main")
-    git(repo, "config", "user.name", GIT_IDENTITY["GIT_AUTHOR_NAME"])
-    git(repo, "config", "user.email", GIT_IDENTITY["GIT_AUTHOR_EMAIL"])
-    git(repo, "config", "commit.gpgsign", "false")
+    _configure(repo)
 
 
 def _add_gitlink(repo: Path, path: str, sha: str, url: str) -> None:
@@ -421,23 +429,26 @@ def build_upstream_repo(root: Path) -> Path:
     original."""
     src = build_source_tree(root)
     _write_files(src, UPSTREAM_FILES)
-    (src / "tools" / "jenkins" / "get_svn_docbin").chmod(0o755)
     # documentation-assets is a submodule upstream, not a directory.
     shutil.rmtree(src / "documentation-assets")
     _init_repo(src)
     git(src, "add", "-A")
+    # Through the index, which is what is committed: Windows has no executable
+    # bit for git to read. The chmod keeps the working tree in step where
+    # there is one, so a later commit -a does not stage the old mode back.
+    (src / "tools" / "jenkins" / "get_svn_docbin").chmod(0o755)
+    git(src, "update-index", "--chmod=+x", "tools/jenkins/get_svn_docbin")
     _add_gitlink(src, "documentation-assets", ASSETS_GITLINK,
                  "https://github.com/Dyalog/documentation-assets")
     git(src, "commit", "-q", "-m", "Upstream history before the cutover")
     page = src / "compiler-user-guide" / "docs" / "basic-usage.md"
-    page.write_text("# Basic Usage\n\nA later edit.\n", encoding="utf-8")
+    page.write_text("# Basic Usage\n\nA later edit.\n", encoding="utf-8", newline="\n")
     git(src, "commit", "-q", "-am", "Edit a page before the freeze")
 
     clone = root / "clone"
-    subprocess.run(["git", "clone", "-q", str(src), str(clone)], check=True)
-    git(clone, "config", "user.name", GIT_IDENTITY["GIT_AUTHOR_NAME"])
-    git(clone, "config", "user.email", GIT_IDENTITY["GIT_AUTHOR_EMAIL"])
-    git(clone, "config", "commit.gpgsign", "false")
+    subprocess.run(["git", "-c", "core.autocrlf=false", "clone", "-q", str(src), str(clone)],
+                   check=True)
+    _configure(clone)
     # The fetch URL a GitHub clone would have; nothing is fetched from it.
     git(clone, "remote", "set-url", "origin", UPSTREAM_URL)
     return clone
@@ -463,5 +474,5 @@ def build_tooling_repo(root: Path, overlay: Path, cutover_dir: Path) -> Path:
     _add_gitlink(tooling, "zensical/docs/documentation-theme-zensical", THEME_GITLINK, THEME_URL)
     git(tooling, "commit", "-q", "-m", "Tooling")
     # An untracked file is not tooling: the cutover copies tracked files only.
-    (tooling / "tools" / "scratch.txt").write_text("untracked\n", encoding="utf-8")
+    (tooling / "tools" / "scratch.txt").write_text("untracked\n", encoding="utf-8", newline="\n")
     return tooling
