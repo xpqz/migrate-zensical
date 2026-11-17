@@ -145,7 +145,10 @@ def run_build(project_dir):
         [sys.executable, "-m", "zensical", "build", "-c"],
         cwd=project_dir,
         capture_output=True,
-        text=True,
+        # Zensical writes UTF-8 (APL glyphs in quoted source lines); decode it
+        # as such rather than in the OS default, which is not UTF-8 on Windows.
+        encoding="utf-8",
+        errors="replace",
     )
     return result.stdout + result.stderr, result.returncode
 

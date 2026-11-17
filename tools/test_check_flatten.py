@@ -196,3 +196,24 @@ def test_main_returns_one_when_the_gate_fails(tmp_path):
     )
     assert rc == 1
 
+
+
+# --- run_build output decoding -----------------------------------------
+
+
+def test_run_build_decodes_output_as_utf8_whatever_the_locale(tmp_path):
+    # A stand-in `zensical` package in the project dir shadows the real one
+    # for `python -m zensical` (cwd is first on sys.path). It writes APL
+    # glyphs as UTF-8 plus one byte that is not valid UTF-8.
+    fake = tmp_path / "zensical"
+    fake.mkdir()
+    (fake / "__init__.py").write_text("", encoding="utf-8")
+    (fake / "__main__.py").write_text(
+        "import sys\n"
+        "sys.stdout.buffer.write('⍳⎕ build\\n'.encode('utf-8') + b'\\xff\\n')\n",
+        encoding="utf-8",
+    )
+    output, returncode = check_flatten.run_build(tmp_path)
+    assert returncode == 0
+    assert "⍳⎕ build" in output
+    assert "�" in output

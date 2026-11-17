@@ -84,7 +84,9 @@ if __name__ == '__main__':
                         help='Display symbols without markdown links, just as back-ticked text')
     
     args = parser.parse_args()
-    sys.stdout.reconfigure(encoding='utf-8')  # APL glyphs, whatever the OS default
+    # APL glyphs go to both streams, whatever the OS default encoding
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
     
     with open(args.filename, 'r', encoding='utf-8') as file:
         text = file.read()

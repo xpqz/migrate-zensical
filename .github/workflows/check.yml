@@ -1,8 +1,9 @@
 name: Check
 
 # Runs the test suite and the content checks on every pull request and on
-# pushes to main. The platforms job builds the site on Windows and macOS,
-# weekly and on demand, since the day-to-day checks only run on Linux.
+# pushes to main. The platforms job runs the same tests and checks (which
+# build the site) on Windows and macOS, weekly and on demand, since the
+# day-to-day checks only run on Linux.
 on:
   pull_request:
   push:
@@ -57,6 +58,6 @@ jobs:
       - name: Tests
         run: uv run pytest -q
 
-      - name: Build the site
-        working-directory: zensical
-        run: uv run zensical build --clean
+      - name: Content checks and build
+        # check.py runs the Zensical build, so this also covers the build.
+        run: uv run python tools/check.py
