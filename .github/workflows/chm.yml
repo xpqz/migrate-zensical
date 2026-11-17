@@ -1,0 +1,172 @@
+name: Build CHM
+
+# Builds the CHM help file from the Zensical project and attaches it to a
+# GitHub release tagged v<X.Y>.<n>, which is what Jenkins'
+# getVersionedReleaseAssets selects (the newest non-draft release whose tag
+# starts with "v<version>."). The tag naming follows the MkDocs-era
+# mkdocs-chm.yml: X.Y from extra.version_majmin, n the commit count, and a
+# letter suffix if the tag already exists. A standalone run leaves a draft;
+# full-release.yml publishes immediately so Jenkins can pick the assets up.
+on:
+  workflow_dispatch:
+    inputs:
+      generate_chm:
+        description: 'Generate CHM help file'
+        type: boolean
+        default: true
+      version_override:
+        description: 'Version (X.Y) for the tag. Empty uses zensical.toml extra.version_majmin.'
+        required: false
+        default: ''
+        type: string
+  workflow_call:
+    inputs:
+      generate_chm:
+        type: boolean
+        default: true
+      publish_release:
+        description: 'Publish release immediately instead of as a draft'
+        type: boolean
+        default: false
+      version_override:
+        type: string
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  build-chm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # Required for git info and the commit count
+          submodules: recursive
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fpc   # for "chmcmd", part of Free Pascal
+
+      - uses: astral-sh/setup-uv@v10.3.3
+
+      - name: Install Python dependencies
+        # The chm group (in --all-groups) carries the build_chm.py extras.
+        run: uv sync --all-groups --locked
+
+      - name: Locate the project
+        id: project
+        env:
+          PYTHONPATH: tools
+        run: |
+          DIR=$(uv run python -c "import os, docsite; print(os.path.relpath(docsite.find_project()))")
+          echo "DIR=$DIR" >> "$GITHUB_OUTPUT"
+          echo "Project: $DIR"
+
+      - name: Git info
+        id: git-info
+        run: |
+          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          HASH=$(git rev-parse --short HEAD)
+          echo "GIT_INFO=${BRANCH}:${HASH}" >> "$GITHUB_OUTPUT"
+          echo "DATE=$(date +'%Y-%m-%d')" >> "$GITHUB_OUTPUT"
+
+      - name: Build the CHM
+        if: ${{ inputs.generate_chm }}
+        env:
+          PROJECT: ${{ steps.project.outputs.DIR }}
+          GIT_INFO: ${{ steps.git-info.outputs.GIT_INFO }}
+          BUILD_DATE: ${{ steps.git-info.outputs.DATE }}
+        run: |
+          mkdir -p chm/output
+          uv run python tools/chm/build_chm.py \
+            --project "$PROJECT" \
+            --project-dir chm/output \
+            --git-info "$GIT_INFO" \
+            --build-date "$BUILD_DATE"
+          ls -la chm/output/*.chm
+
+      - name: Determine the release tag
+        id: version
+        env:
+          VERSION_OVERRIDE: ${{ inputs.version_override }}
+          PROJECT: ${{ steps.project.outputs.DIR }}
+        run: |
+          VERSION_XY="$VERSION_OVERRIDE"
+          if [ -z "$VERSION_XY" ]; then
+            VERSION_XY=$(uv run python -c "import os, tomllib; print(tomllib.load(open(os.path.join(os.environ['PROJECT'], 'zensical.toml'), 'rb'))['project']['extra']['version_majmin'])")
+          fi
+          if ! echo "$VERSION_XY" | grep -qE '^[0-9]+\.[0-9]+$'; then
+            echo "ERROR: invalid version '$VERSION_XY' (expected X.Y)"; exit 1
+          fi
+          COMMIT_COUNT=$(git rev-list --count HEAD)
+          echo "VERSION=v${VERSION_XY}.${COMMIT_COUNT}" >> "$GITHUB_OUTPUT"
+          echo "Constructed version: v${VERSION_XY}.${COMMIT_COUNT}"
+
+      - name: Manage draft releases and create the release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          BASE_TAG: ${{ steps.version.outputs.VERSION }}
+          GIT_INFO: ${{ steps.git-info.outputs.GIT_INFO }}
+          GENERATE_CHM: ${{ inputs.generate_chm }}
+          PUBLISH_RELEASE: ${{ inputs.publish_release }}
+        run: |
+          MAX_DRAFTS=5  # Keep this many most recent drafts
+
+          # First tag not already taken: base, then base + a, b, c ...
+          get_available_tag() {
+            local tag=$1
+            local base_tag=$1
+            local letter="a"
+            while gh release view "$tag" &>/dev/null; do
+              echo "Tag $tag exists, trying next suffix..." >&2
+              tag="${base_tag}${letter}"
+              letter=$(echo "$letter" | tr "a-y" "b-z")
+            done
+            echo "$tag"
+          }
+
+          echo "Cleaning up old draft releases..."
+          DRAFTS=$(gh release list --json tagName,isDraft,createdAt \
+            --jq '.[] | select(.isDraft==true) | [.tagName,.createdAt] | @tsv' \
+            | sort -k2 | awk '{print $1}')
+          DRAFT_COUNT=$(echo "$DRAFTS" | grep -c "^" || true)
+          if [ "$DRAFT_COUNT" -gt "$MAX_DRAFTS" ]; then
+            TO_DELETE=$((DRAFT_COUNT - MAX_DRAFTS + 1))  # +1: a new one is coming
+            echo "Found $DRAFT_COUNT drafts, deleting $TO_DELETE oldest..."
+            echo "$DRAFTS" | head -n "$TO_DELETE" | while read -r tag; do
+              echo "Deleting draft release $tag..."
+              gh release delete "$tag" --yes
+            done
+          fi
+
+          RELEASE_TAG=$(get_available_tag "$BASE_TAG")
+
+          ASSETS=()
+          PARTS=""
+          if [ "$GENERATE_CHM" = "true" ]; then
+            ASSETS+=(chm/output/*.chm)
+            PARTS="$PARTS CHM"
+          fi
+          PARTS=$(echo $PARTS | xargs)
+          RELEASE_NAME="Documentation ${PARTS} $RELEASE_TAG"
+          NOTES="Documentation ${PARTS} generated from ${GIT_INFO}"
+
+          # Called from full-release.yml, publish_release is true so Jenkins
+          # can pick the assets up straight away; otherwise leave a draft.
+          DRAFT_FLAG=(--draft)
+          RELEASE_TYPE="draft"
+          if [ "$PUBLISH_RELEASE" = "true" ]; then
+            DRAFT_FLAG=()
+            RELEASE_TYPE="published"
+          fi
+
+          echo "Creating new ${RELEASE_TYPE} release: $RELEASE_TAG"
+          gh release create "$RELEASE_TAG" \
+            "${ASSETS[@]}" \
+            "${DRAFT_FLAG[@]}" \
+            --target "$GITHUB_SHA" \
+            --title "$RELEASE_NAME" \
+            --notes "$NOTES"

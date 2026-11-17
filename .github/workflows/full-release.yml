@@ -1,0 +1,45 @@
+name: Full Release (Assets + Site)
+
+# Builds the CHM release asset, then publishes the site. This exact file name
+# must stay registered on main: release branches dispatch their own copy of
+# full-release.yml through it.
+on:
+  workflow_dispatch:
+    inputs:
+      version_override:
+        description: 'Version (X.Y) for the release tag and the site. Empty uses zensical.toml extra.version_majmin.'
+        required: false
+        default: ''
+        type: string
+      set_as_latest:
+        description: 'Set this version as the default/latest on staging (GitHub Pages). No effect on docs.dyalog.com'
+        required: false
+        default: false
+        type: boolean
+      site_url_override:
+        description: 'Override site_url (for staging/test hosts). Empty keeps the committed production canonical.'
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: write
+  pages: write
+
+jobs:
+  build-assets:
+    uses: ./.github/workflows/chm.yml
+    with:
+      generate_chm: true
+      publish_release: true
+      version_override: ${{ inputs.version_override }}
+    secrets: inherit
+
+  publish-site:
+    needs: build-assets
+    uses: ./.github/workflows/publish.yml
+    with:
+      version_override: ${{ inputs.version_override }}
+      set_as_latest: ${{ inputs.set_as_latest }}
+      site_url_override: ${{ inputs.site_url_override }}
+    secrets: inherit
