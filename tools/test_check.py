@@ -180,3 +180,139 @@ def test_assess_separates_other_reasons():
     out = "Warning: x\n ╭─[ a.md:1:1 ]\n1 issues found\n"
     r = check_flatten.assess(out, 0, set())
     assert r.other_reasons == [] and r.reasons and r.new
+
+
+# --- review fixes from the admonition and search checks ------------------
+
+def test_hidden_div_with_attributes_before_style(tmp_path):
+    div = '<div class="x" style="display:none">'
+    problems = excl(tmp_path, EXCLUDE + "# T\n\n" + div + "\n⍳\n</div>\n")
+    assert [(p.line, p.severity) for p in problems] == [(7, "error")]
+
+
+def test_hidden_div_in_fence_is_ignored(tmp_path):
+    text = EXCLUDE + '# T\n\n```html\n<div style="display: none;">\n```\n'
+    assert excl(tmp_path, text) == []
+
+
+def test_admonition_without_type_is_malformed(tmp_path):
+    problems = adm(tmp_path, "!!!\n")
+    assert [(p.line, p.severity) for p in problems] == [(1, "error")]
+    assert "malformed" in problems[0].message
+
+
+def test_admonition_unquoted_title_is_malformed(tmp_path):
+    problems = adm(tmp_path, "!!! info Information\n")
+    assert [(p.line, p.severity) for p in problems] == [(1, "error")]
+    assert "malformed" in problems[0].message
+
+
+def test_admonition_empty_title_is_error(tmp_path):
+    problems = adm(tmp_path, '!!! info ""\n')
+    assert [(p.line, p.severity) for p in problems] == [(1, "error")]
+    assert "title" in problems[0].message
+
+
+# --- images --------------------------------------------------------------
+
+def img_site(tmp_path, body="", files=("a/pic.png",), css=""):
+    site = make(tmp_path)
+    page(site, "index.md", body)
+    for rel in files:
+        f = site.docs / rel
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_bytes(b"x")
+    if css:
+        d = site.docs / docsite.ASSET_DIR / "css"
+        d.mkdir(parents=True, exist_ok=True)
+        (d / "dyalog.css").write_text(css, encoding="utf-8")
+    return site
+
+
+def img_problems(site, severity, **kw):
+    return [p for p in check.check_images(site, **kw) if p.severity == severity]
+
+
+def test_missing_image_is_error(tmp_path):
+    site = img_site(tmp_path, "# T\n\n![x](a/nope.png)\n")
+    errs = img_problems(site, "error")
+    assert [(p.path, p.line) for p in errs] == [("index.md", 3)]
+
+
+def test_existing_image_and_decoding(tmp_path):
+    site = img_site(tmp_path, "![x](a/my%20pic.png#f?v=1 \"title\")\n",
+                    files=("a/my pic.png",))
+    assert check.check_images(site) == []
+
+
+def test_html_img_resolved(tmp_path):
+    site = img_site(tmp_path, '<img alt="" src="a/pic.png">\n<img src=\'a/no.png\'>\n')
+    errs = img_problems(site, "error")
+    assert [p.line for p in errs] == [2]
+    assert img_problems(site, "warning") == []
+
+
+def test_relative_to_page_directory(tmp_path):
+    site = img_site(tmp_path, "", files=("a/pic.png",))
+    page(site, "a/index.md", "![x](pic.png) ![y](../a/pic.png)\n")
+    assert check.check_images(site) == []
+
+
+def test_image_in_fence_ignored(tmp_path):
+    site = img_site(tmp_path, "```\n![x](a/nope.png)\n```\n")
+    assert img_problems(site, "error") == []
+    # and a fenced reference does not make an image "used"
+    (tmp_path / "b").mkdir()
+    site2 = img_site(tmp_path / "b", "```\n![x](a/pic.png)\n```\n")
+    assert [p.path for p in img_problems(site2, "warning")] == ["a/pic.png"]
+
+
+def test_external_image_ignored(tmp_path):
+    site = img_site(tmp_path, "![x](https://e.com/a.png)\n"
+                    '<img src="http://e.com/b.png">\n![d](data:image/png;base64,AA)\n')
+    assert img_problems(site, "error") == []
+
+
+def test_unused_image_is_warning(tmp_path):
+    site = img_site(tmp_path, "# T\n", files=("a/pic.png", "a/doc.md.txt"))
+    warns = img_problems(site, "warning")
+    assert [p.path for p in warns] == ["a/pic.png"]
+    assert (site.docs / "a/pic.png").exists()
+
+
+def test_prune_removes_only_unused(tmp_path):
+    site = img_site(tmp_path, "![x](a/used.png)\n",
+                    files=("a/used.png", "a/unused.PNG", "a/notes.txt"),
+                    css="")
+    theme_img = site.docs / docsite.ASSET_DIR / "images" / "t.svg"
+    theme_img.parent.mkdir(parents=True)
+    theme_img.write_bytes(b"x")
+    probs = check.check_images(site, prune=True)
+    assert [(p.path, p.severity, p.message) for p in probs] == [
+        ("a/unused.PNG", "warning", "removed")]
+    assert (site.docs / "a/used.png").exists()
+    assert (site.docs / "a/notes.txt").exists()
+    assert theme_img.exists()
+    assert not (site.docs / "a/unused.PNG").exists()
+
+
+def test_image_referenced_from_css_is_used(tmp_path):
+    site = img_site(
+        tmp_path, "", files=("bg/hero.png",),
+        css="a{background:url('../../bg/hero.png')}")
+    assert check.check_images(site) == []
+
+
+def test_image_referenced_from_config_is_used(tmp_path):
+    site = img_site(tmp_path, "", files=("bg/hero.png",))
+    (site.project / "zensical.toml").write_text(
+        TOML + '\n[project.theme]\nlogo = "bg/hero.png"\n', encoding="utf-8")
+    site = docsite.Site.load(site.project)
+    assert check.check_images(site) == []
+
+
+def test_main_prune_flag(tmp_path):
+    site = img_site(tmp_path, "# T\n", files=("a/pic.png",))
+    check.main(["--project", str(tmp_path), "--skip-build",
+                "--unlisted", str(tmp_path / "u.txt"), "--prune-images"])
+    assert not (site.docs / "a/pic.png").exists()

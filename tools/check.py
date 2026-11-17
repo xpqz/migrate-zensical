@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import argparse
 import re
+import posixpath
 import sys
+import urllib.parse
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Literal
@@ -140,7 +142,7 @@ def check_admonitions(site: Site) -> list[Problem]:
 
 
 _HIDDEN_DIV = re.compile(
-    r"""<div\s+style\s*=\s*["']\s*display\s*:\s*none\s*;?\s*["']""",
+    r"""<div\b[^>]*?\bstyle\s*=\s*["']\s*display\s*:\s*none\s*;?\s*["']""",
     re.IGNORECASE)
 
 
@@ -173,8 +175,86 @@ def check_search_exclusions(site: Site) -> list[Problem]:
     return problems
 
 
-# Cheap checks that need only the site; the build and unlisted checks take
-# extra inputs and are wired in main().
+IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"}
+_MD_IMAGE = re.compile(r"!\[[^\]]*\]\(\s*(?:<([^>]*)>|([^)\s]+))")
+_HTML_IMG = re.compile(r"""<img\b[^>]*?\bsrc\s*=\s*(?:"([^"]*)"|'([^']*)')""",
+                       re.IGNORECASE)
+_CSS_URL = re.compile(r"""url\(\s*["']?([^"')\s]+)["']?\s*\)""", re.IGNORECASE)
+_EXTERNAL = re.compile(r"^(?:[a-z][a-z0-9+.-]*:|//)", re.IGNORECASE)
+
+
+def _resolve(base_dir: str, target: str) -> str | None:
+    """docs-relative POSIX path of a relative image target, else None."""
+    target = target.strip()
+    if not target or target.startswith("#") or _EXTERNAL.match(target):
+        return None
+    target = urllib.parse.unquote(re.split(r"[#?]", target, 1)[0])
+    if target.startswith("/"):
+        return posixpath.normpath(target.lstrip("/"))
+    return posixpath.normpath(posixpath.join(base_dir, target))
+
+
+def _page_image_refs(site: Site, page: str) -> list[tuple[int, str]]:
+    """(line, docs-relative path) for each local image reference in prose."""
+    base = posixpath.dirname(page)
+    refs = []
+    for n, line in docsite.prose_lines(site.read(page)):
+        targets = [a or b for a, b in _MD_IMAGE.findall(line)]
+        targets += [a or b for a, b in _HTML_IMG.findall(line)]
+        for t in targets:
+            if (path := _resolve(base, t)) is not None:
+                refs.append((n, path))
+    return refs
+
+
+def _theme_css_refs(site: Site) -> set[str]:
+    refs = set()
+    for css in (site.docs / docsite.ASSET_DIR).rglob("*.css"):
+        base = posixpath.dirname(css.relative_to(site.docs).as_posix())
+        for t in _CSS_URL.findall(css.read_text(encoding="utf-8")):
+            if (path := _resolve(base, t)) is not None:
+                refs.add(path)
+    return refs
+
+
+def check_images(site: Site, prune: bool = False) -> list[Problem]:
+    """Missing image targets are errors; unreferenced image files warnings.
+
+    With prune=True the unreferenced files are deleted and reported as
+    "removed". The house-style submodule is never pruned; its CSS counts as
+    a referrer.
+    """
+    problems = []
+    used: set[str] = set()
+    for page in site.pages():
+        for n, path in _page_image_refs(site, page):
+            used.add(path)
+            if not (site.docs / path).is_file():
+                problems.append(Problem(
+                    page, n, f"image not found: {path}", "error"))
+    used |= _theme_css_refs(site)
+    config_text = (site.project / "zensical.toml").read_text(encoding="utf-8")
+
+    for f in sorted(site.docs.rglob("*")):
+        if f.suffix.lower() not in IMAGE_SUFFIXES or not f.is_file():
+            continue
+        rel = f.relative_to(site.docs).as_posix()
+        if rel.split("/", 1)[0] == docsite.ASSET_DIR:
+            continue
+        if rel in used or rel in config_text:
+            continue
+        if prune:
+            f.unlink()
+            problems.append(Problem(rel, None, "removed", "warning"))
+        else:
+            problems.append(Problem(rel, None, "image is not referenced by "
+                                    "any page, the config or the theme CSS",
+                                    "warning"))
+    return problems
+
+
+# Cheap checks that need only the site; the build, unlisted and image checks
+# take extra inputs and are wired in main().
 CHECKS: list[Callable[[Site], list[Problem]]] = [
     check_nav_targets, check_admonitions, check_search_exclusions]
 
@@ -184,7 +264,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--skip-build", action="store_true",
                         help="skip the Zensical build (the slow check)")
     parser.add_argument("--prune-images", action="store_true",
-                        help="remove unreferenced images (not yet implemented)")
+                        help="delete unreferenced images")
     parser.add_argument("--project", type=Path, default=None)
     parser.add_argument("--unlisted", type=Path, default=UNLISTED_PATH)
     parser.add_argument("--baseline", type=Path, default=BASELINE_PATH)
@@ -194,6 +274,7 @@ def main(argv: list[str] | None = None) -> int:
     problems: list[Problem] = []
     for fn in CHECKS:
         problems += fn(site)
+    problems += check_images(site, prune=args.prune_images)
     problems += check_unlisted(site, load_list(args.unlisted))
     if not args.skip_build:
         problems += check_build(site, args.baseline)
