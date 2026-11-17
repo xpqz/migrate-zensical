@@ -5,8 +5,6 @@ name: Test Jenkins Deployment Logic
 # Safe to run: operates entirely in temp directories, never touches production.
 
 on:
-  push:
-    branches: [tooling-port]
   workflow_dispatch:
     inputs:
       production_versions:
