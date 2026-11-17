@@ -313,6 +313,82 @@ def test_image_referenced_from_config_is_used(tmp_path):
 
 def test_main_prune_flag(tmp_path):
     site = img_site(tmp_path, "# T\n", files=("a/pic.png",))
+    (tmp_path / "zensical.toml").write_text(
+        '[project]\nsite_name = "T"\nnav = ["index.md", "a/index.md"]\n',
+        encoding="utf-8")
+    (site.docs / "a/extra.md").unlink()
     check.main(["--project", str(tmp_path), "--skip-build",
                 "--unlisted", str(tmp_path / "u.txt"), "--prune-images"])
     assert not (site.docs / "a/pic.png").exists()
+
+
+# --- image check hardening ----------------------------------------------
+
+def test_prune_skipped_when_any_check_errors(tmp_path):
+    # make() has a nav entry with no file: an error from another check.
+    site = img_site(tmp_path, "# T\n", files=("a/pic.png",))
+    check.main(["--project", str(tmp_path), "--skip-build",
+                "--unlisted", str(tmp_path / "u.txt"), "--prune-images"])
+    assert (site.docs / "a/pic.png").exists()
+
+
+def test_prune_skipped_message(tmp_path, capsys):
+    img_site(tmp_path, "# T\n", files=("a/pic.png",))
+    check.main(["--project", str(tmp_path), "--skip-build",
+                "--unlisted", str(tmp_path / "u.txt"), "--prune-images"])
+    assert "pruning skipped because of errors" in capsys.readouterr().out
+
+
+def used_by(tmp_path, body, files=("a/pic.png",)):
+    site = img_site(tmp_path, body, files=files)
+    return check.check_images(site)
+
+
+def test_link_to_image_counts_as_use(tmp_path):
+    assert used_by(tmp_path, "[big](a/pic.png)\n") == []
+
+
+def test_reference_definition_counts_as_use(tmp_path):
+    assert used_by(tmp_path, "![x][p]\n\n[p]: a/pic.png \"t\"\n") == []
+
+
+def test_href_poster_srcset_count_as_use(tmp_path):
+    files = ("a/1.png", "a/2.png", "a/3.png", "a/4.png")
+    body = ('<a href="a/1.png">x</a>\n<video poster="a/2.png"></video>\n'
+            '<img src="a/1.png" srcset="a/3.png 1x, a/4.png 2x">\n')
+    assert used_by(tmp_path, body, files) == []
+
+
+def test_srcset_missing_candidate_is_error(tmp_path):
+    body = '<img src="a/pic.png" srcset="a/pic.png 1x, a/gone.png 2x">\n'
+    assert [p.severity for p in used_by(tmp_path, body)] == ["error"]
+
+
+def test_multiline_img_tag(tmp_path):
+    body = '# T\n\n<img\n  alt="x"\n  src="a/pic.png">\n<img\n  src="a/no.png">\n'
+    probs = used_by(tmp_path, body)
+    assert [(p.severity, p.line) for p in probs] == [("error", 7)]
+
+
+def test_root_relative_image(tmp_path):
+    site = img_site(tmp_path, "", files=("img.png",))
+    page(site, "a/index.md", "![x](/img.png)\n")
+    assert check.check_images(site) == []
+
+
+def test_two_images_on_one_line(tmp_path):
+    body = "![a](a/1.png) text ![b](a/2.png) <img src=\"a/3.png\">\n"
+    assert used_by(tmp_path, body, ("a/1.png", "a/2.png", "a/3.png")) == []
+
+
+def test_case_mismatch_is_error_and_not_pruned(tmp_path):
+    site = img_site(tmp_path, "![x](a/Pic.PNG)\n", files=("a/pic.png",))
+    probs = check.check_images(site, prune=True)
+    assert [(p.path, p.severity) for p in probs] == [("index.md", "error")]
+    assert "case" in probs[0].message
+    assert (site.docs / "a/pic.png").exists()
+
+
+def test_fenced_multiline_img_ignored(tmp_path):
+    body = "```html\n<img\n src=\"a/no.png\">\n```\n"
+    assert [p.severity for p in used_by(tmp_path, body)] == ["warning"]

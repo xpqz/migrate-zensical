@@ -8,8 +8,8 @@ build (via check_flatten) and the known-issues.txt baseline.
 from __future__ import annotations
 
 import argparse
-import re
 import posixpath
+import re
 import sys
 import urllib.parse
 from dataclasses import dataclass
@@ -176,9 +176,12 @@ def check_search_exclusions(site: Site) -> list[Problem]:
 
 
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"}
-_MD_IMAGE = re.compile(r"!\[[^\]]*\]\(\s*(?:<([^>]*)>|([^)\s]+))")
-_HTML_IMG = re.compile(r"""<img\b[^>]*?\bsrc\s*=\s*(?:"([^"]*)"|'([^']*)')""",
-                       re.IGNORECASE)
+_MD_TARGET = re.compile(r"(!?)\[[^\]]*\]\(\s*(?:<([^>]*)>|([^)\s]+))")
+_REF_DEF = re.compile(r"^ {0,3}\[[^\]]+\]:\s*(?:<([^>]*)>|(\S+))", re.MULTILINE)
+_HTML_TAG = re.compile(r"<([a-zA-Z][\w-]*)\b([^>]*)>")
+_HTML_ATTR = re.compile(
+    r"""(?<![\w-])(src|srcset|href|poster)\s*=\s*(?:"([^"]*)"|'([^']*)')""",
+    re.IGNORECASE)
 _CSS_URL = re.compile(r"""url\(\s*["']?([^"')\s]+)["']?\s*\)""", re.IGNORECASE)
 _EXTERNAL = re.compile(r"^(?:[a-z][a-z0-9+.-]*:|//)", re.IGNORECASE)
 
@@ -194,17 +197,46 @@ def _resolve(base_dir: str, target: str) -> str | None:
     return posixpath.normpath(posixpath.join(base_dir, target))
 
 
-def _page_image_refs(site: Site, page: str) -> list[tuple[int, str]]:
-    """(line, docs-relative path) for each local image reference in prose."""
+def _is_image(target: str) -> bool:
+    path = re.split(r"[#?]", target, 1)[0]
+    return posixpath.splitext(path)[1].lower() in IMAGE_SUFFIXES
+
+
+def _page_image_refs(site: Site, page: str) -> list[tuple[int, str, bool]]:
+    """(line, docs-relative path, embedded) for each local image reference.
+
+    Embedded references (![](), <img src/srcset>) must exist. Other
+    references (links, reference definitions, href/poster/srcset) only count
+    when they point at an image file, and only mark it as used. Prose only.
+    """
     base = posixpath.dirname(page)
-    refs = []
-    for n, line in docsite.prose_lines(site.read(page)):
-        targets = [a or b for a, b in _MD_IMAGE.findall(line)]
-        targets += [a or b for a, b in _HTML_IMG.findall(line)]
-        for t in targets:
-            if (path := _resolve(base, t)) is not None:
-                refs.append((n, path))
-    return refs
+    # Fenced lines blank, so offsets still give editor line numbers.
+    prose = {n: line for n, line in docsite.prose_lines(site.read(page))}
+    text = "\n".join(prose.get(i, "") for i in range(1, max(prose, default=0) + 1))
+    found: list[tuple[int, str, bool]] = []
+
+    def add(pos: int, target: str, embedded: bool) -> None:
+        if not embedded and not _is_image(target):
+            return
+        if (path := _resolve(base, target)) is not None:
+            found.append((text.count("\n", 0, pos) + 1, path, embedded))
+
+    for m in _MD_TARGET.finditer(text):
+        add(m.start(), m[2] or m[3] or "", m[1] == "!")
+    for m in _REF_DEF.finditer(text):
+        add(m.start(), m[1] or m[2] or "", False)
+    for tag in _HTML_TAG.finditer(text):
+        is_img = tag[1].lower() == "img"
+        for attr in _HTML_ATTR.finditer(tag[2]):
+            name, value = attr[1].lower(), attr[2] if attr[2] is not None else attr[3]
+            pos = tag.start(2) + attr.start()
+            if name == "srcset":
+                for cand in value.split(","):
+                    if cand.split():
+                        add(pos, cand.split()[0], is_img)
+            else:
+                add(pos, value, is_img and name == "src")
+    return found
 
 
 def _theme_css_refs(site: Site) -> set[str]:
@@ -220,31 +252,43 @@ def _theme_css_refs(site: Site) -> set[str]:
 def check_images(site: Site, prune: bool = False) -> list[Problem]:
     """Missing image targets are errors; unreferenced image files warnings.
 
+    A reference that differs from the file on disk only in case is an error
+    (it breaks on case-sensitive servers) and still marks the file as used.
     With prune=True the unreferenced files are deleted and reported as
     "removed". The house-style submodule is never pruned; its CSS counts as
     a referrer.
     """
     problems = []
+    files = {f.relative_to(site.docs).as_posix()
+             for f in site.docs.rglob("*") if f.is_file()}
+    by_fold = {rel.casefold(): rel for rel in files}
     used: set[str] = set()
     for page in site.pages():
-        for n, path in _page_image_refs(site, page):
-            used.add(path)
-            if not (site.docs / path).is_file():
+        for n, path, embedded in _page_image_refs(site, page):
+            actual = path if path in files else by_fold.get(path.casefold())
+            if actual is None:
+                if embedded:
+                    problems.append(Problem(
+                        page, n, f"image not found: {path}", "error"))
+                continue
+            used.add(actual.casefold())
+            if actual != path:
                 problems.append(Problem(
-                    page, n, f"image not found: {path}", "error"))
-    used |= _theme_css_refs(site)
-    config_text = (site.project / "zensical.toml").read_text(encoding="utf-8")
+                    page, n, f"image path {path!r} differs in case from the "
+                    f"file {actual!r}", "error"))
+    used |= {p.casefold() for p in _theme_css_refs(site)}
+    config_text = (site.project / "zensical.toml").read_text(
+        encoding="utf-8").casefold()
 
-    for f in sorted(site.docs.rglob("*")):
-        if f.suffix.lower() not in IMAGE_SUFFIXES or not f.is_file():
+    for rel in sorted(files):
+        if posixpath.splitext(rel)[1].lower() not in IMAGE_SUFFIXES:
             continue
-        rel = f.relative_to(site.docs).as_posix()
         if rel.split("/", 1)[0] == docsite.ASSET_DIR:
             continue
-        if rel in used or rel in config_text:
+        if rel.casefold() in used or rel.casefold() in config_text:
             continue
         if prune:
-            f.unlink()
+            (site.docs / rel).unlink()
             problems.append(Problem(rel, None, "removed", "warning"))
         else:
             problems.append(Problem(rel, None, "image is not referenced by "
@@ -274,10 +318,18 @@ def main(argv: list[str] | None = None) -> int:
     problems: list[Problem] = []
     for fn in CHECKS:
         problems += fn(site)
-    problems += check_images(site, prune=args.prune_images)
     problems += check_unlisted(site, load_list(args.unlisted))
     if not args.skip_build:
         problems += check_build(site, args.baseline)
+    # Pruning deletes files, so only do it when nothing at all is in error.
+    image_problems = check_images(site)
+    if args.prune_images:
+        if any(p.severity == "error" for p in problems + image_problems):
+            problems.append(Problem(
+                "images", None, "pruning skipped because of errors", "warning"))
+        else:
+            image_problems = check_images(site, prune=True)
+    problems += image_problems
 
     for p in problems:
         loc = f"{p.path}:{p.line}" if p.line else p.path
