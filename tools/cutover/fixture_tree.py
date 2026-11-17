@@ -313,7 +313,7 @@ JENKINS_FILES = {
 }
 
 # The workflow names old branches dispatch; main must keep files so named.
-STUB_WORKFLOWS = ("mkdocs-publish.yml", "mkdocs-chm.yml", "mkdocs-pdf.yml", "full-release.yml")
+STUB_WORKFLOWS = ("mkdocs-publish.yml", "mkdocs-chm.yml", "full-release.yml")
 
 # Upstream files around the content, as on Dyalog/documentation main. The
 # .gitignore is upstream's in the parts that matter: it ignores the files the
@@ -354,7 +354,7 @@ UPSTREAM_URL = "https://github.com/Dyalog/documentation.git"
 # This repository's tracked files outside the content, in miniature.
 TOOLING_FILES = {
     ".gitignore": "/zensical/site/\n/site/\n.venv/\n",
-    ".python-version": "3.11\n",
+    ".python-version": "3.14\n",
     ".vscode/extensions.json": "{}\n",
     "pyproject.toml": "[project]\nname = \"tooling\"\n",
     "uv.lock": "version = 1\n",

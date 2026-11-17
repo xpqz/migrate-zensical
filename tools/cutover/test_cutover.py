@@ -301,8 +301,8 @@ def test_stub_workflows_present(upstream, tooling):
     for name in STUB_WORKFLOWS:
         assert show(upstream, f".github/workflows/{name}") == f"name: stub {name}\n".encode()
 
-    git(upstream, "rm", "-q", ".github/workflows/mkdocs-pdf.yml")
-    with pytest.raises(cutover.CutoverError, match="mkdocs-pdf.yml"):
+    git(upstream, "rm", "-q", ".github/workflows/mkdocs-chm.yml")
+    with pytest.raises(cutover.CutoverError, match="mkdocs-chm.yml"):
         cutover.assert_stub_workflows(upstream)
 
 

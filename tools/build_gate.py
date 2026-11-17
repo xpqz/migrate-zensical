@@ -1,11 +1,11 @@
-"""Validate the flattened project against Zensical's built-in checker.
+"""The build gate behind tools/check.py: Zensical's checker against a baseline.
 
 Zensical reports every unresolved internal link and anchor during a build.
 This tool builds the project, normalises each reported issue to a stable
 `<type> @ <file>:<line>:<col>` key, and diffs that set against a committed
 baseline of issues already known to exist in the source corpus
-(known-issues.txt). The flatten is faithful when the build introduces no
-issue outside that baseline.
+(known-issues.txt). The gate passes when the build introduces no issue
+outside that baseline.
 
 The gate is deliberately hard to pass by accident. Zensical's diagnostic
 format is not a stability contract (the tool is pinned), so a build that
@@ -18,7 +18,6 @@ Forward-looking by design: the only engine it consults is Zensical. It does
 not build or diff against MkDocs, and carries no fallback path.
 """
 
-import argparse
 import re
 import subprocess
 import sys
@@ -152,30 +151,3 @@ def run_build(project_dir):
         errors="replace",
     )
     return result.stdout + result.stderr, result.returncode
-
-
-def main(argv=None, runner=run_build):
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--project-dir", type=Path, default=None,
-                        help="the project to build (default: docsite.find_project())")
-    parser.add_argument("--baseline", type=Path, default=BASELINE_PATH)
-    args = parser.parse_args(argv)
-
-    output, returncode = runner(args.project_dir or docsite.find_project())
-    result = assess(output, returncode, load_baseline(args.baseline))
-
-    for issue in sorted(result.resolved):
-        print(f"resolved (no longer reported): {issue}")
-    for issue in sorted(result.new):
-        print(f"NEW issue introduced by the flatten: {issue}")
-
-    if not result.ok:
-        for reason in result.reasons:
-            print(f"FAIL: {reason}")
-        return 1
-    print("OK: build clean against the baseline.")
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())

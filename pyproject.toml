@@ -15,9 +15,9 @@ build-backend = "setuptools.build_meta"
 name = "dyalog-docs-tooling"
 version = "0.1.0"
 description = "Build and maintenance tooling for the Dyalog documentation on Zensical."
-requires-python = ">=3.11"
+requires-python = ">=3.14"
 dependencies = [
-    # The static site generator, pinned: check_flatten.py parses its
+    # The static site generator, pinned: tools/build_gate.py parses its
     # diagnostic output, which is not a stability contract.
     "zensical==0.1.1",
     # Python-Markdown extensions named in zensical.toml's markdown_extensions
@@ -46,7 +46,9 @@ deploy = [
 chm = [
     "pygments",  # also a Zensical dependency; its version is resolved there
     "cssutils==2.14.0",
-    "htmlmin==0.1.12",
+    # htmlmin2: htmlmin 0.1.12 minus its `import cgi` (removed in Python 3.13);
+    # otherwise identical, so the CHM output is unchanged.
+    "htmlmin2==0.1.13",
     "csscompressor==0.9.5",
 ]
 

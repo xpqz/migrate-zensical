@@ -45,7 +45,7 @@ With a checkout of `dyalog/documentation` as a sibling directory named `document
 ```
 uv sync --all-groups
 uv run python tools/cutover/convert.py --regenerate   # rewrites zensical/ (keeps the house style submodule)
-uv run python tools/check_flatten.py          # builds it and gates on known-issues.txt
+uv run python tools/check.py                   # builds it and runs every check
 ```
 
 `convert.py` refuses to run when a page in `tools/cutover/content/` (a hand-reworked replacement) no

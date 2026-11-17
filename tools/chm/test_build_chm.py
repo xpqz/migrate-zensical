@@ -1,20 +1,18 @@
 """Tests for the CHM builder.
 
-build_chm needs the `chm` dependency group (pygments, cssutils, htmlmin,
-csscompressor), one of uv's default groups; in an environment without it
-these tests are skipped rather than failing the suite.
+build_chm needs the `chm` dependency group (pygments, cssutils, htmlmin2,
+csscompressor), one of uv's default groups. A missing or broken dependency
+fails the suite rather than skipping it: a skip hid htmlmin's breakage on
+Python 3.13+.
 """
 
 import textwrap
 
 import pytest
 
-for _module in ("pygments", "cssutils", "htmlmin", "csscompressor"):
-    pytest.importorskip(_module, reason="needs the chm dependency group")
-
-import build_chm  # noqa: E402
-from bs4 import BeautifulSoup  # noqa: E402
-from docsite import Site  # noqa: E402
+import build_chm
+from bs4 import BeautifulSoup
+from docsite import Site
 
 TOML = textwrap.dedent('''\
     [project]

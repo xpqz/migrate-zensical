@@ -2,7 +2,7 @@
 
 Exit status is 1 if any problem has severity "error". Internal link and
 anchor validation is not re-implemented here: it comes from the Zensical
-build (via check_flatten) and the known-issues.txt baseline.
+build (via build_gate) and the known-issues.txt baseline.
 """
 
 from __future__ import annotations
@@ -18,15 +18,15 @@ from typing import Callable, Literal
 
 import yaml
 
-import check_flatten
+import build_gate
 import docsite
 from docsite import Site
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 UNLISTED_PATH = REPO_ROOT / "unlisted-pages.txt"
-BASELINE_PATH = check_flatten.BASELINE_PATH
+BASELINE_PATH = build_gate.BASELINE_PATH
 
-# "<type> @ <file>:<line>:<col>", as produced by check_flatten.parse_issues.
+# "<type> @ <file>:<line>:<col>", as produced by build_gate.parse_issues.
 _ISSUE_KEY = re.compile(r"^(?P<msg>.*?) @ (?P<file>.+?):(?P<line>\d+):\d+$")
 
 
@@ -80,14 +80,14 @@ def _issue_problem(key: str, message: str, severity) -> Problem:
 
 
 def check_build(site: Site, baseline_path: Path,
-                runner=check_flatten.run_build) -> list[Problem]:
+                runner=build_gate.run_build) -> list[Problem]:
     try:
-        baseline = check_flatten.load_baseline(baseline_path)
+        baseline = build_gate.load_baseline(baseline_path)
     except FileNotFoundError:
         return [Problem(str(baseline_path), None, "baseline file not found",
                         "error")]
     output, returncode = runner(site.project)
-    result = check_flatten.assess(output, returncode, baseline)
+    result = build_gate.assess(output, returncode, baseline)
     problems = [_issue_problem(k, "new build issue", "error")
                 for k in sorted(result.new)]
     problems += [_issue_problem(k, "baseline issue no longer reported; remove "
@@ -192,7 +192,7 @@ def _resolve(base_dir: str, target: str) -> str | None:
     target = target.strip()
     if not target or target.startswith("#") or _EXTERNAL.match(target):
         return None
-    target = urllib.parse.unquote(re.split(r"[#?]", target, 1)[0])
+    target = urllib.parse.unquote(re.split(r"[#?]", target, maxsplit=1)[0])
     if target.startswith("/"):
         return posixpath.normpath(target.lstrip("/"))
     return posixpath.normpath(posixpath.join(base_dir, target))
@@ -228,7 +228,7 @@ def _is_embedded(text: str, close: int) -> bool:
 
 
 def _is_image(target: str) -> bool:
-    path = re.split(r"[#?]", target, 1)[0]
+    path = re.split(r"[#?]", target, maxsplit=1)[0]
     return posixpath.splitext(path)[1].lower() in IMAGE_SUFFIXES
 
 

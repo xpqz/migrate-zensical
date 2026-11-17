@@ -174,11 +174,11 @@ def test_new_issue_tally_not_duplicated(tmp_path):
 
 
 def test_assess_separates_other_reasons():
-    import check_flatten
-    r = check_flatten.assess("boom", 2, set())
+    import build_gate
+    r = build_gate.assess("boom", 2, set())
     assert r.other_reasons and all("baseline" not in x for x in r.other_reasons)
     out = "Warning: x\n ╭─[ a.md:1:1 ]\n1 issues found\n"
-    r = check_flatten.assess(out, 0, set())
+    r = build_gate.assess(out, 0, set())
     assert r.other_reasons == [] and r.reasons and r.new
 
 
