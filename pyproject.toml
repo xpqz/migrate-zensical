@@ -45,7 +45,7 @@ deploy = [
 # tools/requirements-docs.txt.
 chm = [
     "pygments",  # also a Zensical dependency; its version is resolved there
-    "cssutils==2.14.0",
+    "cssutils==2.15.0",
     # htmlmin2: htmlmin 0.1.12 minus its `import cgi` (removed in Python 3.13);
     # otherwise identical, so the CHM output is unchanged.
     "htmlmin2==0.1.13",
