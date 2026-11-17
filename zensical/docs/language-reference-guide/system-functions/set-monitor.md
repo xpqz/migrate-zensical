@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Set Monitor `{R}←X ⎕MONITOR Y`
+# <span class="title-name">Set Monitor</span> `{R}←X ⎕MONITOR Y`
 
 ```apl
 {R}←X ⎕MONITOR Y

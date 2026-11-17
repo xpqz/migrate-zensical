@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Decimal Comparison Tolerance `⎕DCT`
+# <span class="title-name">Decimal Comparison Tolerance</span> `⎕DCT`
 
 ```apl
 ⎕DCT

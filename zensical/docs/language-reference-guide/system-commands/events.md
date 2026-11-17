@@ -1,6 +1,6 @@
 
 
-# List Events `)EVENTS`
+# <span class="title-name">List Events</span> `)EVENTS`
 
 ```apl
 )EVENTS

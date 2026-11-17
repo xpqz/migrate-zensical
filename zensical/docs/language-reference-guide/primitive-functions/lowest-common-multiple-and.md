@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Lowest Common Multiple/AND `R←X∧Y`
+# <span class="title-name">Lowest Common Multiple/AND</span> `R←X∧Y`
 
 ```apl
 R←X∧Y

@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Native File Rename `{R}←X ⎕NRENAME Y`
+# <span class="title-name">Native File Rename</span> `{R}←X ⎕NRENAME Y`
 
 ```apl
 {R}←X ⎕NRENAME Y

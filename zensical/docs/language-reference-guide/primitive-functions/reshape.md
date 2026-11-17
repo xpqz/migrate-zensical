@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Reshape `R←X⍴Y`
+# <span class="title-name">Reshape</span> `R←X⍴Y`
 
 ```apl
 R←X⍴Y

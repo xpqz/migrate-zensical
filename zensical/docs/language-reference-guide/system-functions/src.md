@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Source `R←⎕SRC Y`
+# <span class="title-name">Source</span> `R←⎕SRC Y`
 
 ```apl
 R←⎕SRC Y

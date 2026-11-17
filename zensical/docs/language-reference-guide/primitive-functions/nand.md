@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# NAND `R←X⍲Y`
+# <span class="title-name">NAND</span> `R←X⍲Y`
 
 ```apl
 R←X⍲Y

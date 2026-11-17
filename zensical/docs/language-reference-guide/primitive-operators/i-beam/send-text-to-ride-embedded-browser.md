@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Send Text to Ride-embedded Browser `R←{X}(3500⌶)Y`
+# <span class="title-name">Send Text to Ride-embedded Browser</span> `R←{X}(3500⌶)Y`
 
 ```apl
 R←{X}(3500⌶)Y

@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Screen Read `R←{X}⎕SR Y`
+# <span class="title-name">Screen Read</span> `R←{X}⎕SR Y`
 
 ```apl
 R←{X}⎕SR Y

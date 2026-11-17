@@ -3,7 +3,7 @@ search:
   exclude: true
 ---
 
-# Format `⎕FMT`
+# <span class="title-name">Format</span> `⎕FMT`
 
 ```apl
 ⎕FMT

@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Signal Counts `R←4007⌶Y`
+# <span class="title-name">Signal Counts</span> `R←4007⌶Y`
 
 ```apl
 R←4007⌶Y

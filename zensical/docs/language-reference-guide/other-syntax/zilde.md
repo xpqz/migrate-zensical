@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Zilde `R←⍬`
+# <span class="title-name">Zilde</span> `R←⍬`
 
 ```apl
 R←⍬

@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# State Indicator `R←⎕SI`
+# <span class="title-name">State Indicator</span> `R←⎕SI`
 
 ```apl
 R←⎕SI

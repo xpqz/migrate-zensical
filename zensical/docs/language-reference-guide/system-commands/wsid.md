@@ -1,6 +1,6 @@
 
 
-# Workspace Identification `)WSID {ws}`
+# <span class="title-name">Workspace Identification</span> `)WSID {ws}`
 
 ```apl
 )WSID {ws}

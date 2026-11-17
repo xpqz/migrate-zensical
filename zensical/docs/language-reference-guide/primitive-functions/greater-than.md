@@ -3,18 +3,19 @@ search:
   boost: 2
 ---
 
-# Greater Than `R←X>Y`
+# <span class="title-name">Greater Than</span> `R←X>Y`
 
 ```apl
 R←X>Y
 ```
 [Key to notation](../key-to-notation.md)
 
-`Y` must be numeric. `X` must be numeric. `R` is Boolean. `R` is 1 if `X` is greater than `Y` and `X=Y` is 0. Otherwise `R` is 0.
+`X` and `Y` must be real numeric arrays. `R` is Boolean. `R` is 1 if `X` is greater than `Y` and `X=Y` is 0. Otherwise `R` is 0.
 
-`⎕CT` and `⎕DCT` are  implicit arguments of _greater than_.
+`⎕CT` and `⎕DCT` are implicit arguments of _greater than_.
 
 ## Examples
+
 ```apl
       1 2 3 4 5 > 2
 0 0 1 1 1

@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Expunge Object `{R}←⎕EX Y`
+# <span class="title-name">Expunge Object</span> `{R}←⎕EX Y`
 
 ```apl
 {R}←⎕EX Y

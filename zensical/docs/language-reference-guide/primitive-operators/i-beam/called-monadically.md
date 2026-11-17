@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Called Monadically? `R←900⌶Y`
+# <span class="title-name">Called Monadically?</span> `R←900⌶Y`
 
 ```apl
 R←900⌶Y

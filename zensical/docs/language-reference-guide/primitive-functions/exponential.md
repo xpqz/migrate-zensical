@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Exponential `R←*Y`
+# <span class="title-name">Exponential</span> `R←*Y`
 
 ```apl
 R←*Y

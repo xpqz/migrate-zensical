@@ -1,5 +1,5 @@
 
-# Axis (with Monadic Operand) `R←f[B]Y`
+# <span class="title-name">Axis (with Monadic Operand)</span> `R←f[B]Y`
 
 ```apl
 R←f[B]Y
@@ -15,7 +15,7 @@ Table: Primitive monadic mixed functions with optional axis. {: #MonadicMixed }
 |Function|Name|Range of B|
 |---|---|---|
 |`⌽ or ⊖`|Reverse|`B∊⍳⍴⍴Y`|
-|`↑`|Mix|`(0≠1|B)^(B>⎕IO-1)^(B<⎕IO+⍴⍴Y)`|
+|`↑`|Mix|`(0≠1|B)∧(B>⎕IO-1)∧(B<⎕IO+⍴⍴Y)`|
 |`↓`|Split|`B∊⍳⍴⍴Y`|
 |`,`|Ravel|fraction, or zero or more axes of `Y`|
 |`⊂`|Enclose|`(B≡⍳0)∨(^/B∊⍳⍴⍴Y)`|

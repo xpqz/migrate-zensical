@@ -1,6 +1,6 @@
 
 
-# While Statement `:While bexp`
+# <span class="title-name">While Statement</span> `:While bexp`
 
 ```apl
 :While bexp

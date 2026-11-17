@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Compress/Decompress Vector of Short Integers `R←X(219⌶)Y`
+# <span class="title-name">Compress/Decompress Vector of Short Integers</span> `R←X(219⌶)Y`
 
 ```apl
 R←X(219⌶)Y

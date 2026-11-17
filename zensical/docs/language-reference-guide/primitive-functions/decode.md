@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Decode `R←X⊥Y`
+# <span class="title-name">Decode</span> `R←X⊥Y`
 
 ```apl
 R←X⊥Y

@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Name Classification `R←⎕NC Y`
+# <span class="title-name">Name Classification</span> `R←⎕NC Y`
 
 ```apl
 R←⎕NC Y

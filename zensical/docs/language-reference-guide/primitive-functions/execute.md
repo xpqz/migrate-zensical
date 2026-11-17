@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Execute `R←⍎Y`
+# <span class="title-name">Execute</span> `R←⍎Y`
 
 ```apl
 R←⍎Y

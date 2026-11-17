@@ -1,6 +1,6 @@
 
 
-# WS FULL `1`
+# <span class="title-name">WS FULL</span> `1`
 
 ```apl
 1

@@ -1,6 +1,6 @@
 
 
-# TIMEOUT `1006`
+# <span class="title-name">TIMEOUT</span> `1006`
 
 ```apl
 1006

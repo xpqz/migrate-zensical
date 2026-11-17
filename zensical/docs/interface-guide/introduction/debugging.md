@@ -1,8 +1,3 @@
----
-tags:
-  - Explanation
----
-
 # Debugging
 
 Four features are built into the system to assist in developing and debugging GUI applications.

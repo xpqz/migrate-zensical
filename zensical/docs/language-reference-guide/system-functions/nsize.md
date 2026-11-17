@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Native File Size `R←⎕NSIZE Y`
+# <span class="title-name">Native File Size</span> `R←⎕NSIZE Y`
 
 ```apl
 R←⎕NSIZE Y

@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Logical NOR `⍱`
+# <span class="title-name">Logical NOR</span> `⍱`
 
 ```apl
 ⍱

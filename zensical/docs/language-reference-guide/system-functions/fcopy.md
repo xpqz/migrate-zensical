@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# File Copy `R←X ⎕FCOPY Y`
+# <span class="title-name">File Copy</span> `R←X ⎕FCOPY Y`
 
 ```apl
 R←X ⎕FCOPY Y

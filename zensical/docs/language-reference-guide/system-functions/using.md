@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Using (Microsoft .NET Search Path) `⎕USING`
+# <span class="title-name">Using (Microsoft .NET Search Path)</span> `⎕USING`
 
 ```apl
 ⎕USING
@@ -35,13 +35,13 @@ Assigning a simple character vector to `⎕USING` is equivalent to setting it to
 
 ## Examples
 ```apl
-  ⎕USING←'System'
-  ]Display ⎕USING
-.→---------.
-| .→-----. |
-| |System| |
-| '------' |
-'∊---------'
+      ⎕USING←'System'
+      ]Display ⎕USING
+┌→─────────┐
+│ ┌→─────┐ │
+│ │System│ │
+│ └──────┘ │
+└∊─────────┘
 
 ⎕USING,←⊂'System.Windows.Forms,System.Windows.Forms.dll'
 ⎕USING,←⊂'System.Drawing,System.Drawing.dll'

@@ -1,8 +1,3 @@
----
-tags:
-  - Explanation
----
-
 # Gestures
 
 ## Introduction

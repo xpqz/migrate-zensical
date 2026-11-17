@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Query Monitor `R←⎕MONITOR Y`
+# <span class="title-name">Query Monitor</span> `R←⎕MONITOR Y`
 
 ```apl
 R←⎕MONITOR Y

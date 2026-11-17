@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Log `⍟`
+# <span class="title-name">Log</span> `⍟`
 
 ```apl
 ⍟

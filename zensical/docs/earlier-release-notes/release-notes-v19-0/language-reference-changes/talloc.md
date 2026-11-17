@@ -1,4 +1,4 @@
-# Allocate Token Range `{R}←{X} ⎕TALLOC Y`
+# <span class="title-name">Allocate Token Range</span> `{R}←{X} ⎕TALLOC Y`
 
 ```apl
 {R}←{X} ⎕TALLOC Y

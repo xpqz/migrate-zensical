@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Underscored Alphabetic Characters `R←⎕Ⓐ`
+# <span class="title-name">Underscored Alphabetic Characters</span> `R←⎕Ⓐ`
 
 ```apl
 R←⎕Ⓐ

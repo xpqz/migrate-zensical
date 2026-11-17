@@ -3,7 +3,7 @@ search:
   exclude: true
 ---
 
-# Trace Controls `⎕TRACE`
+# <span class="title-name">Trace Controls</span> `⎕TRACE`
 
 ```apl
 ⎕TRACE

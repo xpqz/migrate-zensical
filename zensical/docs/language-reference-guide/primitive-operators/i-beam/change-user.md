@@ -4,14 +4,14 @@ search:
 ---
 
 
-# Change User `R←4001⌶Y`
+# <span class="title-name">Change User</span> `R←4001⌶Y`
 
 ```apl
 R←4001⌶Y
 ```
 [Key to notation](../../key-to-notation.md)
 
-`Y` is a character vector that specifies a valid UNIX user name. The function changes the *userid (uid)* and *groupid (gid)* of the process to values that correspond to the specified user name.
+`Y` is a character vector that specifies a valid Unix user name. The function changes the *userid (uid)* and *groupid (gid)* of the process to values that correspond to the specified user name.
 
 It is only possible to change the user name if the *effective uid* is 0 (that is, the process has root privileges).
 

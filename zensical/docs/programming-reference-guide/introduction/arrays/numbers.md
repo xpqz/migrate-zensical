@@ -1,8 +1,3 @@
----
-tags:
-  - Explanation
----
-
 # Numbers
 
 Dyalog APL supports both real numbers and complex numbers.

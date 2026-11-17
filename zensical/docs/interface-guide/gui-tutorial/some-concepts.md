@@ -1,8 +1,3 @@
----
-tags:
-  - Tutorial
----
-
 # Some Concepts
 
 ## Objects

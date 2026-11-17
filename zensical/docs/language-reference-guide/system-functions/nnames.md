@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Native File Names `R←⎕NNAMES`
+# <span class="title-name">Native File Names</span> `R←⎕NNAMES`
 
 ```apl
 R←⎕NNAMES

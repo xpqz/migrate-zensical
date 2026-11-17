@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Remove Loaded File Object Info `R←5178⌶Y`
+# <span class="title-name">Remove Loaded File Object Info</span> `R←5178⌶Y`
 
 ```apl
 R←5178⌶Y

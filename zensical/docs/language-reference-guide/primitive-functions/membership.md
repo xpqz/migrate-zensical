@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Membership `R←X∊Y`
+# <span class="title-name">Membership</span> `R←X∊Y`
 
 ```apl
 R←X∊Y

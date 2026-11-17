@@ -1,6 +1,6 @@
 
 
-# Disposable Statement `:Disposable`
+# <span class="title-name">Disposable Statement</span> `:Disposable`
 
 ```apl
 :Disposable

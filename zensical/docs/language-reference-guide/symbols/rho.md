@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Rho `⍴`
+# <span class="title-name">Rho</span> `⍴`
 
 ```apl
 ⍴

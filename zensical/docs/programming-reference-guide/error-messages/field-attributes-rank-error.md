@@ -1,6 +1,6 @@
 
 
-# FIELD ATTRIBUTES RANK ERROR `58`
+# <span class="title-name">FIELD ATTRIBUTES RANK ERROR</span> `58`
 
 ```apl
 58

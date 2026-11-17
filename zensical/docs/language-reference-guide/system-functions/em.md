@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Event Message `R←⎕EM Y`
+# <span class="title-name">Event Message</span> `R←⎕EM Y`
 
 ```apl
 R←⎕EM Y

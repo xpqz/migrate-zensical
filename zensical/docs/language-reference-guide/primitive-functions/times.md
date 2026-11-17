@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Times `R←X×Y`
+# <span class="title-name">Times</span> `R←X×Y`
 
 ```apl
 R←X×Y

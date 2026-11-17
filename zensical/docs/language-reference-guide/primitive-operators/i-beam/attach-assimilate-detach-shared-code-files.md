@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Attach/Assimilate/Detach Shared Code Files `{R}←{X} (8666⌶) Y`
+# <span class="title-name">Attach/Assimilate/Detach Shared Code Files</span> `{R}←{X} (8666⌶) Y`
 
 ```apl
 {R}←{X} (8666⌶) Y

@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Equal Underbar Slash `≢`
+# <span class="title-name">Equal Underbar Slash</span> `≢`
 
 ```apl
 ≢

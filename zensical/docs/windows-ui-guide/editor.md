@@ -145,7 +145,7 @@ Nevertheless whenever you edit the Class *when it is not suspended*, you probabl
 
 The options in the *File* menu shown above provide for these alternatives.
 
-In addition, the Configuration Dialog (see [Fixing Scripts](../windows-installation-and-configuration-guide/configuring-the-ide/configuration-dialog.md#fixing-scripts)) allows you to define  the behaviour of the keystrokes <EP> and <S1> for both the suspended case and the non-suspended case. This association will be displayed against the appropriate action according to the state of the script you are editing.
+In addition, the Configuration Dialog (see [Fixing Scripts](../windows-installation-and-configuration-guide/configuring-the-ide/configuration-dialog.md#fixing-scripts)) allows you to define  the behaviour of the keystrokes **<EP\>** and **<S1\>** for both the suspended case and the non-suspended case. This association will be displayed against the appropriate action according to the state of the script you are editing.
 
 ### The Edit Menu
 
@@ -305,15 +305,15 @@ When you position the caret over a name, control word, or simple text or to the 
 
 ### Aligning Comments
 
-When you press the <AC> key, or select *Align Comments* in the Editor's context menu, the alignment of the comments in every line in the function will be changed so that the left-most comment (Lamp) symbol is in the same column as the cursor, except that:
+When you press the **<AC\>** key, or select *Align Comments* in the Editor's context menu, the alignment of the comments in every line in the function will be changed so that the left-most comment (Lamp) symbol is in the same column as the cursor, except that:
 
 - Comment symbols that are preceded only by white space, that is, comments in lines that contain no code, are ignored and are not adjusted in any way.
-- Comment symbols that lie between the first column and the first tab stop will remain in or be moved to the first column. For information on setting tab stops, see _Dyalog for Microsoft Windows Installation and Configuration Reference Guide_: [Configuration Dialog (Edit/Trace Tab)](../windows-installation-and-configuration-guide/configuring-the-ide/configuration-dialog.md#traceedit-tab).
+- Comment symbols that lie between the first column and the first tab stop will remain in or be moved to the first column. For information on setting tab stops, see the [Configuration Dialog (Trace/Edit Tab)](../windows-installation-and-configuration-guide/configuring-the-ide/configuration-dialog.md#traceedit-tab).
 - Comment symbols will not move further left than the end of the statement.
 
 When a comment is re-aligned, text to the right of the left-most comment symbol (including spaces and other comment symbols) will remain fixed in relation to  that symbol.
 
-There is no keystroke associated with this command by default; you must define one. See _Dyalog for Microsoft Windows Installation and Configuration Reference Guide_: [Configuration Dialog (Keyboard Shortcuts Tab)](../windows-installation-and-configuration-guide/configuring-the-ide/configuration-dialog.md#keyboard-shortcuts-tab).
+By default, there is no keystroke associated with this command; you must define one using the [Configuration Dialog (Keyboard Shortcuts Tab)](../windows-installation-and-configuration-guide/configuring-the-ide/configuration-dialog.md#keyboard-shortcuts-tab).
 
 ### Stop, Trace and Monitor Controls
 

@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Right Tack `⊢`
+# <span class="title-name">Right Tack</span> `⊢`
 
 ```apl
 ⊢

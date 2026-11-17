@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Inner Product `R←Xf.gY`
+# <span class="title-name">Inner Product</span> `R←Xf.gY`
 
 ```apl
 R←Xf.gY

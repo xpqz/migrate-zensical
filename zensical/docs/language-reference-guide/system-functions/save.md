@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Save Workspace `{R}←{X}⎕SAVE Y`
+# <span class="title-name">Save Workspace</span> `{R}←{X}⎕SAVE Y`
 
 ```apl
 {R}←{X}⎕SAVE Y

@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Query Access Control `R←⎕SVC Y`
+# <span class="title-name">Query Access Control</span> `R←⎕SVC Y`
 
 ```apl
 R←⎕SVC Y

@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Greater Than `>`
+# <span class="title-name">Greater Than</span> `>`
 
 ```apl
 >

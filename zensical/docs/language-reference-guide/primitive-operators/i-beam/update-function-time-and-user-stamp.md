@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Update Function Time and User Stamp `{R}←X(1159⌶)Y`
+# <span class="title-name">Update Function Time and User Stamp</span> `{R}←X(1159⌶)Y`
 
 ```apl
 {R}←X(1159⌶)Y

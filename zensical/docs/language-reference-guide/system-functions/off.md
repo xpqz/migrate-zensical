@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Sign Off APL `⎕OFF`
+# <span class="title-name">Sign Off APL</span> `⎕OFF`
 
 ```apl
 ⎕OFF

@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Size of Object `R←⎕SIZE Y`
+# <span class="title-name">Size of Object</span> `R←⎕SIZE Y`
 
 ```apl
 R←⎕SIZE Y

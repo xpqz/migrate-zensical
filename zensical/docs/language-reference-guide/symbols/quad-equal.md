@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Quad Equal `⌸`
+# <span class="title-name">Quad Equal</span> `⌸`
 
 ```apl
 ⌸

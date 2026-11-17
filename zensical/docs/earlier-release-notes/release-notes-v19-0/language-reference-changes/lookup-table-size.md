@@ -1,4 +1,4 @@
-# Lookup Table Size `R←8469⌶Y`
+# <span class="title-name">Lookup Table Size</span> `R←8469⌶Y`
 
 ```apl
 R←8469⌶Y

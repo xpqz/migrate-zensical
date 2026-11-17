@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Circle Bar `⊖`
+# <span class="title-name">Circle Bar</span> `⊖`
 
 ```apl
 ⊖

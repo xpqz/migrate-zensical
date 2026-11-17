@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Enlist `(⎕ML≥1) R←∊Y`
+# <span class="title-name">Enlist</span> `(⎕ML≥1) R←∊Y`
 
 ```apl
 (⎕ML≥1) R←∊Y

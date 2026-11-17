@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Null Item `R←⎕NULL`
+# <span class="title-name">Null Item</span> `R←⎕NULL`
 
 ```apl
 R←⎕NULL

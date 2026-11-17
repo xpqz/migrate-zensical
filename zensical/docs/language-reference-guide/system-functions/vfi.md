@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Verify &amp; Fix Input `R←{X}⎕VFI Y`
+# <span class="title-name">Verify &amp; Fix Input</span> `R←{X}⎕VFI Y`
 
 ```apl
 R←{X}⎕VFI Y

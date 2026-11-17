@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# I-Beam `R←{X}(A⌶)Y`
+# <span class="title-name">I-Beam</span> `R←{X}(A⌶)Y`
 
 ```apl
 R←{X}(A⌶)Y

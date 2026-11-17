@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Dot `.`
+# <span class="title-name">Dot</span> `.`
 
 ```apl
 .

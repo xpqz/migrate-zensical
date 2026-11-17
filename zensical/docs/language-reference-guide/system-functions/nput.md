@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Write Text File `{R}←X ⎕NPUT Y`
+# <span class="title-name">Write Text File</span> `{R}←X ⎕NPUT Y`
 
 ```apl
 {R}←X ⎕NPUT Y

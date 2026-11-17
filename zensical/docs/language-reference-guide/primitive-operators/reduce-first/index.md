@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Reduce First `R←f⌿Y`
+# <span class="title-name">Reduce First</span> `R←f⌿Y`
 
 ```apl
 R←f⌿Y

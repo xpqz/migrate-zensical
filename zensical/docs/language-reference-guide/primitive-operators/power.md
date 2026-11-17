@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Power `{R}←{X}(f⍣g)Y`
+# <span class="title-name">Power</span> `{R}←{X}(f⍣g)Y`
 
 ```apl
 {R}←{X}(f⍣g)Y

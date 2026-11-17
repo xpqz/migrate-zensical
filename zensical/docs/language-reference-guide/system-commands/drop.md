@@ -1,6 +1,6 @@
 
 
-# Drop Workspace `)DROP {ws}`
+# <span class="title-name">Drop Workspace</span> `)DROP {ws}`
 
 ```apl
 )DROP {ws}

@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Format (Monadic) `R←⎕FMT Y`
+# <span class="title-name">Format (Monadic)</span> `R←⎕FMT Y`
 
 ```apl
 R←⎕FMT Y

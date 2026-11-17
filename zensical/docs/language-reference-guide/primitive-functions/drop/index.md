@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Drop `R←X↓Y`
+# <span class="title-name">Drop</span> `R←X↓Y`
 
 ```apl
 R←X↓Y

@@ -2,7 +2,7 @@
 search:
   boost: 2
 ---
-# Log Use of Deprecated Features `{R}←(13⌶)Y`
+# <span class="title-name">Log Use of Deprecated Features</span> `{R}←(13⌶)Y`
 
 ```apl
 {R}←(13⌶)Y

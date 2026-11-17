@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Overwrite Free Pockets `R←127⌶Y`
+# <span class="title-name">Overwrite Free Pockets</span> `R←127⌶Y`
 
 ```apl
 R←127⌶Y
@@ -26,7 +26,7 @@ It is the responsibility of the programmer to ensure that there are no USED pock
 [2]    ⎕EX'a'
 [3]    ⍝ 'my secure data' is now in an
 [4]    ⍝ UNUSED pocket in the workspace
-[5]    a←127⌶0 ⍝ all unused pockets are overwritten,
+[5]    a←127⌶⍬ ⍝ all unused pockets are overwritten,
 [6]            ⍝ 'my secure data' is no longer present
      ∇
 
@@ -40,7 +40,7 @@ It is the responsibility of the programmer to ensure that there are no USED pock
 [3]    ⎕EX'a'
 [4]    ⍝ 'my secure data' is now in an
 [5]    ⍝ UNUSED pocket in the workspace
-[6]    a←127⌶0 ⍝ all unused pockets are overwritten,
+[6]    a←127⌶⍬ ⍝ all unused pockets are overwritten,
 [7]            ⍝ but 'my secure data' is still present
 [8]            ⍝ because it is referenced by b
      ∇

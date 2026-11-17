@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Native File Read `R←⎕NREAD Y`
+# <span class="title-name">Native File Read</span> `R←⎕NREAD Y`
 
 ```apl
 R←⎕NREAD Y

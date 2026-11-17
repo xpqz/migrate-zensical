@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Remove Data Binding `R←2014⌶Y`
+# <span class="title-name">Remove Data Binding</span> `R←2014⌶Y`
 
 ```apl
 R←2014⌶Y

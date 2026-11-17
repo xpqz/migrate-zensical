@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Specify Workspace Available `R←2002⌶Y`
+# <span class="title-name">Specify Workspace Available</span> `R←2002⌶Y`
 
 ```apl
 R←2002⌶Y

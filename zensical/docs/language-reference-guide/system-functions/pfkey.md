@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Program Function Key `R←{X}⎕PFKEY Y`
+# <span class="title-name">Program Function Key</span> `R←{X}⎕PFKEY Y`
 
 ```apl
 R←{X}⎕PFKEY Y

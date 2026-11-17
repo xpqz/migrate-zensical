@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Instances `R←⎕INSTANCES Y`
+# <span class="title-name">Instances</span> `R←⎕INSTANCES Y`
 
 ```apl
 R←⎕INSTANCES Y

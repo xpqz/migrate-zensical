@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Component File Library `R←⎕FLIB Y`
+# <span class="title-name">Component File Library</span> `R←⎕FLIB Y`
 
 ```apl
 R←⎕FLIB Y

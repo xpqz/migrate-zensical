@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Outer Product `{R}←X∘.gY`
+# <span class="title-name">Outer Product</span> `{R}←X∘.gY`
 
 ```apl
 {R}←X∘.gY

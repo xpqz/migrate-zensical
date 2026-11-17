@@ -3,14 +3,14 @@ search:
   boost: 2
 ---
 
-# Account Name `R←⎕AN`
+# <span class="title-name">Account Name</span> `R←⎕AN`
 
 ```apl
 R←⎕AN
 ```
 [Key to notation](../key-to-notation.md)
 
-This is a simple character vector containing the user (login) name. Under UNIX and Linux this is the real user name, whereas `⎕AI` returns the effective user id.
+This is a simple character vector containing the user (login) name. Under Unix this is the real user name, whereas `⎕AI` returns the effective user id.
 
 ## Example
 ```apl

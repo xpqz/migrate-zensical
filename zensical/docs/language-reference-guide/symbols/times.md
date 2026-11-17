@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Times `×`
+# <span class="title-name">Times</span> `×`
 
 ```apl
 ×

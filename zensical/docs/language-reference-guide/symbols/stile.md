@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Stile `|`
+# <span class="title-name">Stile</span> `|`
 
 ```apl
 |

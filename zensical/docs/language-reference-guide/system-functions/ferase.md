@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# File Erase `{R}←X ⎕FERASE Y`
+# <span class="title-name">File Erase</span> `{R}←X ⎕FERASE Y`
 
 ```apl
 {R}←X ⎕FERASE Y

@@ -1,8 +1,3 @@
----
-tags:
-  - Tutorial
----
-
 # Introducing a ScrollBar
 
 Another way to improve the application would be to allow the user to input using a slider or scrollbar. Let's create one called `'TEMP.S'` ...

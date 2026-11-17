@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Abort `→`
+# <span class="title-name">Abort</span> `→`
 
 ```apl
 →

@@ -1,6 +1,6 @@
 
 
-# TRAP ERROR `84`
+# <span class="title-name">TRAP ERROR</span> `84`
 
 ```apl
 84

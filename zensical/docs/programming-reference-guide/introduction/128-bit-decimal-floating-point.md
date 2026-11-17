@@ -1,8 +1,3 @@
----
-tags:
-  - Explanation
----
-
 # 128 Bit Decimal Floating-Point Support
 
 ## Introduction

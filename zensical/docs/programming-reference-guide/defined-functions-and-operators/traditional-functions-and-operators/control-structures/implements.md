@@ -3,7 +3,7 @@ search:
   exclude: true
 ---
 
-# Implements Statement `:Implements`
+# <span class="title-name">Implements Statement</span> `:Implements`
 
 ```apl
 :Implements

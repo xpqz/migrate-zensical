@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Reverse `R←⌽[K]Y`
+# <span class="title-name">Reverse</span> `R←⌽[K]Y`
 
 ```apl
 R←⌽[K]Y

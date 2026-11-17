@@ -3,7 +3,7 @@ search:
   exclude: true
 ---
 
-# Signature Statement `:Signature`
+# <span class="title-name">Signature Statement</span> `:Signature`
 
 ```apl
 :Signature

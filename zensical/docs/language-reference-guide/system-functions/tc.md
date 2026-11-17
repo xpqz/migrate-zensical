@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Terminal Control `(⎕ML)`
+# <span class="title-name">Terminal Control</span> `(⎕ML)`
 
 ```apl
 (⎕ML)

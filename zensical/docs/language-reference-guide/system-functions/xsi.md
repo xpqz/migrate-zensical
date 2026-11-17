@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Extended State Indicator `R←⎕XSI`
+# <span class="title-name">Extended State Indicator</span> `R←⎕XSI`
 
 ```apl
 R←⎕XSI

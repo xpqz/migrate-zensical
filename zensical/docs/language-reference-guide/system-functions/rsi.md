@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Space Indicator `R←⎕RSI`
+# <span class="title-name">Space Indicator</span> `R←⎕RSI`
 
 ```apl
 R←⎕RSI

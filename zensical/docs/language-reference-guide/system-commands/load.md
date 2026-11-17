@@ -1,6 +1,6 @@
 
 
-# Load Workspace `)LOAD {ws}`
+# <span class="title-name">Load Workspace</span> `)LOAD {ws}`
 
 ```apl
 )LOAD {ws}

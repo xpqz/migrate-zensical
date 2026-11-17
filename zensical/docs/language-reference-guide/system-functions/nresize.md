@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Native File Resize `{R}←X ⎕NRESIZE Y`
+# <span class="title-name">Native File Resize</span> `{R}←X ⎕NRESIZE Y`
 
 ```apl
 {R}←X ⎕NRESIZE Y

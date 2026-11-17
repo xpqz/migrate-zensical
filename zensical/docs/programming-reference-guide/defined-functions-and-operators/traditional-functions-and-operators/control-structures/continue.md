@@ -1,6 +1,6 @@
 
 
-# Continue Statement `:Continue`
+# <span class="title-name">Continue Statement</span> `:Continue`
 
 ```apl
 :Continue

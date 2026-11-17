@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Put Tokens `{R}←{X} ⎕TPUT Y`
+# <span class="title-name">Put Tokens</span> `{R}←{X} ⎕TPUT Y`
 
 ```apl
 {R}←{X} ⎕TPUT Y

@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Equal To `R←X=Y`
+# <span class="title-name">Equal To</span> `R←X=Y`
 
 ```apl
 R←X=Y

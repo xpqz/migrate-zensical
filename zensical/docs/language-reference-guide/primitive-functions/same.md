@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Same `R←⊣YR←⊢Y`
+# <span class="title-name">Same</span> `R←⊣YR←⊢Y`
 
 ```apl
 R←⊣YR←⊢Y

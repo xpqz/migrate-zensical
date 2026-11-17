@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Division Method `⎕DIV`
+# <span class="title-name">Division Method</span> `⎕DIV`
 
 ```apl
 ⎕DIV

@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Backslash Bar `⍀`
+# <span class="title-name">Backslash Bar</span> `⍀`
 
 ```apl
 ⍀

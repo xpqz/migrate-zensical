@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# File Read Access `R←⎕FRDAC Y`
+# <span class="title-name">File Read Access</span> `R←⎕FRDAC Y`
 
 ```apl
 R←⎕FRDAC Y

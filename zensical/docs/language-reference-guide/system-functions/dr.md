@@ -3,7 +3,7 @@ search:
   exclude: true
 ---
 
-# Data Representation `⎕DR`
+# <span class="title-name">Data Representation</span> `⎕DR`
 
 ```apl
 ⎕DR

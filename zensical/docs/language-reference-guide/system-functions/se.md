@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Session Namespace `⎕SE`
+# <span class="title-name">Session Namespace</span> `⎕SE`
 
 ```apl
 ⎕SE

@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Scan `R←f\[K]Y`
+# <span class="title-name">Scan</span> `R←f\[K]Y`
 
 ```apl
 R←f\[K]Y

@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Object Representation `R←⎕OR Y`
+# <span class="title-name">Object Representation</span> `R←⎕OR Y`
 
 ```apl
 R←⎕OR Y

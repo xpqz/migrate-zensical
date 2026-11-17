@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# This Space `R←⎕THIS`
+# <span class="title-name">This Space</span> `R←⎕THIS`
 
 ```apl
 R←⎕THIS

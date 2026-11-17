@@ -1,6 +1,6 @@
 
 
-# List Global Namespaces `)OBJECTS {nm}`
+# <span class="title-name">List Global Namespaces</span> `)OBJECTS {nm}`
 
 ```apl
 )OBJECTS {nm}

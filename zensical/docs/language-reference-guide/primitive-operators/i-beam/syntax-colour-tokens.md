@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Syntax Colour Tokens `R←201⌶Y`
+# <span class="title-name">Syntax Colour Tokens</span> `R←201⌶Y`
 
 ```apl
 R←201⌶Y

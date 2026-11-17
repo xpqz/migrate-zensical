@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Conjugate `R←+Y`
+# <span class="title-name">Conjugate</span> `R←+Y`
 
 ```apl
 R←+Y

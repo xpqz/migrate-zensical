@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Latent Expression `⎕LX`
+# <span class="title-name">Latent Expression</span> `⎕LX`
 
 ```apl
 ⎕LX

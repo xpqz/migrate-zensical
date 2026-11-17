@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Character Input/Output `⍞`
+# <span class="title-name">Character Input/Output</span> `⍞`
 
 ```apl
 ⍞

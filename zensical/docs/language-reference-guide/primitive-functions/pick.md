@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Pick `R←X⊃Y`
+# <span class="title-name">Pick</span> `R←X⊃Y`
 
 ```apl
 R←X⊃Y

@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Clear Workspace `⎕CLEAR`
+# <span class="title-name">Clear Workspace</span> `⎕CLEAR`
 
 ```apl
 ⎕CLEAR

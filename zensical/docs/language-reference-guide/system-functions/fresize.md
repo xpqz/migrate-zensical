@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# File Resize `{R}←{X}⎕FRESIZE Y`
+# <span class="title-name">File Resize</span> `{R}←{X}⎕FRESIZE Y`
 
 ```apl
 {R}←{X}⎕FRESIZE Y

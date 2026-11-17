@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Pi Times `R←○Y`
+# <span class="title-name">Pi Times</span> `R←○Y`
 
 ```apl
 R←○Y

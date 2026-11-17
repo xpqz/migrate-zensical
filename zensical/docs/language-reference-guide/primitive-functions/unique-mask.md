@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Unique Mask `R←≠Y`
+# <span class="title-name">Unique Mask</span> `R←≠Y`
 
 ```apl
 R←≠Y

@@ -1,8 +1,3 @@
----
-tags:
-  - Tutorial
----
-
 # Adding a Fahrenheit Label
 
 We are going to need two edit fields to input and display temperatures and two labels to identify them.

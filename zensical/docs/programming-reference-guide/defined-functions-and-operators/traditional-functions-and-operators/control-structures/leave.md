@@ -1,6 +1,6 @@
 
 
-# Leave Statement `:Leave`
+# <span class="title-name">Leave Statement</span> `:Leave`
 
 ```apl
 :Leave

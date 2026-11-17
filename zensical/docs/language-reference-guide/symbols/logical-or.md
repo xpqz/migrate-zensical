@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Logical OR `∨`
+# <span class="title-name">Logical OR</span> `∨`
 
 ```apl
 ∨

@@ -1,6 +1,6 @@
 
 
-# SYNTAX ERROR `2`
+# <span class="title-name">SYNTAX ERROR</span> `2`
 
 ```apl
 2

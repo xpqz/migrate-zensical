@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Shared Variable Query `R←⎕SVQ Y`
+# <span class="title-name">Shared Variable Query</span> `R←⎕SVQ Y`
 
 ```apl
 R←⎕SVQ Y

@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Factorial `R←!Y`
+# <span class="title-name">Factorial</span> `R←!Y`
 
 ```apl
 R←!Y

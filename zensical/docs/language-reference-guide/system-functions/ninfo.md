@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Native File Information `R←{X}⎕NINFO Y`
+# <span class="title-name">Native File Information</span> `R←{X}⎕NINFO Y`
 
 ```apl
 R←{X}⎕NINFO Y

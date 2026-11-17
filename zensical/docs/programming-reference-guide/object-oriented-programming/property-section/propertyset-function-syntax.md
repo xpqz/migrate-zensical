@@ -1,6 +1,6 @@
 
 
-# PropertySet Function `Set ipa`
+# <span class="title-name">PropertySet Function</span> `Set ipa`
 
 ```apl
 Set ipa

@@ -3,7 +3,7 @@ search:
   exclude: true
 ---
 
-# Thorn `⍕`
+# <span class="title-name">Thorn</span> `⍕`
 
 ```apl
 ⍕

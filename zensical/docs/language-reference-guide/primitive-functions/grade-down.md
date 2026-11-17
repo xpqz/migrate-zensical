@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Grade Down `R←⍒Y`
+# <span class="title-name">Grade Down</span> `R←⍒Y`
 
 ```apl
 R←⍒Y

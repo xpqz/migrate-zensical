@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Circle Backslash `⍉`
+# <span class="title-name">Circle Backslash</span> `⍉`
 
 ```apl
 ⍉

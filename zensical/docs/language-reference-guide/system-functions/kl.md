@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Key Label `R←⎕KL Y`
+# <span class="title-name">Key Label</span> `R←⎕KL Y`
 
 ```apl
 R←⎕KL Y

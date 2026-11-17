@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Index Of `R←X⍳Y`
+# <span class="title-name">Index Of</span> `R←X⍳Y`
 
 ```apl
 R←X⍳Y

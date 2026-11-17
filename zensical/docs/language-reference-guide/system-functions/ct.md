@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Comparison Tolerance `⎕CT`
+# <span class="title-name">Comparison Tolerance</span> `⎕CT`
 
 ```apl
 ⎕CT

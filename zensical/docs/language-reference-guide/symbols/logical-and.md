@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Logical AND `∧`
+# <span class="title-name">Logical AND</span> `∧`
 
 ```apl
 ∧

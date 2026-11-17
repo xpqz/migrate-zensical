@@ -3,7 +3,7 @@ search:
   exclude: true
 ---
 
-# Stop Controls `⎕STOP`
+# <span class="title-name">Stop Controls</span> `⎕STOP`
 
 ```apl
 ⎕STOP

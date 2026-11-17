@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# File Read Component Information `R←⎕FRDCI Y`
+# <span class="title-name">File Read Component Information</span> `R←⎕FRDCI Y`
 
 ```apl
 R←⎕FRDCI Y

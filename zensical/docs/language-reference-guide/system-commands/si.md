@@ -1,6 +1,6 @@
 
 
-# State Indicator `)SI {n} {-tid=tn}`
+# <span class="title-name">State Indicator</span> `)SI {n} {-tid=tn}`
 
 ```apl
 )SI {n} {-tid=tn}

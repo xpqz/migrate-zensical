@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Enclose with Axes `R←⊂[K]Y`
+# <span class="title-name">Enclose with Axes</span> `R←⊂[K]Y`
 
 ```apl
 R←⊂[K]Y

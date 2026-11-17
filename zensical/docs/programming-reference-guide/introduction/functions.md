@@ -1,8 +1,3 @@
----
-tags:
-  - Explanation
----
-
 # Functions
 
 A function is an operation which is performed on zero, one or two array arguments and may produce an array result.  Three forms are permitted:

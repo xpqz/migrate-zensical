@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Timestamp `R←⎕TS`
+# <span class="title-name">Timestamp</span> `R←⎕TS`
 
 ```apl
 R←⎕TS

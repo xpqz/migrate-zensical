@@ -1,6 +1,6 @@
 
 
-# Section Statement `:Section`
+# <span class="title-name">Section Statement</span> `:Section`
 
 ```apl
 :Section

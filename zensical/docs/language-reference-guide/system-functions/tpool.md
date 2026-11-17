@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Token Pool `R←⎕TPOOL`
+# <span class="title-name">Token Pool</span> `R←⎕TPOOL`
 
 ```apl
 R←⎕TPOOL

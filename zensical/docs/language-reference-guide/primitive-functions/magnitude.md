@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Magnitude `R←|Y`
+# <span class="title-name">Magnitude</span> `R←|Y`
 
 ```apl
 R←|Y

@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Minus `R←X-Y`
+# <span class="title-name">Minus</span> `R←X-Y`
 
 ```apl
 R←X-Y

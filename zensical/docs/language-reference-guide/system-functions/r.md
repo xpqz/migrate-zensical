@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Replace `R←{X}(A ⎕R B) Y`
+# <span class="title-name">Replace</span> `R←{X}(A ⎕R B) Y`
 
 ```apl
 R←{X}(A ⎕R B) Y

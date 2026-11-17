@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Encode `R←X⊤Y`
+# <span class="title-name">Encode</span> `R←X⊤Y`
 
 ```apl
 R←X⊤Y

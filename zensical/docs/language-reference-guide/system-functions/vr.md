@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Vector Representation `R←⎕VR Y`
+# <span class="title-name">Vector Representation</span> `R←⎕VR Y`
 
 ```apl
 R←⎕VR Y

@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Rotate First `R←X⊖[K]Y`
+# <span class="title-name">Rotate First</span> `R←X⊖[K]Y`
 
 ```apl
 R←X⊖[K]Y

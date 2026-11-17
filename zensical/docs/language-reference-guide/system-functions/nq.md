@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Enqueue Event `{R}←{X}⎕NQ Y`
+# <span class="title-name">Enqueue Event</span> `{R}←{X}⎕NQ Y`
 
 ```apl
 {R}←{X}⎕NQ Y

@@ -1,6 +1,6 @@
 
 
-# Erase Object `)ERASE nms`
+# <span class="title-name">Erase Object</span> `)ERASE nms`
 
 ```apl
 )ERASE nms

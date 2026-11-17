@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Constant `R←{X}(A⍨)Y`
+# <span class="title-name">Constant</span> `R←{X}(A⍨)Y`
 
 ```apl
 R←{X}(A⍨)Y

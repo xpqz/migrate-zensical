@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Bind <code>{R}←A∘fY<br>{R}←(f∘B)Y</code>
+# <span class="title-name">Bind</span> <code>{R}←A∘fY<br>{R}←(f∘B)Y</code>
 
 ```apl
 {R}←A∘fY

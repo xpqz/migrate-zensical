@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Diaeresis `¨`
+# <span class="title-name">Diaeresis</span> `¨`
 
 ```apl
 ¨

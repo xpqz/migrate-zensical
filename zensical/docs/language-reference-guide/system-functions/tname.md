@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Current Thread Name `⎕TNAME`
+# <span class="title-name">Current Thread Name</span> `⎕TNAME`
 
 ```apl
 ⎕TNAME

@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Enclose `R←⊂Y`
+# <span class="title-name">Enclose</span> `R←⊂Y`
 
 ```apl
 R←⊂Y

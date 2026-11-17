@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Interval Index `R←X⍸Y`
+# <span class="title-name">Interval Index</span> `R←X⍸Y`
 
 ```apl
 R←X⍸Y

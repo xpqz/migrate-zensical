@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Thread Numbers `R←⎕TNUMS`
+# <span class="title-name">Thread Numbers</span> `R←⎕TNUMS`
 
 ```apl
 R←⎕TNUMS

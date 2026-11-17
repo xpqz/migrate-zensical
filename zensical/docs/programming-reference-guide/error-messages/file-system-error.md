@@ -1,6 +1,6 @@
 
 
-# FILE SYSTEM ERROR `26`
+# <span class="title-name">FILE SYSTEM ERROR</span> `26`
 
 ```apl
 26

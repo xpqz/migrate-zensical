@@ -122,8 +122,10 @@ DROPPED_EXTENSIONS = frozenset({"pymdownx.arithmatex"})
 # time.
 CAPTION_EXTENSION = "dyalog_caption"
 
-# Root config keys carried into the rendered zensical.toml header.
-CARRIED_KEYS = ("site_name", "repo_url")
+# Root config keys carried into the rendered zensical.toml header. repo_url is
+# not carried: the flattened source lives in this repository, so the template
+# points repo_url and edit_uri here (the "View source of this page" link).
+CARRIED_KEYS = ("site_name",)
 
 _INCLUDE_RE = re.compile(r"^!include \./([^/]+)/mkdocs\.yml$")
 
@@ -223,7 +225,7 @@ def merge_configs(root_config, sub_configs):
     sub-project's nav, path-prefixed with its mount alias. markdown_extensions
     fold into a superset with root precedence, minus DROPPED_EXTENSIONS and
     plus the caption extension. extra folds with the root winning conflicts.
-    site_name and repo_url come from the root. Everything else in the source
+    site_name comes from the root. Everything else in the source
     configs (theme, stylesheets, scripts, plugins, copyright) is MkDocs house
     configuration that the template replaces, so it is not carried.
     """
@@ -504,7 +506,7 @@ def render_zensical_toml(merged, template_text):
 
     The template carries the static house configuration with its rationale
     in comments (tomli_w cannot write comments), and three placeholder lines:
-    @@HEADER@@ (site_name, repo_url), @@MARKDOWN_EXTENSIONS@@ and
+    @@HEADER@@ (site_name), @@MARKDOWN_EXTENSIONS@@ and
     @@EXTRA_AND_NAV@@ ([project.extra] and the [[project.nav]] tables). Each
     must appear exactly once.
     """

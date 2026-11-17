@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Set Dyalog Pixel Type `R←2035⌶Y`
+# <span class="title-name">Set Dyalog Pixel Type</span> `R←2035⌶Y`
 
 ```apl
 R←2035⌶Y

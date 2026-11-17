@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Hydrant `⍎`
+# <span class="title-name">Hydrant</span> `⍎`
 
 ```apl
 ⍎

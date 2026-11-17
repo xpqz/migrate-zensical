@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Account Information `R←⎕AI`
+# <span class="title-name">Account Information</span> `R←⎕AI`
 
 ```apl
 R←⎕AI
@@ -27,7 +27,7 @@ Elements beyond 4 are not defined but reserved.
 ```
 
 !!! info "Dyalog on Unix"
-    Under UNIX, `⎕AI[1]` is the effective UID of the account whereas [`⎕AN`](./an.md) returns the real name.
+    Under Unix, `⎕AI[1]` is the effective UID of the account whereas [`⎕AN`](./an.md) returns the real name.
 
 !!! info "Dyalog on Microsoft Windows"
     Under Microsoft Windows, `⎕AI[1]` is the aplnid (network ID from configuration dialog box).

@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Query Stop `R←⎕STOP Y`
+# <span class="title-name">Query Stop</span> `R←⎕STOP Y`
 
 ```apl
 R←⎕STOP Y

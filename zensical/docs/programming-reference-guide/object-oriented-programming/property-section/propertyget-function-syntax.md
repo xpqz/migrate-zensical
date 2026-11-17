@@ -1,6 +1,6 @@
 
 
-# PropertyGet Function `R←Get {ipa}`
+# <span class="title-name">PropertyGet Function</span> `R←Get {ipa}`
 
 ```apl
 R←Get {ipa}

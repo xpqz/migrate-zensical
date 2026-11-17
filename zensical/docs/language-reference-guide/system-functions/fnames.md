@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# File Names `R←⎕FNAMES`
+# <span class="title-name">File Names</span> `R←⎕FNAMES`
 
 ```apl
 R←⎕FNAMES

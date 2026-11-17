@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Data Representation (Monadic) `R←⎕DR Y`
+# <span class="title-name">Data Representation (Monadic)</span> `R←⎕DR Y`
 
 ```apl
 R←⎕DR Y
@@ -41,6 +41,17 @@ Table: Classic Edition
 |645  |64 bits Floating                          |
 |1287 |128 bits Decimal                          |
 |1289 |128 bits Complex                          |
+
+Before it reports the type, `⎕DR` squeezes `Y` into a smaller internal representation if it can do so without changing the values. The exception is data converted by [dyadic `⎕DR`](data-representation-dyadic.md), which keeps the internal representation it was converted to until a function that changes it is applied. [`181⌶`](../primitive-operators/i-beam/unsqueezed-type.md) reports the type in which `Y` is stored, without squeezing it.
+
+## Example
+```apl
+      v←645 ⎕DR 64⍴0
+      ⎕DR v
+645
+      ⎕DR ⍪v
+83
+```
 
 <!-- Hidden search keywords -->
 <div style="display: none;">

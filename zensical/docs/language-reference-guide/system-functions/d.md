@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Digits `R←⎕D`
+# <span class="title-name">Digits</span> `R←⎕D`
 
 ```apl
 R←⎕D

@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Native File Numbers `R←⎕NNUMS`
+# <span class="title-name">Native File Numbers</span> `R←⎕NNUMS`
 
 ```apl
 R←⎕NNUMS

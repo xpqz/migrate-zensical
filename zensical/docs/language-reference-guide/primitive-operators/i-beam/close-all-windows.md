@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Close All Windows `R←2023⌶Y`
+# <span class="title-name">Close All Windows</span> `R←2023⌶Y`
 
 ```apl
 R←2023⌶Y

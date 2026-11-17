@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Down Tack `⊤`
+# <span class="title-name">Down Tack</span> `⊤`
 
 ```apl
 ⊤

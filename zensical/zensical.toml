@@ -1,10 +1,10 @@
 [project]
 site_name = "Documentation"
 # repo_url is the header link and the base for the source links. The flattened
-# source lives in this repository, so edit_uri points at the authored tree and
-# branch; "View source of this page" is derived by swapping /edit/ for /raw/.
-# Update both when the docs move home.
-repo_url = "https://github.com/xpqz/zensical-dyalog"
+# source lives in this repository, so edit_uri points at the generated tree and
+# branch; "View source of this page" (content.action.view) is derived by
+# swapping /edit/ for /raw/. Update both if the repository moves.
+repo_url = "https://github.com/xpqz/migrate-zensical"
 edit_uri = "edit/main/zensical/docs"
 
 # House style: the generator credit lives here and extra.generator is off.
@@ -23,7 +23,6 @@ extra_css = ["documentation-assetsz/css/dyalog.css"]
 # built in. Only macros (version-number substitution) remains.
 plugins = [
     "search",
-    "tags",
     "macros",
 ]
 markdown_extensions = [
@@ -93,52 +92,8 @@ conga_version = 3.6
 conga_version_condensed = 36
 generator = false
 
-# First-party "Was this page helpful?" feedback. provider = "custom" selects
-# our own transport (overrides/partials/integrations/analytics/custom.html)
-# instead of the theme's Google Analytics default. Two transports:
-#
-#   beacon     production: GET /feedback.gif, which Apache logs like any
-#              other request; tools/feedback_log.py reduces the log to
-#              feedback.json, which the dashboard reads. No service, no
-#              cookies, first-party.
-#   collector  demo: POST to tools/feedback_stub.py, which serves
-#              tools/feedback_dashboard.html with a live view. Kept for local
-#              demos and testing.
-#
-# This cut is left on the demo collector; for production switch to the beacon
-# block beneath.
-[project.extra.analytics]
-provider = "custom"
-transport = "collector"
-property = "http://127.0.0.1:8765/feedback"
-
-# Production:
-# transport = "beacon"
-# property = "/feedback.gif"
-
-[project.extra.analytics.feedback]
-title = "Was this page helpful?"
-
-[[project.extra.analytics.feedback.ratings]]
-icon = "material/thumb-up-outline"
-name = "This page was helpful"
-data = 1
-note = "Thanks for your feedback!"
-
-[[project.extra.analytics.feedback.ratings]]
-icon = "material/thumb-down-outline"
-name = "This page could be improved"
-data = 0
-note = "Thanks for your feedback. If you can, tell us what was missing -- that is what turns a rating into a fix."
-
 [project.extra.version]
 provider = "mike"
-
-[[project.nav]]
-Tutorials = ["tutorials/index.md", { "Getting Started" = "tutorials/getting-started.md" }]
-
-[[project.nav]]
-"How-to guides" = ["how-to/index.md"]
 
 [[project.nav]]
 
@@ -483,7 +438,7 @@ Tutorials = ["tutorials/index.md", { "Getting Started" = "tutorials/getting-star
     { "Character Input Output" = "language-reference-guide/system-functions/character-input-output.md" },
     { "Evaluated Input Output" = "language-reference-guide/system-functions/evaluated-input-output.md" },
     { "Underscored Alphabetic Characters" = "language-reference-guide/system-functions/underscored-alphabetic-characters.md" },
-    { "<code>⎕A</code>: Alphabetic Characters" = "language-reference-guide/system-functions/a.md" },
+    { "<code>⎕A</code>: Uppercase Alphabet" = "language-reference-guide/system-functions/a.md" },
     { "<code>⎕AI</code>: Account Information" = "language-reference-guide/system-functions/ai.md" },
     { "<code>⎕AN</code>: Account Name" = "language-reference-guide/system-functions/an.md" },
     { "<code>⎕ARBIN</code>: Arbitrary Input" = "language-reference-guide/system-functions/arbin.md" },
@@ -501,7 +456,6 @@ Tutorials = ["tutorials/index.md", { "Getting Started" = "tutorials/getting-star
     { "<code>⎕CR</code>: Canonical Representation" = "language-reference-guide/system-functions/cr.md" },
     { "<code>⎕CS</code>: Change Space" = "language-reference-guide/system-functions/cs.md" },
     { "<code>⎕CSV</code>: Comma Separated Values" = "language-reference-guide/system-functions/csv.md" },
-    { "<code>⎕CSV</code>: Comma Separated Values (rewrite for comparison)" = "language-reference-guide/system-functions/csv-new.md" },
     { "<code>⎕CT</code>: Comparison Tolerance" = "language-reference-guide/system-functions/ct.md" },
     { "<code>⎕CY</code>: Copy Workspace" = "language-reference-guide/system-functions/cy.md" },
     { "<code>⎕D</code>: Digits" = "language-reference-guide/system-functions/d.md" },
@@ -559,7 +513,7 @@ Tutorials = ["tutorials/index.md", { "Getting Started" = "tutorials/getting-star
     { "<code>⎕LOCK</code>: Lock Definition" = "language-reference-guide/system-functions/lock.md" },
     { "<code>⎕LX</code>: Latent Expression" = "language-reference-guide/system-functions/lx.md" },
     { "<code>⎕MAP</code>: Map File" = "language-reference-guide/system-functions/map.md" },
-    { "<code>⎕MKDIR</code>: Make Directory" = "language-reference-guide/system-functions/mkdir.md" },
+    { "<code>⎕MKDIR</code>: Create Directory" = "language-reference-guide/system-functions/mkdir.md" },
     { "<code>⎕ML</code>: Migration Level" = "language-reference-guide/system-functions/ml.md" },
     { "<code>⎕MONITOR</code>: Set Monitor" = "language-reference-guide/system-functions/set-monitor.md" },
     { "<code>⎕MONITOR</code>: Query Monitor" = "language-reference-guide/system-functions/query-monitor.md" },
@@ -697,7 +651,7 @@ Tutorials = ["tutorials/index.md", { "Getting Started" = "tutorials/getting-star
     { "PROPS: List Properties" = "language-reference-guide/system-commands/props.md" },
     { "RESET: Reset State Indicator" = "language-reference-guide/system-commands/reset.md" },
     { "SAVE: Save Workspace" = "language-reference-guide/system-commands/save.md" },
-    { "SH: Execute UNIX Command" = "language-reference-guide/system-commands/sh.md" },
+    { "SH: Execute Unix Command" = "language-reference-guide/system-commands/sh.md" },
     { "SI: State Indicator" = "language-reference-guide/system-commands/si.md" },
     { "SIC: Clear State Indicator" = "language-reference-guide/system-commands/sic.md" },
     { "SINL: State Indicator Name List" = "language-reference-guide/system-commands/sinl.md" },
@@ -809,6 +763,7 @@ Programming = [
     { "Shy Result" = "programming-reference-guide/defined-functions-and-operators/dfns-and-dops/shy-result.md" },
     { "Global and Local Names" = "programming-reference-guide/defined-functions-and-operators/dfns-and-dops/global-local-names.md" },
     { "Lexical Name Scope" = "programming-reference-guide/defined-functions-and-operators/dfns-and-dops/static-name-scope.md" },
+    { Capsules = "programming-reference-guide/defined-functions-and-operators/dfns-and-dops/capsules.md" },
     { Recursion = "programming-reference-guide/defined-functions-and-operators/dfns-and-dops/recursion.md" },
     { "Tail Calls" = "programming-reference-guide/defined-functions-and-operators/dfns-and-dops/tail-calls.md" },
     { Dops = "programming-reference-guide/defined-functions-and-operators/dfns-and-dops/dynamic-operators.md" },
@@ -1934,6 +1889,7 @@ Compiler = [
     { "AnimPlay Method" = "object-reference/methodorevents/animplay.md" },
     { "AnimStop Method" = "object-reference/methodorevents/animstop.md" },
     { "Animate Method" = "object-reference/methodorevents/animate.md" },
+    { "Bind Method" = "object-reference/methodorevents/bind.md" },
     { "Browse Method" = "object-reference/methodorevents/browse.md" },
     { "CancelToClose Method" = "object-reference/methodorevents/canceltoclose.md" },
     { "CellFromPoint Method" = "object-reference/methodorevents/cellfrompoint.md" },
@@ -2074,6 +2030,7 @@ Compiler = [
     { "BaseClass Property" = "object-reference/properties/baseclass.md" },
     { "BCol Property" = "object-reference/properties/bcol.md" },
     { "BeginEditLabel Event" = "object-reference/methodorevents/begineditlabel.md" },
+    { "Bind Method" = "object-reference/methodorevents/bind.md" },
     { "Bitmap Object" = "object-reference/objects/bitmap.md" },
     { "Bits Property" = "object-reference/properties/bits.md" },
     { "Border Property" = "object-reference/properties/border.md" },
@@ -2952,7 +2909,7 @@ Interfaces = [
 
 [[project.nav]]
 
-[[project.nav."Dyalog for UNIX"]]
+[[project.nav."Dyalog for Unix"]]
 "Installation/Configuration" = [
     "unix-installation-and-configuration-guide/index.md",
     { Introduction = "unix-installation-and-configuration-guide/introduction.md" },
@@ -2971,12 +2928,12 @@ Interfaces = [
     { Magic = "unix-installation-and-configuration-guide/magic.md" },
     { "SE and SALT" = "unix-installation-and-configuration-guide/se-and-user-commands.md" },
     { "HOME dyalog directory" = "unix-installation-and-configuration-guide/home-dyalog-directory.md" },
-    { "QuadNA and UNIX" = "unix-installation-and-configuration-guide/quadna.md" },
+    { "QuadNA and Unix" = "unix-installation-and-configuration-guide/quadna.md" },
     { Miscellaneous = "unix-installation-and-configuration-guide/miscellaneous.md" },
     { BuildID = "unix-installation-and-configuration-guide/buildid.md" },
 ]
 
-[[project.nav."Dyalog for UNIX"]]
+[[project.nav."Dyalog for Unix"]]
 "User Interface" = [
     "unix-user-guide/index.md",
     { Overview = "unix-user-guide/overview.md" },
@@ -2987,7 +2944,7 @@ Interfaces = [
     { "Starting APL" = "unix-user-guide/starting-apl.md" },
     { "Configuring the Editor" = "unix-user-guide/configuring-the-editor.md" },
     { "File Permissions and FSTAC" = "unix-user-guide/file-permissions-and-fstac.md" },
-    { "Calling UNIX Commands" = "unix-user-guide/calling-unix-commands.md" },
+    { "Calling Unix Commands" = "unix-user-guide/calling-unix-commands.md" },
     { "Signals and Trap" = "unix-user-guide/signals-and-trap.md" },
     { BuildID = "unix-user-guide/buildid.md" },
     { "Core and APLCore Files" = "unix-user-guide/core-and-aplcore-files.md" },

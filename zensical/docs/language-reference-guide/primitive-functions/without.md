@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Without `R←X~Y`
+# <span class="title-name">Without</span> `R←X~Y`
 
 ```apl
 R←X~Y

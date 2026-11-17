@@ -1,4 +1,4 @@
-# List Global Namespaces `)OBS {nm}`
+# <span class="title-name">List Global Namespaces</span> `)OBS {nm}`
 
 ```apl
 )OBS {nm}

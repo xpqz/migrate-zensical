@@ -1,8 +1,3 @@
----
-tags:
-  - Tutorial
----
-
 # Tutorial
 
 All the examples in this tutorial are to be executed as simple console applications written in C#.

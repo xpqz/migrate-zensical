@@ -1,8 +1,3 @@
----
-tags:
-  - Explanation
----
-
 # Arrays of Namespace References
 
 You can construct arrays of refs using strand notation, array notation, _catenate_ (`,`), _reshape_ (`⍴`) and other structural primitives, as well as certain system functions.

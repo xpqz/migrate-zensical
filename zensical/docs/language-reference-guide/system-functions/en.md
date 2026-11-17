@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Event Number `R←⎕EN`
+# <span class="title-name">Event Number</span> `R←⎕EN`
 
 ```apl
 R←⎕EN

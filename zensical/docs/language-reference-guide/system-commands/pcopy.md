@@ -1,6 +1,6 @@
 
 
-# Protected Copy `)PCOPY {ws {nms}}`
+# <span class="title-name">Protected Copy</span> `)PCOPY {ws {nms}}`
 
 ```apl
 )PCOPY {ws {nms}}

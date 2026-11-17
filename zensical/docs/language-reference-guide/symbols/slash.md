@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Slash `/`
+# <span class="title-name">Slash</span> `/`
 
 ```apl
 /

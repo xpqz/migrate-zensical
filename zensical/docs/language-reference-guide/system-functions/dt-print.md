@@ -3,7 +3,7 @@ search:
   exclude: true
 ---
 
-# Date-time `R←X ⎕DT Y`
+# <span class="title-name">Date-time</span> `R←X ⎕DT Y`
 
 ```apl
 R←X ⎕DT Y

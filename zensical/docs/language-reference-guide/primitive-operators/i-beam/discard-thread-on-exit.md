@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Discard Thread on Exit `R←2501⌶Y`
+# <span class="title-name">Discard Thread on Exit</span> `R←2501⌶Y`
 
 ```apl
 R←2501⌶Y

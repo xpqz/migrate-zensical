@@ -1,8 +1,3 @@
----
-tags:
-  - How-to
----
-
 # Configuring Value Tips
 
 You may enable/disable Value Tips and select other options from the *General* tab of the *Configuration* dialog box as shown below.

@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Jot Diaeresis `⍤`
+# <span class="title-name">Jot Diaeresis</span> `⍤`
 
 ```apl
 ⍤

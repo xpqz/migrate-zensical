@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Ampersand `&`
+# <span class="title-name">Ampersand</span> `&`
 
 ```apl
 &

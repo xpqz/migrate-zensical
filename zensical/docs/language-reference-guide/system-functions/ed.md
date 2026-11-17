@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Edit Object `{R}←{X}⎕ED Y`
+# <span class="title-name">Edit Object</span> `{R}←{X}⎕ED Y`
 
 ```apl
 {R}←{X}⎕ED Y

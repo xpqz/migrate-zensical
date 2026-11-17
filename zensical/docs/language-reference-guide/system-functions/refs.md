@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Cross References `R←⎕REFS Y`
+# <span class="title-name">Cross References</span> `R←⎕REFS Y`
 
 ```apl
 R←⎕REFS Y

@@ -1,8 +1,3 @@
----
-tags:
-  - How-to
----
-
 # Starting APL
 
 By default, to start the non-GUI versions of Dyalog APL, run the mapl script which is in the installation directory of Dyalog APL.

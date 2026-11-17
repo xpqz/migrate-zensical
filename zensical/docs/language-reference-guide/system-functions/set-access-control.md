@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Set Access Control `R←X ⎕SVC Y`
+# <span class="title-name">Set Access Control</span> `R←X ⎕SVC Y`
 
 ```apl
 R←X ⎕SVC Y

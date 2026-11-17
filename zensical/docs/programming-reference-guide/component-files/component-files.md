@@ -32,7 +32,7 @@ In addition to the data held in a component, the user ID that wrote it and the t
 
 ## Multi-User Access
 
-`⎕FSTIE` ties a file for **shared** (that is, multi-user) access. This kind of access would be appropriate for a multi-user UNIX system, a network of single user PCs, or multiple APL tasks under Microsoft Windows.
+`⎕FSTIE` ties a file for _shared_ (that is, multi-user) access. This type of access would be appropriate for a multi-user Unix system, a network of single user PCs, or multiple APL tasks under Microsoft Windows.
 
 `⎕FHOLD` provides the means for the user to temporarily prevent other co-operating users from accessing one or more files. This is necessary to allow a single logical update involving more than one component, and perhaps more than one file, to be completed without interference from another user. `⎕FHOLD` is applicable to External Variables as well as Component Files
 
@@ -138,14 +138,14 @@ See *Language Reference* for full details of the syntax of these system function
 
 Let us suppose that you have written an APL system that builds a personnel database, containing the name, age and place of birth of each employee. Let us assume that you have created a variable `DATA`, which is a nested vector with each element containing a person's name, age and place of birth:
 ```apl
-      DISPLAY 2↑DATA
-.→-------------------------------------------------------.
-| .→----------------------. .→-------------------------. |
-| | .→-------.    .→----. | | .→------.    .→--------. | |
-| | |Jonathan| 42 |Wales| | | |Pauline| 21 |Isleworth| | |
-| | '--------'    '-----' | | '-------'    '---------' | |
-| '∊----------------------' '∊-------------------------' |
-'∊-------------------------------------------------------'
+      ]Display 2↑DATA
+┌→───────────────────────────────────────────────────────┐
+│ ┌→──────────────────────┐ ┌→─────────────────────────┐ │
+│ │ ┌→───────┐    ┌→────┐ │ │ ┌→──────┐    ┌→────────┐ │ │
+│ │ │Jonathan│ 42 │Wales│ │ │ │Pauline│ 21 │Iselworth│ │ │
+│ │ └────────┘    └─────┘ │ │ └───────┘    └─────────┘ │ │
+│ └∊──────────────────────┘ └∊─────────────────────────┘ │
+└∊───────────────────────────────────────────────────────┘
 ```
 
 Then the following APL expressions can be used to access the database:
@@ -154,12 +154,12 @@ Then the following APL expressions can be used to access the database:
 
 Show record 2
 ```apl
-      DISPLAY 2⊃DATA
-.→-------------------------.
-| .→------.    .→--------. |
-| |Pauline| 21 |Isleworth| |
-| '-------'    '---------' |
-'∊-------------------------'
+      ]Display 2⊃DATA
+┌→─────────────────────────┐
+│ ┌→──────┐    ┌→────────┐ │
+│ │Pauline│ 21 │Iselworth│ │
+│ └───────┘    └─────────┘ │
+└∊─────────────────────────┘
 ```
 
 ## Example 2
@@ -204,13 +204,12 @@ Now we'll try our previous examples using this file.
 
 Show record 2
 ```apl
-      DISPLAY ⎕FREAD 1 2
-.→-------------------------.
-| .→------.    .→--------. |
-| |Pauline| 21 |Isleworth| |
-| '-------'    '---------' |
-'∊-------------------------'
-
+      ]Display  ⎕FREAD 1 2
+┌→─────────────────────────┐
+│ ┌→──────┐    ┌→────────┐ │
+│ │Pauline│ 21 │Iselworth│ │
+│ └───────┘    └─────────┘ │
+└∊─────────────────────────┘
 ```
 
 ## Example 2

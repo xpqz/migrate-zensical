@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Export To Memory `R←2100⌶Y`
+# <span class="title-name">Export To Memory</span> `R←2100⌶Y`
 
 ```apl
 R←2100⌶Y

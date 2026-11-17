@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Name List `R←{X}⎕NL Y`
+# <span class="title-name">Name List</span> `R←{X}⎕NL Y`
 
 ```apl
 R←{X}⎕NL Y

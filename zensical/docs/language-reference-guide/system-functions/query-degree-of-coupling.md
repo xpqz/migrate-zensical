@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Query Degree of Coupling `R←⎕SVO Y`
+# <span class="title-name">Query Degree of Coupling</span> `R←⎕SVO Y`
 
 ```apl
 R←⎕SVO Y

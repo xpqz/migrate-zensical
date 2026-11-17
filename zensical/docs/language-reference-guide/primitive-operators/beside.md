@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Beside `{R}←{X}f∘gY`
+# <span class="title-name">Beside</span> `{R}←{X}f∘gY`
 
 ```apl
 {R}←{X}f∘gY

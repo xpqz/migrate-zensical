@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# NOT `R←~Y`
+# <span class="title-name">NOT</span> `R←~Y`
 
 ```apl
 R←~Y

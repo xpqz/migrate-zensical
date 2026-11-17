@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Discard Parked Threads `R←2502⌶Y`
+# <span class="title-name">Discard Parked Threads</span> `R←2502⌶Y`
 
 ```apl
 R←2502⌶Y

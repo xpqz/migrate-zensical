@@ -1,5 +1,11 @@
 [project]
 @@HEADER@@
+# repo_url is the header link and the base for the source links. The flattened
+# source lives in this repository, so edit_uri points at the generated tree and
+# branch; "View source of this page" (content.action.view) is derived by
+# swapping /edit/ for /raw/. Update both if the repository moves.
+repo_url = "https://github.com/xpqz/migrate-zensical"
+edit_uri = "edit/main/zensical/docs"
 
 # House style: the generator credit lives here and extra.generator is off.
 # The $CURRENT_YEAR / $BUILD_DATE / $GIT_INFO placeholders are stamped at
@@ -34,6 +40,7 @@ favicon = "documentation-assetsz/images/dyalog-ide-cube-2025.2.svg"
 font = false
 custom_dir = "overrides"
 features = [
+    "content.action.view",
     "content.code.copy",
     "navigation.indexes",
     "navigation.instant",

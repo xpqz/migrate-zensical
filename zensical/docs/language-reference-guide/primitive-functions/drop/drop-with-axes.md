@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Drop with Axes `R←X↓[K]Y`
+# <span class="title-name">Drop with Axes</span> `R←X↓[K]Y`
 
 ```apl
 R←X↓[K]Y

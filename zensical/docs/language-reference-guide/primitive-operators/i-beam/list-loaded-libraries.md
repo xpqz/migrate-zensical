@@ -4,7 +4,7 @@ search:
 ---
 
 
-# List Loaded Libraries `R←950⌶Y`
+# <span class="title-name">List Loaded Libraries</span> `R←950⌶Y`
 
 ```apl
 R←950⌶Y

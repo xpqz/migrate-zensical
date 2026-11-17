@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Down Arrow `↓`
+# <span class="title-name">Down Arrow</span> `↓`
 
 ```apl
 ↓

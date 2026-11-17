@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Table `R←⍪Y`
+# <span class="title-name">Table</span> `R←⍪Y`
 
 ```apl
 R←⍪Y

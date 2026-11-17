@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Spawn `{R}←{X}f&Y`
+# <span class="title-name">Spawn</span> `{R}←{X}f&Y`
 
 ```apl
 {R}←{X}f&Y

@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Catenate/Laminate `R←X,[K]Y`
+# <span class="title-name">Catenate/Laminate</span> `R←X,[K]Y`
 
 ```apl
 R←X,[K]Y

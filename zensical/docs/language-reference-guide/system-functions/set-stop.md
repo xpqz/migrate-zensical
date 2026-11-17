@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Set Stop `{R}←X ⎕STOP Y`
+# <span class="title-name">Set Stop</span> `{R}←X ⎕STOP Y`
 
 ```apl
 {R}←X ⎕STOP Y

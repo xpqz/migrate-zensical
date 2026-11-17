@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Value Get `R←{X}⎕VGET Y`
+# <span class="title-name">Value Get</span> `R←{X}⎕VGET Y`
 
 ```apl
 R←{X}⎕VGET Y

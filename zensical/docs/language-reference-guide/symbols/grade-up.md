@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Grade Up `⍋`
+# <span class="title-name">Grade Up</span> `⍋`
 
 ```apl
 ⍋

@@ -1,6 +1,6 @@
 
 
-# Copy Workspace `)COPY {ws {nms}}`
+# <span class="title-name">Copy Workspace</span> `)COPY {ws {nms}}`
 
 ```apl
 )COPY {ws {nms}}

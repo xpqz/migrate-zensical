@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Quad Diamond `⌺`
+# <span class="title-name">Quad Diamond</span> `⌺`
 
 ```apl
 ⌺

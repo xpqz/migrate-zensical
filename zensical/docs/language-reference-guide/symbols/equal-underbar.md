@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Equal Underbar `≡`
+# <span class="title-name">Equal Underbar</span> `≡`
 
 ```apl
 ≡

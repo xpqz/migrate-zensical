@@ -1,4 +1,4 @@
-# Hash Table Size `{R}←8468⌶Y`
+# <span class="title-name">Hash Table Size</span> `{R}←8468⌶Y`
 
 ```apl
 {R}←8468⌶Y

@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Take `R←X↑Y`
+# <span class="title-name">Take</span> `R←X↑Y`
 
 ```apl
 R←X↑Y

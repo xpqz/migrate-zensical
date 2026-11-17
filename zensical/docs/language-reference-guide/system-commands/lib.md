@@ -1,6 +1,6 @@
 
 
-# List Workspace Library `)LIB {dir}`
+# <span class="title-name">List Workspace Library</span> `)LIB {dir}`
 
 ```apl
 )LIB {dir}

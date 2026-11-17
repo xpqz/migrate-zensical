@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Equal `=`
+# <span class="title-name">Equal</span> `=`
 
 ```apl
 =

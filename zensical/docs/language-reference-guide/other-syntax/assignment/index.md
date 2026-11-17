@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Assignment `X←Y`
+# <span class="title-name">Assignment</span> `X←Y`
 
 ```apl
 X←Y

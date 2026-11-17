@@ -3,7 +3,7 @@ search:
   exclude: true
 ---
 
-# Unix Shell `⎕SH`
+# <span class="title-name">Unix Shell</span> `⎕SH`
 
 ```apl
 ⎕SH

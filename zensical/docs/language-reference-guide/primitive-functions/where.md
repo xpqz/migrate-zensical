@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Where `R←⍸Y`
+# <span class="title-name">Where</span> `R←⍸Y`
 
 ```apl
 R←⍸Y

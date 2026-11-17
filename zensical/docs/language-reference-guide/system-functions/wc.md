@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Window Create Object `{R}←{X}⎕WC Y`
+# <span class="title-name">Window Create Object</span> `{R}←{X}⎕WC Y`
 
 ```apl
 {R}←{X}⎕WC Y

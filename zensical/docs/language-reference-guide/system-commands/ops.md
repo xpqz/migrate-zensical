@@ -1,6 +1,6 @@
 
 
-# List Global Defined Operators `)OPS {nm}`
+# <span class="title-name">List Global Defined Operators</span> `)OPS {nm}`
 
 ```apl
 )OPS {nm}

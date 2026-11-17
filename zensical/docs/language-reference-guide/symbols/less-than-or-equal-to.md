@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Less Than Or Equal To `≤`
+# <span class="title-name">Less Than Or Equal To</span> `≤`
 
 ```apl
 ≤

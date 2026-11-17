@@ -1,6 +1,6 @@
 
 
-# PropertyShape Function `R←Shape {ipa}`
+# <span class="title-name">PropertyShape Function</span> `R←Shape {ipa}`
 
 ```apl
 R←Shape {ipa}

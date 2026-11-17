@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Ravel `R←,Y`
+# <span class="title-name">Ravel</span> `R←,Y`
 
 ```apl
 R←,Y

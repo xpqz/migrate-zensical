@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Iota Underbar `⍸`
+# <span class="title-name">Iota Underbar</span> `⍸`
 
 ```apl
 ⍸

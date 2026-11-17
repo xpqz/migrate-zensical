@@ -1,6 +1,6 @@
 
 
-# List Global Defined Variables `)VARS {nm}`
+# <span class="title-name">List Global Defined Variables</span> `)VARS {nm}`
 
 ```apl
 )VARS {nm}

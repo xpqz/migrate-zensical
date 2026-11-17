@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Depth `(⎕ML) R←≡Y`
+# <span class="title-name">Depth</span> `(⎕ML) R←≡Y`
 
 ```apl
 (⎕ML) R←≡Y

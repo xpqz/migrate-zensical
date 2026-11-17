@@ -1,6 +1,6 @@
 
 
-# RESIZE `1007`
+# <span class="title-name">RESIZE</span> `1007`
 
 ```apl
 1007

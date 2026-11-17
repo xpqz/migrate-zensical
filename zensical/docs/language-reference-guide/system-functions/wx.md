@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Window Expose `⎕WX`
+# <span class="title-name">Window Expose</span> `⎕WX`
 
 ```apl
 ⎕WX

@@ -123,6 +123,10 @@ KEY_TARGET = "language-reference-guide/key-to-notation.md"
 KEY_LINK_TEXT = "Key to notation"
 
 
+# Class on the name span of a normalised title with a calling syntax.
+TITLE_NAME_CLASS = "title-name"
+
+
 def normalise_titles(text, key_link=None):
     """Rewrite styled title headings to plain Markdown.
 
@@ -130,7 +134,9 @@ def normalise_titles(text, key_link=None):
     generations: the pre-July raw-HTML form the h1 rewrite turns into
     `# <span class="name">N</span> <span class="command">C</span> {: .heading}`,
     and today's `# <span>N</span> \\`C\\`{{key}}` / `# <span>N</span> <span>R</span>`.
-    Both become `# N \\`C\\``: the name followed by the calling syntax C as
+    Both become `# <span class="title-name">N</span> \\`C\\``: the name (its span kept, so the
+    stylesheet can set C flush right as the old theme did) followed by the
+    calling syntax C as
     inline code, with C repeated in an ```apl block directly below (copyable,
     and set in the APL face), or `# N` with a classifier R (Property, Event
     33, ...) as a plain line. Any other attr_list tokens (an explicit `#id`)
@@ -155,6 +161,8 @@ def _normalise_title_line(line, key_link):
     if not line.startswith("# "):
         return None
     body = line[2:]
+    if f'class="{TITLE_NAME_CLASS}"' in body:
+        return None
     if not any(marker in body for marker in ("<span", "<code", "{{", "{:", "`")):
         return None
 
@@ -174,9 +182,14 @@ def _normalise_title_line(line, key_link):
         return None
     name, command, right = parsed
 
-    title = f"# {name}"
     if command:
-        title += " " + _inline_command(command)
+        # The name keeps a <span>, as in the source: the stylesheet sets the
+        # syntax after a leading span flush right, as the old theme did. The
+        # class marks the title as already normalised (a bare span is the
+        # input form), keeping the transform idempotent.
+        title = f'# <span class="{TITLE_NAME_CLASS}">{name}</span> ' + _inline_command(command)
+    else:
+        title = f"# {name}"
     if attrs:
         title += " {: " + " ".join(attrs) + "}"
     lines = [title]

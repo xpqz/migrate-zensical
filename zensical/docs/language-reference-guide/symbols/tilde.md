@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Tilde `~`
+# <span class="title-name">Tilde</span> `~`
 
 ```apl
 ~

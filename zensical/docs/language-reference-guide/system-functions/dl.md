@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Delay `{R}←⎕DL Y`
+# <span class="title-name">Delay</span> `{R}←⎕DL Y`
 
 ```apl
 {R}←⎕DL Y

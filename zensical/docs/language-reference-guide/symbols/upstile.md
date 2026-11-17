@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Upstile `⌈`
+# <span class="title-name">Upstile</span> `⌈`
 
 ```apl
 ⌈

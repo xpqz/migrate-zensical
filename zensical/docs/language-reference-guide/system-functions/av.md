@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Atomic Vector `R←⎕AV`
+# <span class="title-name">Atomic Vector</span> `R←⎕AV`
 
 ```apl
 R←⎕AV

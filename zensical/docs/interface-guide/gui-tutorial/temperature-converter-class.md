@@ -1,8 +1,3 @@
----
-tags:
-  - Tutorial
----
-
 # Temperature Converter Class
 
 You may create user-defined Classes based upon Dyalog GUI objects as illustrated by the Temperature Converter Class which is listed overleaf.

@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Rotate `R←X⌽[K]Y`
+# <span class="title-name">Rotate</span> `R←X⌽[K]Y`
 
 ```apl
 R←X⌽[K]Y

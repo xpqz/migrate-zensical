@@ -1,6 +1,6 @@
 
 
-# DOMAIN ERROR `11`
+# <span class="title-name">DOMAIN ERROR</span> `11`
 
 ```apl
 11

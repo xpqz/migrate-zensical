@@ -1,6 +1,6 @@
 
 
-# Trap Statement `:Trap ecode`
+# <span class="title-name">Trap Statement</span> `:Trap ecode`
 
 ```apl
 :Trap ecode

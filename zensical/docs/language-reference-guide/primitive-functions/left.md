@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Left `R←X⊣Y`
+# <span class="title-name">Left</span> `R←X⊣Y`
 
 ```apl
 R←X⊣Y

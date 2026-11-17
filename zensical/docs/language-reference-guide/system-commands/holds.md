@@ -1,6 +1,6 @@
 
 
-# Display Held Tokens `)HOLDS`
+# <span class="title-name">Display Held Tokens</span> `)HOLDS`
 
 ```apl
 )HOLDS

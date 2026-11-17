@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Namespace `{R}←{X}⎕NS Y`
+# <span class="title-name">Namespace</span> `{R}←{X}⎕NS Y`
 
 ```apl
 {R}←{X}⎕NS Y

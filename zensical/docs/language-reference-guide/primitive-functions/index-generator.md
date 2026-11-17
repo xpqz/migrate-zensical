@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Index Generator `R←⍳Y`
+# <span class="title-name">Index Generator</span> `R←⍳Y`
 
 ```apl
 R←⍳Y

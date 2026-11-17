@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Canonical Representation `R←⎕CR Y`
+# <span class="title-name">Canonical Representation</span> `R←⎕CR Y`
 
 ```apl
 R←⎕CR Y
@@ -74,11 +74,11 @@ If `Y` is a name assigned to a derived function, `R` is a vector whose elements 
       ⍴F
 3
       ]Display F
-.→----------.
-| .→--.     |
-| |2 2| ∘ ⍴ |
-| '~--' - - |
-'∊----------'
+┌→──────────┐
+│ ┌→──┐     │
+│ │2 2│ ∘ ⍴ │
+│ └~──┘ - - │
+└∊──────────┘
 ```
 
 If `Y` is a name assigned to a defined function, `R` is the `⎕CR` of the defined function.  In particular, the name that appears in the function header is the name of the original defined function, not the assigned name `Y`.

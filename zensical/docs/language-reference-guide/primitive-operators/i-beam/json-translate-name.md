@@ -4,7 +4,7 @@ search:
 ---
 
 
-# JSON Translate Name `R←X(7162⌶)Y`
+# <span class="title-name">JSON Translate Name</span> `R←X(7162⌶)Y`
 
 ```apl
 R←X(7162⌶)Y

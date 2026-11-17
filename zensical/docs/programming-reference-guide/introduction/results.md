@@ -1,8 +1,3 @@
----
-tags:
-  - Explanation
----
-
 # Results
 
 A function can return a value, known as its *result*. Not every function returns one, and a result that is returned is not always displayed. Every function application produces one of three outcomes:

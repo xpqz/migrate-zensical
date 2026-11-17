@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Quad Colon `⍠`
+# <span class="title-name">Quad Colon</span> `⍠`
 
 ```apl
 ⍠

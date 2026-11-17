@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Up Shoe `∩`
+# <span class="title-name">Up Shoe</span> `∩`
 
 ```apl
 ∩

@@ -1,6 +1,6 @@
 
 
-# EOF INTERRUPT `1005`
+# <span class="title-name">EOF INTERRUPT</span> `1005`
 
 ```apl
 1005

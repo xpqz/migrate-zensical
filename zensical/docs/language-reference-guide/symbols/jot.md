@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Jot `∘`
+# <span class="title-name">Jot</span> `∘`
 
 ```apl
 ∘

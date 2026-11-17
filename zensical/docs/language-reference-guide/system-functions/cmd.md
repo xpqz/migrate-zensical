@@ -3,7 +3,7 @@ search:
   exclude: true
 ---
 
-# Windows Command `⎕CMD`
+# <span class="title-name">Windows Command</span> `⎕CMD`
 
 ```apl
 ⎕CMD

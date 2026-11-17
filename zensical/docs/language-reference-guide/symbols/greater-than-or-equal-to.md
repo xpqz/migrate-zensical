@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Greater Than Or Equal To `≥`
+# <span class="title-name">Greater Than Or Equal To</span> `≥`
 
 ```apl
 ≥

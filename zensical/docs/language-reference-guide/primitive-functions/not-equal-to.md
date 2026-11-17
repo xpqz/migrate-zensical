@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Not Equal To `R←X≠Y`
+# <span class="title-name">Not Equal To</span> `R←X≠Y`
 
 ```apl
 R←X≠Y

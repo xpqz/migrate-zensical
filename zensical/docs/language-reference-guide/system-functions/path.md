@@ -3,13 +3,13 @@ search:
   boost: 2
 ---
 
-# Search Path `⎕PATH`
+# <span class="title-name">Search Path</span> `⎕PATH`
 
 ```apl
 ⎕PATH
 ```
 
-`⎕PATH` is a simple character vector representing a blank-separated list of namespaces.  It is approximately analogous to the PATH variable in Windows or UNIX.
+`⎕PATH` is a simple character vector representing a blank-separated list of namespaces. It is approximately analogous to the PATH variable in Microsoft Windows or Unix.
 
 The `⎕PATH` variable can be used to identify a namespace in which commonly used utility functions reside.  Functions or operators (**NOT** variables) which are copied into this namespace and *exported* (see [Export Object](export.md)) can then be used directly from anywhere in the workspace without giving their full path names. `⎕PATH` has Session scope.
 
@@ -35,7 +35,7 @@ The special character `↑` stands for the list of namespace ancestors:
 
 In other words, the search is conducted upwards through enclosing namespaces, emulating the static scope rule inherent in modern block-structured languages.
 
-The `⎕PATH` mechanism is only used if the function reference cannot be satisfied in the current namespace.  This is analogous to the case when the Windows or UNIX PATH variable begins with a `'.'`.
+The `⎕PATH` mechanism is only used if the function reference cannot be satisfied in the current namespace. This is analogous to the case when the Microsoft Windows or Unix PATH variable begins with a `'.'`.
 
 ## Examples
 ```other

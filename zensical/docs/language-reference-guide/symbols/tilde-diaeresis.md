@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Tilde Diaeresis `⍨`
+# <span class="title-name">Tilde Diaeresis</span> `⍨`
 
 ```apl
 ⍨

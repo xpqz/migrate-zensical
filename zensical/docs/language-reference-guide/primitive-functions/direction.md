@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Direction (Signum) `R←×Y`
+# <span class="title-name">Direction (Signum)</span> `R←×Y`
 
 ```apl
 R←×Y

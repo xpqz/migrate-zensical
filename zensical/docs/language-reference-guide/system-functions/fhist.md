@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# File History `R←⎕FHIST Y`
+# <span class="title-name">File History</span> `R←⎕FHIST Y`
 
 ```apl
 R←⎕FHIST Y

@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Maximum `R←X⌈Y`
+# <span class="title-name">Maximum</span> `R←X⌈Y`
 
 ```apl
 R←X⌈Y

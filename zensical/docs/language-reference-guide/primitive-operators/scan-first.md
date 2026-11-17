@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Scan First `R←f⍀Y`
+# <span class="title-name">Scan First</span> `R←f⍀Y`
 
 ```apl
 R←f⍀Y

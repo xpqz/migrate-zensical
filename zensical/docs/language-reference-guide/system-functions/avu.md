@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Atomic Vector - Unicode `⎕AVU`
+# <span class="title-name">Atomic Vector - Unicode</span> `⎕AVU`
 
 ```apl
 ⎕AVU

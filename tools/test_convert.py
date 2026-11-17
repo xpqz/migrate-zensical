@@ -122,7 +122,7 @@ def test_rewrites_styled_title_with_syntax_block_and_key_link(source_tree, out_d
     run(source_tree, out_dir, overlay)
     page = (out_dir / "docs" / "compiler-user-guide" / "styled-title.md").read_text()
     assert page.startswith(
-        "# Comma Separated Values `{R}←{X} ⎕CSV Y`\n\n```apl\n{R}←{X} ⎕CSV Y\n```\n"
+        "# <span class=\"title-name\">Comma Separated Values</span> `{R}←{X} ⎕CSV Y`\n\n```apl\n{R}←{X} ⎕CSV Y\n```\n"
         "[Key to notation](../language-reference-guide/key-to-notation.md)\n\n"
     )
     assert "## Examples\n```apl\n" in page
@@ -364,9 +364,8 @@ def test_keeps_root_level_nav_pages_unprefixed(merged):
 def test_carries_only_the_source_values_the_template_needs(merged):
     # theme, stylesheets, scripts, plugins and copyright are MkDocs house
     # configuration; the Zensical template owns their replacements.
-    assert set(merged) == {"site_name", "repo_url", "nav", "markdown_extensions", "extra"}
+    assert set(merged) == {"site_name", "nav", "markdown_extensions", "extra"}
     assert merged["site_name"] == "Documentation"
-    assert merged["repo_url"] == "https://github.com/dyalog/documentation"
 
 
 def test_folds_markdown_extensions_into_a_superset_with_root_precedence(merged):
@@ -427,7 +426,11 @@ def test_writes_zensical_toml_under_project_with_merged_values(source_tree, out_
     run(source_tree, out_dir, overlay)
     project = read_toml(out_dir)
     assert project["site_name"] == "Documentation"
-    assert project["repo_url"] == "https://github.com/dyalog/documentation"
+    # The source link points at this repository's flattened tree, not the
+    # monorepo the content was converted from.
+    assert project["repo_url"] == "https://github.com/xpqz/migrate-zensical"
+    assert project["edit_uri"] == "edit/main/zensical/docs"
+    assert "content.action.view" in project["theme"]["features"]
     assert project["extra"]["version_majmin"] == "21.0"
     assert project["nav"][0]["Release Notes"][0]["v21.0 Release Notes"][0] == (
         "release-notes/index.md"

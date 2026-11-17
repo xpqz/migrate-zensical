@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Syntax Colouring `R←200⌶Y`
+# <span class="title-name">Syntax Colouring</span> `R←200⌶Y`
 
 ```apl
 R←200⌶Y

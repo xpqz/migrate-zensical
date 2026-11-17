@@ -1,6 +1,6 @@
 
 
-# EXCEPTION `90`
+# <span class="title-name">EXCEPTION</span> `90`
 
 ```apl
 90

@@ -1,6 +1,6 @@
 
 
-# Save Workspace `)SAVE {-force} {ws}`
+# <span class="title-name">Save Workspace</span> `)SAVE {-force} {ws}`
 
 ```apl
 )SAVE {-force} {ws}

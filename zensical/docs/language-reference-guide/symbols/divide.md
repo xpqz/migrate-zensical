@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Divide `÷`
+# <span class="title-name">Divide</span> `÷`
 
 ```apl
 ÷

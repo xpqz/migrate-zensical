@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# State of Object `R←⎕STATE Y`
+# <span class="title-name">State of Object</span> `R←⎕STATE Y`
 
 ```apl
 R←⎕STATE Y

@@ -1,6 +1,6 @@
 
 
-# FILE ERROR 26 Text file busy `126`
+# <span class="title-name">FILE ERROR 26 Text file busy</span> `126`
 
 ```apl
 126

@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Unique `R←∪Y`
+# <span class="title-name">Unique</span> `R←∪Y`
 
 ```apl
 R←∪Y

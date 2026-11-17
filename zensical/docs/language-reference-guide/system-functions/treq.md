@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Token Requests `R←⎕TREQ Y`
+# <span class="title-name">Token Requests</span> `R←⎕TREQ Y`
 
 ```apl
 R←⎕TREQ Y

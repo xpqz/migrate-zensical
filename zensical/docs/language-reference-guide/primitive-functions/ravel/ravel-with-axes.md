@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Ravel with Axes `R←,[K]Y`
+# <span class="title-name">Ravel with Axes</span> `R←,[K]Y`
 
 ```apl
 R←,[K]Y

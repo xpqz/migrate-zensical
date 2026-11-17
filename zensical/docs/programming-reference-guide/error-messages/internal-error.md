@@ -1,6 +1,6 @@
 
 
-# INTERNAL ERROR `99`
+# <span class="title-name">INTERNAL ERROR</span> `99`
 
 ```apl
 99

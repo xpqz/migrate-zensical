@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Split `R←↓[K]Y`
+# <span class="title-name">Split</span> `R←↓[K]Y`
 
 ```apl
 R←↓[K]Y

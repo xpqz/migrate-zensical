@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Power `R←X*Y`
+# <span class="title-name">Power</span> `R←X*Y`
 
 ```apl
 R←X*Y

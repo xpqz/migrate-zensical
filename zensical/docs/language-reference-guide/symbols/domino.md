@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Domino `⌹`
+# <span class="title-name">Domino</span> `⌹`
 
 ```apl
 ⌹

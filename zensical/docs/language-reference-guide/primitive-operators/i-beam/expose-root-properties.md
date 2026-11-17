@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Expose Root Properties `R←2401⌶Y`
+# <span class="title-name">Expose Root Properties</span> `R←2401⌶Y`
 
 ```apl
 R←2401⌶Y

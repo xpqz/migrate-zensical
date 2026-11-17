@@ -154,7 +154,7 @@ These constants simplify access to commonly-used values.
 
 |Name   |Description                     |
 |-------|--------------------------------|
-|[`⎕A`](a.md)   |Alphabetic uppercase characters (lowercase characters can be obtained with `⎕C⎕A`)|
+|[`⎕A`](a.md)   |Uppercase Alphabet              |
 |[`⎕D`](d.md)   |Digits                          |
 |[`⎕NULL`](null.md)|Null Item                       |
 
@@ -244,7 +244,7 @@ These create and manipulate files of any type as well as directories.
 
 |Name       |Description                                                  |Form|
 |-----------|-------------------------------------------------------------|----|
-|[`⎕MKDIR`](mkdir.md)   |Create a directory                                           |Ambivalent function|
+|[`⎕MKDIR`](mkdir.md)   |Create Directory                                           |Ambivalent function|
 |[`⎕NAPPEND`](nappend.md) |Append to File                                               |Dyadic function|
 |[`⎕NCOPY`](ncopy.md)   |Copy files and directories                                   |Dyadic function|
 |[`⎕NCREATE`](ncreate.md) |Create a File                                                |Dyadic function|
@@ -362,8 +362,8 @@ These are deprecated facilities that are still supported for legacy purposes; Dy
 |[`⎕FX`](fx.md)     |Fix definition          |Monadic function|`⎕FIX` saves source as typed|
 |[`⎕NR`](nr.md)     |Nested Representation   |Monadic function|`⎕ATX` can provide source as typed|
 |[`⎕PATH`](path.md)  |Search Path            |Variable|Use full (absolute or relative) namespace paths|
-|[`⎕SH`](execute-unix-command.md)   |Execute a UNIX command or another program|Monadic function|`⎕SHELL` is interruptible, can separate output streams, and has lots of advanced options|
-|[`⎕SH`](start-unix-auxiliary-processor.md)   |Start a UNIX Auxiliary Processor|Dyadic function|DLL/shared libraries via `⎕NA`|
+|[`⎕SH`](execute-unix-command.md)   |Execute a Unix command or another program|Monadic function|`⎕SHELL` is interruptible, can separate output streams, and has lots of advanced options|
+|[`⎕SH`](start-unix-auxiliary-processor.md)   |Start a Unix Auxiliary Processor|Dyadic function|DLL/shared libraries via `⎕NA`|
 |[`⎕SRC`](src.md)      |Source        |Monadic function|`⎕ATX` can provide source for non-objects|
 |[`⎕TC`](tc.md)   |Terminal Control           |Constant|`⎕UCS 8`, `⎕UCS 10`, and `⎕UCS 13`|
 |[`⎕VR`](vr.md)     |Vector Representation   |Monadic function|`⎕ATX` can provide source as typed|
@@ -374,7 +374,7 @@ These are deprecated facilities that are still supported for legacy purposes; Dy
 
 System variables retain information used by the system in some way. Many system variables affect the behaviour of primitive functions and operators to which they act as _implicit arguments_.
 
-System variables can be localised by inclusion in the header line of a defined function or in the argument list of the system function `⎕SHADOW`. When a system variable is localised, it retains its previous value until it is assigned a new one. This feature is known as "pass-through localisation". The exception to this rule is `⎕TRAP`.
+System variables can be localised by inclusion in the header line of a defined function or in the argument list of the system function [`⎕SHADOW`](shadow.md). When a system variable is localised, it retains its previous value until it is assigned a new one. This feature is known as _pass-through localisation_. The exception to this rule is [`⎕TRAP`](trap.md).
 
 A system variable can never be undefined. Default values are assigned to all system variables in a clear workspace.
 

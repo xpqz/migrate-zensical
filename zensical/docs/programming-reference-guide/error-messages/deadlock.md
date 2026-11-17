@@ -1,6 +1,6 @@
 
 
-# DEADLOCK `1008`
+# <span class="title-name">DEADLOCK</span> `1008`
 
 ```apl
 1008

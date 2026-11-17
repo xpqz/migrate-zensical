@@ -1,6 +1,6 @@
 
 
-# List Global Defined Functions `)FNS {nm}`
+# <span class="title-name">List Global Defined Functions</span> `)FNS {nm}`
 
 ```apl
 )FNS {nm}

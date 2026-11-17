@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Greatest Common Divisor/OR `R←X∨Y`
+# <span class="title-name">Greatest Common Divisor/OR</span> `R←X∨Y`
 
 ```apl
 R←X∨Y

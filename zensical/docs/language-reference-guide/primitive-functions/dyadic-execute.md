@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Dyadic Execute `R←X⍎Y`
+# <span class="title-name">Dyadic Execute</span> `R←X⍎Y`
 
 ```apl
 R←X⍎Y

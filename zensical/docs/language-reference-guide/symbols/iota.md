@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Iota `⍳`
+# <span class="title-name">Iota</span> `⍳`
 
 ```apl
 ⍳

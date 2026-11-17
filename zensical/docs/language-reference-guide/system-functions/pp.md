@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Print Precision `⎕PP`
+# <span class="title-name">Print Precision</span> `⎕PP`
 
 ```apl
 ⎕PP

@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Floating-Point Representation `⎕FR`
+# <span class="title-name">Floating-Point Representation</span> `⎕FR`
 
 ```apl
 ⎕FR

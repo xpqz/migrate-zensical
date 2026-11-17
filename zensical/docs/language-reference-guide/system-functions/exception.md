@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Exception `R←⎕EXCEPTION`
+# <span class="title-name">Exception</span> `R←⎕EXCEPTION`
 
 ```apl
 R←⎕EXCEPTION

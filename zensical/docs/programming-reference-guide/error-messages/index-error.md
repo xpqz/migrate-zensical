@@ -1,6 +1,6 @@
 
 
-# INDEX ERROR `3`
+# <span class="title-name">INDEX ERROR</span> `3`
 
 ```apl
 3

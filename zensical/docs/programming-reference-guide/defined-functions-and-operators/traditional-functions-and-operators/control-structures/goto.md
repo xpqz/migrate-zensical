@@ -1,4 +1,4 @@
-# GoTo Statement `:GoTo aexp`
+# <span class="title-name">GoTo Statement</span> `:GoTo aexp`
 
 ```apl
 :GoTo aexp

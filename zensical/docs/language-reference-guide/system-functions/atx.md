@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Extended Attributes `R←X ⎕ATX Y`
+# <span class="title-name">Extended Attributes</span> `R←X ⎕ATX Y`
 
 ```apl
 R←X ⎕ATX Y

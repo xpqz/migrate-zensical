@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Jot Underbar `⍛`
+# <span class="title-name">Jot Underbar</span> `⍛`
 
 ```apl
 ⍛

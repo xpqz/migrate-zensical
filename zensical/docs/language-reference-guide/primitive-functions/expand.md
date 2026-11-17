@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Expand `R←X\[K]Y`
+# <span class="title-name">Expand</span> `R←X\[K]Y`
 
 ```apl
 R←X\[K]Y

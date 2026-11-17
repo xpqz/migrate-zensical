@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Rank `R←{X}(f⍤B)Y`
+# <span class="title-name">Rank</span> `R←{X}(f⍤B)Y`
 
 ```apl
 R←{X}(f⍤B)Y

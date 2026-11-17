@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Update DataTable `R←{X}2010⌶Y`
+# <span class="title-name">Update DataTable</span> `R←{X}2010⌶Y`
 
 ```apl
 R←{X}2010⌶Y

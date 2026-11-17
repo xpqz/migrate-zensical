@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Matrix Divide `R←X⌹Y`
+# <span class="title-name">Matrix Divide</span> `R←X⌹Y`
 
 ```apl
 R←X⌹Y

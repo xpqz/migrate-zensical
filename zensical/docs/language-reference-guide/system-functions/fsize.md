@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# File Size `R←⎕FSIZE Y`
+# <span class="title-name">File Size</span> `R←⎕FSIZE Y`
 
 ```apl
 R←⎕FSIZE Y

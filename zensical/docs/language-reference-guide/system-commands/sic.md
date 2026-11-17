@@ -1,6 +1,6 @@
 
 
-# Clear State Indicator `)SIC`
+# <span class="title-name">Clear State Indicator</span> `)SIC`
 
 ```apl
 )SIC

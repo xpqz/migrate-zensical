@@ -1,8 +1,3 @@
----
-tags:
-  - Explanation
----
-
 # Cells and Sub-arrays
 
 Certain functions and operators operate on particular cells or sub-arrays of an array, which are identified and described as follows.

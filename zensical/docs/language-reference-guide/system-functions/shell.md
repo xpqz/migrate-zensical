@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Execute External Program `R←⎕SHELL Y`
+# <span class="title-name">Execute External Program</span> `R←⎕SHELL Y`
 
 ```apl
 R←⎕SHELL Y

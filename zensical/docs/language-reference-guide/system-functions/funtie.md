@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# File Untie `{R}←⎕FUNTIE Y`
+# <span class="title-name">File Untie</span> `{R}←⎕FUNTIE Y`
 
 ```apl
 {R}←⎕FUNTIE Y

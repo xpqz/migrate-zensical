@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Reap Forked Tasks `R←4002⌶Y`
+# <span class="title-name">Reap Forked Tasks</span> `R←4002⌶Y`
 
 ```apl
 R←4002⌶Y
@@ -14,7 +14,7 @@ R←4002⌶Y
 !!! info "Dyalog on AIX"
     This function is available only under AIX.
 
-Under UNIX, when a child process terminates, it signals to its parent that it has terminated and waits for the parent to acknowledge that signal. `4002⌶` is the mechanism to allow the APL programmer to issue such acknowledgements.
+Under Unix, when a child process terminates, it signals to its parent that it has terminated and waits for the parent to acknowledge that signal. `4002⌶` is the mechanism to allow the APL programmer to issue such acknowledgements.
 
 `Y` must be a simple empty vector but is ignored.
 

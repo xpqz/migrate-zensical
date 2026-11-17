@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Logical NAND `⍲`
+# <span class="title-name">Logical NAND</span> `⍲`
 
 ```apl
 ⍲

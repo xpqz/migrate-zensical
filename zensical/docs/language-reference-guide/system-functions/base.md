@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Base Class `R←⎕BASE.Y`
+# <span class="title-name">Base Class</span> `R←⎕BASE.Y`
 
 ```apl
 R←⎕BASE.Y

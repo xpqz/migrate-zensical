@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Squad `⌷`
+# <span class="title-name">Squad</span> `⌷`
 
 ```apl
 ⌷

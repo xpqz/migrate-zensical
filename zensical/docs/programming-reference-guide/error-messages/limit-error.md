@@ -1,6 +1,6 @@
 
 
-# LIMIT ERROR `10`
+# <span class="title-name">LIMIT ERROR</span> `10`
 
 ```apl
 10

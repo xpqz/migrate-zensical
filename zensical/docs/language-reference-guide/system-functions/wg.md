@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Window Get Property `R←{X}⎕WG Y`
+# <span class="title-name">Window Get Property</span> `R←{X}⎕WG Y`
 
 ```apl
 R←{X}⎕WG Y

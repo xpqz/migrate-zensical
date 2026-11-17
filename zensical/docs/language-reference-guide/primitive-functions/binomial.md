@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Binomial `R←X!Y`
+# <span class="title-name">Binomial</span> `R←X!Y`
 
 ```apl
 R←X!Y

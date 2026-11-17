@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Evaluated Input/Output `⎕`
+# <span class="title-name">Evaluated Input/Output</span> `⎕`
 
 ```apl
 ⎕

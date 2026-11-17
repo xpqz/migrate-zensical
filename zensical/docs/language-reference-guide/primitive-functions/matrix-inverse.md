@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Matrix Inverse `R←⌹Y`
+# <span class="title-name">Matrix Inverse</span> `R←⌹Y`
 
 ```apl
 R←⌹Y

@@ -1,6 +1,6 @@
 
 
-# INTERRUPT `1003`
+# <span class="title-name">INTERRUPT</span> `1003`
 
 ```apl
 1003

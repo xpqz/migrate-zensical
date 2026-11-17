@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Shape `R←⍴Y`
+# <span class="title-name">Shape</span> `R←⍴Y`
 
 ```apl
 R←⍴Y

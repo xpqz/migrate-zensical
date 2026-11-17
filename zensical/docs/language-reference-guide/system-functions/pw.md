@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Print Width `⎕PW`
+# <span class="title-name">Print Width</span> `⎕PW`
 
 ```apl
 ⎕PW

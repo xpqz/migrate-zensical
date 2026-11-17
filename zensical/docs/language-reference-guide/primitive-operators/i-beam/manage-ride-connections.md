@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Manage Ride Connections `R←3502⌶Y`
+# <span class="title-name">Manage Ride Connections</span> `R←3502⌶Y`
 
 ```apl
 R←3502⌶Y

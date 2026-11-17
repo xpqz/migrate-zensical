@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# File Replace Component `{R}←X ⎕FREPLACE Y`
+# <span class="title-name">File Replace Component</span> `{R}←X ⎕FREPLACE Y`
 
 ```apl
 {R}←X ⎕FREPLACE Y

@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Deal `R←X?Y`
+# <span class="title-name">Deal</span> `R←X?Y`
 
 ```apl
 R←X?Y

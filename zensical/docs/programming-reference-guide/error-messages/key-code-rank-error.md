@@ -1,6 +1,6 @@
 
 
-# KEY CODE RANK ERROR `62`
+# <span class="title-name">KEY CODE RANK ERROR</span> `62`
 
 ```apl
 62

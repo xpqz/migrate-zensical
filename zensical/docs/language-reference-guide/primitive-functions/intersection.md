@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Intersection `R←X∩Y`
+# <span class="title-name">Intersection</span> `R←X∩Y`
 
 ```apl
 R←X∩Y

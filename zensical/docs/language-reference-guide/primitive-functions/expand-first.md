@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Expand First `R←X⍀Y`
+# <span class="title-name">Expand First</span> `R←X⍀Y`
 
 ```apl
 R←X⍀Y

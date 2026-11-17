@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Exclamation Mark `!`
+# <span class="title-name">Exclamation Mark</span> `!`
 
 ```apl
 !

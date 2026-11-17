@@ -1,8 +1,3 @@
----
-tags:
-  - Explanation
----
-
 # Namespace Reference Evaluation
 
 When the interpreter encounters a namespace reference, it:

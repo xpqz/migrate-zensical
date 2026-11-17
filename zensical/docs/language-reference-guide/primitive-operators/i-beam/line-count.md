@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Line Count `R←50100⌶Y`
+# <span class="title-name">Line Count</span> `R←50100⌶Y`
 
 ```apl
 R←50100⌶Y

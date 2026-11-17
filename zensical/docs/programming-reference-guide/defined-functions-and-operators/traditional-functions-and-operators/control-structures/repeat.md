@@ -1,6 +1,6 @@
 
 
-# Repeat Statement `:Repeat`
+# <span class="title-name">Repeat Statement</span> `:Repeat`
 
 ```apl
 :Repeat

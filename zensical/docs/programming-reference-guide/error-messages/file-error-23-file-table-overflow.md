@@ -1,6 +1,6 @@
 
 
-# FILE ERROR 23 File table overflow `123`
+# <span class="title-name">FILE ERROR 23 File table overflow</span> `123`
 
 ```apl
 123

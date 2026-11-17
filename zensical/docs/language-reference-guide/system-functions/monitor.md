@@ -3,7 +3,7 @@ search:
   exclude: true
 ---
 
-# Monitor Controls `⎕MONITOR`
+# <span class="title-name">Monitor Controls</span> `⎕MONITOR`
 
 ```apl
 ⎕MONITOR

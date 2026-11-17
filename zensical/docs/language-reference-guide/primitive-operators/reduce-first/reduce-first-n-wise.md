@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Reduce First N-Wise `R←Xf⌿[K]Y`
+# <span class="title-name">Reduce First N-Wise</span> `R←Xf⌿[K]Y`
 
 ```apl
 R←Xf⌿[K]Y

@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Commute `{R}←{X}f⍨Y`
+# <span class="title-name">Commute</span> `{R}←{X}f⍨Y`
 
 ```apl
 {R}←{X}f⍨Y

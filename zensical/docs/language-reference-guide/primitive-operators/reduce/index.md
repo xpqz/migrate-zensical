@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Reduce `R←f/[K]Y`
+# <span class="title-name">Reduce</span> `R←f/[K]Y`
 
 ```apl
 R←f/[K]Y

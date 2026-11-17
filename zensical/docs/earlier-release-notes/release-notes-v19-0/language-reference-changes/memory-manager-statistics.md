@@ -1,4 +1,4 @@
-# Memory Manager Statistics `R←{X}(2000⌶)Y`
+# <span class="title-name">Memory Manager Statistics</span> `R←{X}(2000⌶)Y`
 
 ```apl
 R←{X}(2000⌶)Y

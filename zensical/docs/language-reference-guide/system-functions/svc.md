@@ -3,7 +3,7 @@ search:
   exclude: true
 ---
 
-# Shared Variable Access Control `⎕SVC`
+# <span class="title-name">Shared Variable Access Control</span> `⎕SVC`
 
 ```apl
 ⎕SVC

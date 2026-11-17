@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Connected to Ride? `R←(3501⌶)Y`
+# <span class="title-name">Connected to Ride?</span> `R←(3501⌶)Y`
 
 ```apl
 R←(3501⌶)Y

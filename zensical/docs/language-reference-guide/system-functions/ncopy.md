@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Native File Copy `{R}←X ⎕NCOPY Y`
+# <span class="title-name">Native File Copy</span> `{R}←X ⎕NCOPY Y`
 
 ```apl
 {R}←X ⎕NCOPY Y

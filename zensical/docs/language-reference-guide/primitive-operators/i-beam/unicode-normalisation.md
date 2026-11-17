@@ -2,7 +2,7 @@
 search:
   boost: 2
 ---
-# Unicode Normalisation `R←X(5581⌶)Y`
+# <span class="title-name">Unicode Normalisation</span> `R←X(5581⌶)Y`
 
 ```apl
 R←X(5581⌶)Y

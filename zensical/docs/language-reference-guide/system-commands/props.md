@@ -1,6 +1,6 @@
 
 
-# List Properties `)PROPS`
+# <span class="title-name">List Properties</span> `)PROPS`
 
 ```apl
 )PROPS

@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Native File Move `{R}←X ⎕NMOVE Y`
+# <span class="title-name">Native File Move</span> `{R}←X ⎕NMOVE Y`
 
 ```apl
 {R}←X ⎕NMOVE Y

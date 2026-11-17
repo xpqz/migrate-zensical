@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Datetime `R←X ⎕DT Y`
+# <span class="title-name">Datetime</span> `R←X ⎕DT Y`
 
 ```apl
 R←X ⎕DT Y
@@ -68,7 +68,7 @@ Table: Time numbers { #timenumbers }
 | `15` |Go UnixMicro|Tick count 1&nbsp;µs ticks[^3]|1970-01-01 00:00|Yes|
 | `16` |Go UnixNano|Tick count 1&nbsp;ns ticks[^3]|1970-01-01 00:00|Yes|
 | `17` |APL+Win and APL64 workspace timestamp|Tick count 1μs ticks[^3]|1900-01-01 00:00|No|
-|UNIX|||||
+|Unix|||||
 | `20` |Unix time|Tick count 1&nbsp;s ticks[^3]|1970-01-01 00:00|Yes|
 | `21` |Apollo NCS UUID|Tick count 4µs ticks[^3]|1980-01-01 00:00|No|
 | `22` |OSF DCE UUID|Tick count 1&nbsp;ns ticks[^3]|1582-10-15 00:00|No|
@@ -94,8 +94,8 @@ Table: Time numbers { #timenumbers }
 |Decimal encoded[^9]|||||
 | `60` |Floating-point decimal encoded format Digits take the form yyyymmdd.hhmmss|Encoded broken-down time 1&nbsp;s resolution|N/A|No|
 | `61` |Integer decimal encoded format Digits take the form yyyymmddhhmmss (J digit time)|Encoded broken-down time 1&nbsp;s resolution|N/A|No|
-|Misc. Operating Systems|||||
-| `70` |AmigaOS|Tick count 1&nbsp;ms ticks[^3]|1978-01-01 00:00|No|
+|Miscellaneous operating systems|||||
+| `70` |AmigaOS|Tick count 1&nbsp;s ticks[^3]|1978-01-01 00:00|No|
 
 ### Examples: Time number to time number
 

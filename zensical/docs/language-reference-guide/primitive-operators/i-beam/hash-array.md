@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Hash Array `R←{X}1500⌶Y`
+# <span class="title-name">Hash Array</span> `R←{X}1500⌶Y`
 
 ```apl
 R←{X}1500⌶Y

@@ -1,6 +1,6 @@
 
 
-# Create Namespace `)NS {nm}`
+# <span class="title-name">Create Namespace</span> `)NS {nm}`
 
 ```apl
 )NS {nm}

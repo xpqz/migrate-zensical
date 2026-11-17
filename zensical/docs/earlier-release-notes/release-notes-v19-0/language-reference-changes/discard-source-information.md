@@ -1,4 +1,4 @@
-# Discard Source Information `R←5171⌶Y`
+# <span class="title-name">Discard Source Information</span> `R←5171⌶Y`
 
 ```apl
 R←5171⌶Y

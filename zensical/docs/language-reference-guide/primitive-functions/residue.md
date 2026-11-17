@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Residue `R←X|Y`
+# <span class="title-name">Residue</span> `R←X|Y`
 
 ```apl
 R←X|Y

@@ -1,6 +1,6 @@
 
 
-# HOLD ERROR `12`
+# <span class="title-name">HOLD ERROR</span> `12`
 
 ```apl
 12

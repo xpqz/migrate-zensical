@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Mark Thread as Uninterruptible `R←2503⌶Y`
+# <span class="title-name">Mark Thread as Uninterruptible</span> `R←2503⌶Y`
 
 ```apl
 R←2503⌶Y

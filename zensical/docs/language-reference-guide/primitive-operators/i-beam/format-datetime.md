@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Format Date-time `R←X(1200⌶)Y`
+# <span class="title-name">Format Date-time</span> `R←X(1200⌶)Y`
 
 ```apl
 R←X(1200⌶)Y

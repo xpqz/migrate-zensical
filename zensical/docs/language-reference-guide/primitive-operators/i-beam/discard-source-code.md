@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Discard Source Code `R←5172⌶Y`
+# <span class="title-name">Discard Source Code</span> `R←5172⌶Y`
 
 ```apl
 R←5172⌶Y

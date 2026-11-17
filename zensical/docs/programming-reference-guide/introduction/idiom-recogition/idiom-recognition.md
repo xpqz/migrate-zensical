@@ -1,8 +1,3 @@
----
-tags:
-  - Explanation
----
-
 # Idiom Recognition
 
 *Idioms* are commonly used expressions that are recognised and evaluated internally, providing a significant performance improvement.

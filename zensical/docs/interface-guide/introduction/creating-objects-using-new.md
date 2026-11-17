@@ -1,8 +1,3 @@
----
-tags:
-  - Explanation
----
-
 # Creating Objects using NEW
 
 With the introduction of Classes in Version 11.0, you may manipulate Dyalog GUI objects as Instances of built-in (GUI) Classes. This approach supplements (but does not replace) the use of `⎕WC`, `⎕WS` and so forth.

@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Shadow Name `{R}←⎕SHADOW Y`
+# <span class="title-name">Shadow Name</span> `{R}←⎕SHADOW Y`
 
 ```apl
 {R}←⎕SHADOW Y

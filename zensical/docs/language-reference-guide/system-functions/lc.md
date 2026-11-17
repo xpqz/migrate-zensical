@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Line Count `R←⎕LC`
+# <span class="title-name">Line Count</span> `R←⎕LC`
 
 ```apl
 R←⎕LC

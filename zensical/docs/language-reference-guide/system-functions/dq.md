@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Dequeue Events `{R}←⎕DQ Y`
+# <span class="title-name">Dequeue Events</span> `{R}←⎕DQ Y`
 
 ```apl
 {R}←⎕DQ Y

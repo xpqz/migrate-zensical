@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# File Append Component `{R}←X ⎕FAPPEND Y`
+# <span class="title-name">File Append Component</span> `{R}←X ⎕FAPPEND Y`
 
 ```apl
 {R}←X ⎕FAPPEND Y

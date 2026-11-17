@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Verify .NET Interface `R←2250⌶Y`
+# <span class="title-name">Verify .NET Interface</span> `R←2250⌶Y`
 
 ```apl
 R←2250⌶Y

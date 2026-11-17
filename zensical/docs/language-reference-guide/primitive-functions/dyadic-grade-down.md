@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Dyadic Grade Down `R←X⍒Y`
+# <span class="title-name">Dyadic Grade Down</span> `R←X⍒Y`
 
 ```apl
 R←X⍒Y

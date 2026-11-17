@@ -1,9 +1,9 @@
 
 
-# FILE SYSTEM TIES USED UP `30`
+# <span class="title-name">FILE SYSTEM TIES USED UP</span> `30`
 
 ```apl
 30
 ```
 
-This error is generated when the maximum number of file ties for this APL instance has been reached.  See *Dyalog Programming Reference Guide: Component Files* for details.
+This error is generated when the maximum number of file ties for this APL instance has been reached; see [Component Files](../introduction/component-files.md) for more information.

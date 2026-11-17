@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Native File Exists `R←⎕NEXISTS Y`
+# <span class="title-name">Native File Exists</span> `R←⎕NEXISTS Y`
 
 ```apl
 R←⎕NEXISTS Y

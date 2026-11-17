@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Zilde `⍬`
+# <span class="title-name">Zilde</span> `⍬`
 
 ```apl
 ⍬

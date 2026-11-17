@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Star `*`
+# <span class="title-name">Star</span> `*`
 
 ```apl
 *

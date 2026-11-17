@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Reverse First `R←⊖[K]Y`
+# <span class="title-name">Reverse First</span> `R←⊖[K]Y`
 
 ```apl
 R←⊖[K]Y

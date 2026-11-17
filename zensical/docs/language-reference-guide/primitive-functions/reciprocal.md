@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Reciprocal `R←÷Y`
+# <span class="title-name">Reciprocal</span> `R←÷Y`
 
 ```apl
 R←÷Y

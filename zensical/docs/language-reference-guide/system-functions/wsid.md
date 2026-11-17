@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Workspace Identification `⎕WSID`
+# <span class="title-name">Workspace Identification</span> `⎕WSID`
 
 ```apl
 ⎕WSID

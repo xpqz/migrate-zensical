@@ -1,8 +1,3 @@
----
-tags:
-  - Explanation
----
-
 # Structuring of Arrays
 
 Primitive functions that restructure arrays:

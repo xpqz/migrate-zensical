@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Kill Thread `{R}←{X}⎕TKILL Y`
+# <span class="title-name">Kill Thread</span> `{R}←{X}⎕TKILL Y`
 
 ```apl
 {R}←{X}⎕TKILL Y

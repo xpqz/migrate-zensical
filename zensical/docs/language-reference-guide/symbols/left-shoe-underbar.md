@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Left Shoe Underbar `⊆`
+# <span class="title-name">Left Shoe Underbar</span> `⊆`
 
 ```apl
 ⊆

@@ -1,6 +1,6 @@
 
 
-# Thread Identity `)TID {tid}`
+# <span class="title-name">Thread Identity</span> `)TID {tid}`
 
 ```apl
 )TID {tid}

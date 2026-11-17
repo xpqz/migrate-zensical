@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Native File Replace `{R}←X ⎕NREPLACE Y`
+# <span class="title-name">Native File Replace</span> `{R}←X ⎕NREPLACE Y`
 
 ```apl
 {R}←X ⎕NREPLACE Y

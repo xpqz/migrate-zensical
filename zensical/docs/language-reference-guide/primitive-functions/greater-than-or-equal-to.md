@@ -3,18 +3,19 @@ search:
   boost: 2
 ---
 
-# Greater Than Or Equal To `R←X≥Y`
+# <span class="title-name">Greater Than Or Equal To</span> `R←X≥Y`
 
 ```apl
 R←X≥Y
 ```
 [Key to notation](../key-to-notation.md)
 
-`Y` must be numeric. `X` must be numeric. `R` is Boolean. `R` is 1 if `X` is greater than `Y` or `X=Y`. Otherwise `R` is 0.
+`X` and `Y` must be real numeric arrays. `R` is Boolean. `R` is 1 if `X` is greater than `Y` or `X=Y`. Otherwise `R` is 0.
 
-`⎕CT` and `⎕DCT` are  implicit arguments of _greater than or equal to_.
+`⎕CT` and `⎕DCT` are implicit arguments of _greater than or equal to_.
 
 ## Examples
+
 ```apl
       1 2 3 4 5 ≥ 3
 0 0 1 1 1

@@ -131,3 +131,22 @@ pre > code.language-apl {
   background: none;
   padding: 0;
 }
+
+/* Set the calling syntax flush right of the name, as the old theme did
+   (documentation-theme css/main.css): a title whose name is a leading span
+   followed by code becomes a flex row, the name takes the free space and the
+   syntax keeps its line breaks and never wraps; a long one scrolls. */
+.md-typeset h1:has(> span:first-child + code) {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  column-gap: 1em;
+  overflow-x: auto;
+}
+.md-typeset h1 > span:first-child {
+  flex-grow: 1;
+}
+.md-typeset h1 > span:first-child + code {
+  text-align: right;
+  white-space: pre;
+}

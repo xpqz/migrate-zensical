@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Shared Variable Offer `⎕SVO`
+# <span class="title-name">Shared Variable Offer</span> `⎕SVO`
 
 ```apl
 ⎕SVO

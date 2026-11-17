@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Use Separate Thread For .NET `R←2520⌶Y`
+# <span class="title-name">Use Separate Thread For .NET</span> `R←2520⌶Y`
 
 ```apl
 R←2520⌶Y

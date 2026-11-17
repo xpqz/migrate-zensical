@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Disable Component Checksum Validation `{R}←3002⌶Y`
+# <span class="title-name">Disable Component Checksum Validation</span> `{R}←3002⌶Y`
 
 ```apl
 {R}←3002⌶Y

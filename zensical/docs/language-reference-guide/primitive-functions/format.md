@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Format `R←⍕Y`
+# <span class="title-name">Format</span> `R←⍕Y`
 
 ```apl
 R←⍕Y

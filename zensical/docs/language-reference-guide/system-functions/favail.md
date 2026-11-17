@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# File System Available `R←⎕FAVAIL`
+# <span class="title-name">File System Available</span> `R←⎕FAVAIL`
 
 ```apl
 R←⎕FAVAIL

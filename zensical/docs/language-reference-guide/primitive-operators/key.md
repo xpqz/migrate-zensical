@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Key `R←{X}f⌸Y`
+# <span class="title-name">Key</span> `R←{X}f⌸Y`
 
 ```apl
 R←{X}f⌸Y

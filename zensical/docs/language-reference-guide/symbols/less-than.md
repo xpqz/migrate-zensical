@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Less Than `<`
+# <span class="title-name">Less Than</span> `<`
 
 ```apl
 <

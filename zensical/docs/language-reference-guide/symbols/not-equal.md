@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Not Equal `≠`
+# <span class="title-name">Not Equal</span> `≠`
 
 ```apl
 ≠

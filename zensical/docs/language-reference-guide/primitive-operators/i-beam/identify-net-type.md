@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Identify .NET Type `R←2017⌶Y`
+# <span class="title-name">Identify .NET Type</span> `R←2017⌶Y`
 
 ```apl
 R←2017⌶Y

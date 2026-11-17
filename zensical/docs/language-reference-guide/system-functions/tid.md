@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Current Thread Identity `R←⎕TID`
+# <span class="title-name">Current Thread Identity</span> `R←⎕TID`
 
 ```apl
 R←⎕TID

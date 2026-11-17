@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Native File Append `{R}←X ⎕NAPPEND Y`
+# <span class="title-name">Native File Append</span> `{R}←X ⎕NAPPEND Y`
 
 ```apl
 {R}←X ⎕NAPPEND Y

@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Comma Bar `⍪`
+# <span class="title-name">Comma Bar</span> `⍪`
 
 ```apl
 ⍪

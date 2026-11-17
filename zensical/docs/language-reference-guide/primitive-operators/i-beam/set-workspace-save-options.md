@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Set Workspace Save Options `R←2400⌶Y`
+# <span class="title-name">Set Workspace Save Options</span> `R←2400⌶Y`
 
 ```apl
 R←2400⌶Y

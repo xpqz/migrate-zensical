@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Native File Delete `{R}←{X}⎕NDELETE Y`
+# <span class="title-name">Native File Delete</span> `{R}←{X}⎕NDELETE Y`
 
 ```apl
 {R}←{X}⎕NDELETE Y

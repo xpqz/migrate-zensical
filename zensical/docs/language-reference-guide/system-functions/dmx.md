@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Extended Diagnostic Message `R←⎕DMX`
+# <span class="title-name">Extended Diagnostic Message</span> `R←⎕DMX`
 
 ```apl
 R←⎕DMX

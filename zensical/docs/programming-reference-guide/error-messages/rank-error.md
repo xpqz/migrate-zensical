@@ -1,6 +1,6 @@
 
 
-# RANK ERROR `4`
+# <span class="title-name">RANK ERROR</span> `4`
 
 ```apl
 4

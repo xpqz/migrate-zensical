@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Close .NET AppDomain `R←2101⌶Y`
+# <span class="title-name">Close .NET AppDomain</span> `R←2101⌶Y`
 
 ```apl
 R←2101⌶Y

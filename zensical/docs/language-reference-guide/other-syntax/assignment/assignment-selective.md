@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Assignment (Selective) `(EXP X)←Y`
+# <span class="title-name">Assignment (Selective)</span> `(EXP X)←Y`
 
 ```apl
 (EXP X)←Y

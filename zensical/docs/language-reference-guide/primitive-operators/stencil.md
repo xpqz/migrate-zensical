@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Stencil `R←(f⌺g)Y`
+# <span class="title-name">Stencil</span> `R←(f⌺g)Y`
 
 ```apl
 R←(f⌺g)Y

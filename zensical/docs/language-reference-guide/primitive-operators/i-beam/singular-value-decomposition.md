@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Singular Value Decomposition `R←(8415⌶)Y`
+# <span class="title-name">Singular Value Decomposition</span> `R←(8415⌶)Y`
 
 ```apl
 R←(8415⌶)Y

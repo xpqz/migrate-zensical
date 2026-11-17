@@ -1,8 +1,3 @@
----
-tags:
-  - Explanation
----
-
 # Namespace References
 
 A namespace reference, or ref for short, is a unique data type that is distinct from and in addition to number and character.

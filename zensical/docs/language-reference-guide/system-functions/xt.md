@@ -3,7 +3,7 @@ search:
   exclude: true
 ---
 
-# External Variables `⎕XT`
+# <span class="title-name">External Variables</span> `⎕XT`
 
 ```apl
 ⎕XT

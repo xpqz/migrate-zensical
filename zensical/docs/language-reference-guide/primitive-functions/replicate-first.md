@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Replicate First `R←X⌿[K]Y`
+# <span class="title-name">Replicate First</span> `R←X⌿[K]Y`
 
 ```apl
 R←X⌿[K]Y

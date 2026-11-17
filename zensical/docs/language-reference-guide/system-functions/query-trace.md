@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Query Trace `R←⎕TRACE Y`
+# <span class="title-name">Query Trace</span> `R←⎕TRACE Y`
 
 ```apl
 R←⎕TRACE Y

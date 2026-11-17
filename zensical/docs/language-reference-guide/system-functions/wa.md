@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Workspace Available `R←⎕WA`
+# <span class="title-name">Workspace Available</span> `R←⎕WA`
 
 ```apl
 R←⎕WA

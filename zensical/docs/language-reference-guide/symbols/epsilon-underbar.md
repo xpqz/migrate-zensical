@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Epsilon Underbar `⍷`
+# <span class="title-name">Epsilon Underbar</span> `⍷`
 
 ```apl
 ⍷

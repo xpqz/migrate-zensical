@@ -1,8 +1,3 @@
----
-tags:
-  - Explanation
----
-
 # Enclosed Elements
 
 An array may be enclosed to form a scalar element through any of the following means:

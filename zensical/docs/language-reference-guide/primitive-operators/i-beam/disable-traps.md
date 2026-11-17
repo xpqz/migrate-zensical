@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Disable Traps `R←600⌶Y`
+# <span class="title-name">Disable Traps</span> `R←600⌶Y`
 
 ```apl
 R←600⌶Y

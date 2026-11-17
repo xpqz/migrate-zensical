@@ -1,4 +1,4 @@
-# Enable Compression of Large Components `{R}←3012⌶Y`
+# <span class="title-name">Enable Compression of Large Components</span> `{R}←3012⌶Y`
 
 ```apl
 {R}←3012⌶Y

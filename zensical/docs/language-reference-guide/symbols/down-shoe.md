@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Down Shoe `∪`
+# <span class="title-name">Down Shoe</span> `∪`
 
 ```apl
 ∪

@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Parallel Execution Threshold `R←1112⌶Y`
+# <span class="title-name">Parallel Execution Threshold</span> `R←1112⌶Y`
 
 ```apl
 R←1112⌶Y

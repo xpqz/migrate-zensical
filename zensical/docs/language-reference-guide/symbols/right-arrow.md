@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Right Arrow `→`
+# <span class="title-name">Right Arrow</span> `→`
 
 ```apl
 →

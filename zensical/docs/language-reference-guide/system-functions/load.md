@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Load Workspace `⎕LOAD Y`
+# <span class="title-name">Load Workspace</span> `⎕LOAD Y`
 
 ```apl
 ⎕LOAD Y

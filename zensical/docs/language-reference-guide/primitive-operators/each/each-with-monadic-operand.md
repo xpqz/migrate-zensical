@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Each (with Monadic Operand) `{R}←f¨Y`
+# <span class="title-name">Each (with Monadic Operand)</span> `{R}←f¨Y`
 
 ```apl
 {R}←f¨Y

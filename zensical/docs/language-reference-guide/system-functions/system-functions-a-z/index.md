@@ -8,7 +8,7 @@ search:
 |-----------------------|---------------------------|----|
 |[`⎕`](../evaluated-input-output.md)      |Evaluated Input/Output|Variable|
 |[`⍞`](../character-input-output.md)      |Character Input/Output|Variable|
-|[`⎕A`](../a.md)   |Alphabetic uppercase characters|Variable|
+|[`⎕A`](../a.md)   |Uppercase Alphabet|Constant|
 |[`⎕Ⓐ` or `⎕Á`](../underscored-alphabetic-characters.md) |Underscored Alphabetic Characters|Constant|
 |[`⎕AI`](../ai.md)      |Account Information        |Constant|
 |[`⎕AN`](../an.md)      |Account Name               |Constant|
@@ -43,7 +43,6 @@ search:
 |[`⎕ED`](../ed.md)     |Edit one or more objects|Ambivalent function|
 |[`⎕EM`](../em.md)       |Event Messages                                  |Monadic function|
 |[`⎕EN`](../en.md)       |Event Number          |Constant|
-|[`⎕EX`](../ex.md)     |Expunge objects         |Monadic function|
 |[`⎕EX`](../ex.md)     |Expunge objects         |Monadic function|
 |[`⎕EXCEPTION`](../exception.md)|Reports the most recent Microsoft .NET Exception|Reference|
 |[`⎕EXPORT`](../export.md)|Export objects       |Ambivalent function|
@@ -85,7 +84,7 @@ search:
 |[`⎕LOCK`](../lock.md)   |Lock a function       |Ambivalent function|
 |[`⎕LX`](../lx.md)    |Latent Expression        |Variable|
 |[`⎕MAP`](../map.md)  |Map a file                                              |Ambivalent function|
-|[`⎕MKDIR`](../mkdir.md)   |Create a directory                                           |Ambivalent function|
+|[`⎕MKDIR`](../mkdir.md)   |Create Directory                                           |Ambivalent function|
 |[`⎕ML`](../ml.md) |Migration Level              |Variable|
 |[`⎕MONITOR`](../query-monitor.md)|Monitor query|Monadic function|
 |[`⎕MONITOR`](../set-monitor.md)|Monitor set    |Dyadic function|
@@ -136,10 +135,9 @@ search:
 |[`⎕SAVE`](../save.md)  |Save the active WS         |Function|
 |[`⎕SD`](../sd.md)   |Screen Dimensions                |Constant|
 |[`⎕SE`](../se.md)   |Session Namespace                |Reference|
-|[`⎕SH`](../execute-unix-command.md)   |Execute a UNIX command or another program|Monadic function|
-|[`⎕SH`](../start-unix-auxiliary-processor.md)   |Start a UNIX Auxiliary Processor|Dyadic function|
+|[`⎕SH`](../execute-unix-command.md)   |Execute a Unix command or another program|Monadic function|
+|[`⎕SH`](../start-unix-auxiliary-processor.md)   |Start a Unix Auxiliary Processor|Dyadic function|
 |[`⎕SHADOW`](../shadow.md)|Shadow names             |Monadic function|
-|[`⎕SHADOW`](../shadow.md)|Shadow names         |Monadic function|
 |[`⎕SHELL`](../shell.md)|Execute a shell command or another program              |Monadic function|
 |[`⎕SI`](../si.md)    |State Indicator          |Constant|
 |[`⎕SIGNAL`](../signal.md)   |Signal event                                    |Ambivalent function|

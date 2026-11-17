@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Negate `R←-Y`
+# <span class="title-name">Negate</span> `R←-Y`
 
 ```apl
 R←-Y

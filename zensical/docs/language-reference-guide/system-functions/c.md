@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Case Convert `R←{X}⎕C Y`
+# <span class="title-name">Case Convert</span> `R←{X}⎕C Y`
 
 ```apl
 R←{X}⎕C Y

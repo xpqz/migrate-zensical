@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Set Trace `{R}←X ⎕TRACE Y`
+# <span class="title-name">Set Trace</span> `{R}←X ⎕TRACE Y`
 
 ```apl
 {R}←X ⎕TRACE Y

@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Variant `{R}←{X}(f⍠B)Y`
+# <span class="title-name">Variant</span> `{R}←{X}(f⍠B)Y`
 
 ```apl
 {R}←{X}(f⍠B)Y

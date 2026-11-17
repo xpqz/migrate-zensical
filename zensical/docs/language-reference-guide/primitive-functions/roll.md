@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Roll `R←?Y`
+# <span class="title-name">Roll</span> `R←?Y`
 
 ```apl
 R←?Y

@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Star Diaeresis `⍣`
+# <span class="title-name">Star Diaeresis</span> `⍣`
 
 ```apl
 ⍣

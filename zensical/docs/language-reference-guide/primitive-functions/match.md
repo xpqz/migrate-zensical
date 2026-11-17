@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Match `R←X≡Y`
+# <span class="title-name">Match</span> `R←X≡Y`
 
 ```apl
 R←X≡Y

@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Value Set `{R}←{X}⎕VSET Y`
+# <span class="title-name">Value Set</span> `{R}←{X}⎕VSET Y`
 
 ```apl
 {R}←{X}⎕VSET Y

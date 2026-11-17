@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Response Time Limit `⎕RTL`
+# <span class="title-name">Response Time Limit</span> `⎕RTL`
 
 ```apl
 ⎕RTL

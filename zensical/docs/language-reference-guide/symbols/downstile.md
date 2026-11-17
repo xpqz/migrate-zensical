@@ -3,7 +3,7 @@ search:
   exclude: true
 ---
 
-# Downstile `⌊`
+# <span class="title-name">Downstile</span> `⌊`
 
 ```apl
 ⌊

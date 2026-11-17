@@ -1,8 +1,3 @@
----
-tags:
-  - Explanation
----
-
 # Complex Numbers
 
 A complex number is a number consisting of a real and an imaginary part which is usually written in the form a+ bi, where a and b are real numbers, and i is the standard imaginary unit with the property i<sup>2</sup>= −1.
@@ -60,7 +55,7 @@ Furthermore, adding a complex number and its conjugate produces a real number:
 6
 ```
 
-The famous Euler's Identityeiπ+1=0 may be expressed as follows:
+The famous Euler's Identity e<sup>iπ</sup>+1=0 can be expressed as follows:
 ```apl
       1+*○0j1 ⍝ Euler Identity
 0

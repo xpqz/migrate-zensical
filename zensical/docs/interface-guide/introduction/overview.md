@@ -1,8 +1,3 @@
----
-tags:
-  - Explanation
----
-
 # Overview
 
 This manual describes various interfaces between Dyalog APL and Windows.

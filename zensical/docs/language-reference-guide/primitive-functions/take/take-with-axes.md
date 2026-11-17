@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Take with Axes `R←X↑[K]Y`
+# <span class="title-name">Take with Axes</span> `R←X↑[K]Y`
 
 ```apl
 R←X↑[K]Y

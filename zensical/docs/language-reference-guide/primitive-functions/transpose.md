@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Transpose (Monadic) `R←⍉Y`
+# <span class="title-name">Transpose (Monadic)</span> `R←⍉Y`
 
 ```apl
 R←⍉Y

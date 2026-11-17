@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Tally `R←≢Y`
+# <span class="title-name">Tally</span> `R←≢Y`
 
 ```apl
 R←≢Y

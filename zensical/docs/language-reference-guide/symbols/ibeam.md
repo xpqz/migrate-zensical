@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# I-Beam `⌶`
+# <span class="title-name">I-Beam</span> `⌶`
 
 ```apl
 ⌶

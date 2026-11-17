@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Class `R←{X}⎕CLASS Y`
+# <span class="title-name">Class</span> `R←{X}⎕CLASS Y`
 
 ```apl
 R←{X}⎕CLASS Y

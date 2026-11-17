@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Index Origin `⎕IO`
+# <span class="title-name">Index Origin</span> `⎕IO`
 
 ```apl
 ⎕IO

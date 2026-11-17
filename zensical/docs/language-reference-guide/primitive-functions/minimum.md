@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Minimum `R←X⌊Y`
+# <span class="title-name">Minimum</span> `R←X⌊Y`
 
 ```apl
 R←X⌊Y

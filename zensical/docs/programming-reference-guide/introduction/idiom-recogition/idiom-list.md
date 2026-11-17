@@ -1,8 +1,3 @@
----
-tags:
-  - Explanation
----
-
 # Idiom List
 
 In the following table, arguments to the idiom have types and ranks as follows:

@@ -2,7 +2,7 @@
 search:
   boost: 2
 ---
-# Log File for Deprecations `{R}←{X} 109⌶Y`
+# <span class="title-name">Log File for Deprecations</span> `{R}←{X} 109⌶Y`
 
 ```apl
 {R}←{X} 109⌶Y

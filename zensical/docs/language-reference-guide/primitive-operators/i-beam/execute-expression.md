@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Execute Expression `R←X(85⌶)Y`
+# <span class="title-name">Execute Expression</span> `R←X(85⌶)Y`
 
 ```apl
 R←X(85⌶)Y

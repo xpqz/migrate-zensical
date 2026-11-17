@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Namespace Indicator `R←⎕NSI`
+# <span class="title-name">Namespace Indicator</span> `R←⎕NSI`
 
 ```apl
 R←⎕NSI

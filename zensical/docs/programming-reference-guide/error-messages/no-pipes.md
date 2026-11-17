@@ -1,12 +1,12 @@
 
 
-# NO PIPES `72`
+# <span class="title-name">NO PIPES</span> `72`
 
 ```apl
 72
 ```
 
-This message applies to the UNIX environment ONLY.
+This message only applies to the Unix environment.
 
 This message is given when the limit on the number of pipes communicating between tasks is exceeded.  An installation-set quota is assigned for each task.  An associated task may require more than one pipe.  The message occurs on attempting to exceed the account's quota when either:
 

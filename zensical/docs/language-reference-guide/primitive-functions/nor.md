@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# NOR `R←X⍱Y`
+# <span class="title-name">NOR</span> `R←X⍱Y`
 
 ```apl
 R←X⍱Y

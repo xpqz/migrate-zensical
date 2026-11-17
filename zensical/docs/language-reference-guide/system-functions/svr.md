@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Shared Variable Retract Offer `R←⎕SVR Y`
+# <span class="title-name">Shared Variable Retract Offer</span> `R←⎕SVR Y`
 
 ```apl
 R←⎕SVR Y

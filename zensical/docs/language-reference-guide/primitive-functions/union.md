@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Union `R←X∪Y`
+# <span class="title-name">Union</span> `R←X∪Y`
 
 ```apl
 R←X∪Y

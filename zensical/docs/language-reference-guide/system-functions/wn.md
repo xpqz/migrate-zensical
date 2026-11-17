@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Window Child Names `R←{X}⎕WN Y`
+# <span class="title-name">Window Child Names</span> `R←{X}⎕WN Y`
 
 ```apl
 R←{X}⎕WN Y

@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Assignment (Indexed) `{R}←X[I]←Y`
+# <span class="title-name">Assignment (Indexed)</span> `{R}←X[I]←Y`
 
 ```apl
 {R}←X[I]←Y

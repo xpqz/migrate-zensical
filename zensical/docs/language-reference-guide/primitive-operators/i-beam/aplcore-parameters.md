@@ -4,7 +4,7 @@ search:
 ---
 
 
-# aplcore Parameters `R←1302⌶Y`
+# <span class="title-name">aplcore Parameters</span> `R←1302⌶Y`
 
 ```apl
 R←1302⌶Y

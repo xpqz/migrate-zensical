@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Branch `→Y`
+# <span class="title-name">Branch</span> `→Y`
 
 ```apl
 →Y

@@ -4,7 +4,7 @@ search:
 ---
 
 
-# Disable Global Triggers `R←2007⌶Y`
+# <span class="title-name">Disable Global Triggers</span> `R←2007⌶Y`
 
 ```apl
 R←2007⌶Y

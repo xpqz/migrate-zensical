@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Plus `+`
+# <span class="title-name">Plus</span> `+`
 
 ```apl
 +

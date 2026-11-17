@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Get Tokens `{R}←{X} ⎕TGET Y`
+# <span class="title-name">Get Tokens</span> `{R}←{X} ⎕TGET Y`
 
 ```apl
 {R}←{X} ⎕TGET Y

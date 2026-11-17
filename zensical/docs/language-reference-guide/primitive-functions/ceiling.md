@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Ceiling `R←⌈Y`
+# <span class="title-name">Ceiling</span> `R←⌈Y`
 
 ```apl
 R←⌈Y

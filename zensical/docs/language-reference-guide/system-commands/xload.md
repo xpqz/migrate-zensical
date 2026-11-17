@@ -1,6 +1,6 @@
 
 
-# Load without Latent Expression `)XLOAD {ws}`
+# <span class="title-name">Load without Latent Expression</span> `)XLOAD {ws}`
 
 ```apl
 )XLOAD {ws}

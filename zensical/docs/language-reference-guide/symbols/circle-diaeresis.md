@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Circle Diaeresis `⍥`
+# <span class="title-name">Circle Diaeresis</span> `⍥`
 
 ```apl
 ⍥

@@ -3,7 +3,7 @@ search:
   boost: 2
 ---
 
-# Display Form `{R}←⎕DF Y`
+# <span class="title-name">Display Form</span> `{R}←⎕DF Y`
 
 ```apl
 {R}←⎕DF Y

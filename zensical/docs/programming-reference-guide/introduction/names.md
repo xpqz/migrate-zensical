@@ -1,8 +1,3 @@
----
-tags:
-  - Explanation
----
-
 # Legal Names
 
 APL objects may be given names. A name may be any sequence of characters, starting with a non-numeric character, selected from the following:

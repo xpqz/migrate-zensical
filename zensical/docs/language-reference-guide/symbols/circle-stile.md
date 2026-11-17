@@ -2,7 +2,7 @@
 search:
   exclude: true
 ---
-# Circle Stile `⌽`
+# <span class="title-name">Circle Stile</span> `⌽`
 
 ```apl
 ⌽
