@@ -4,6 +4,8 @@ name: Full Release (Assets + Site)
 # must stay registered on main: release branches dispatch their own copy of
 # full-release.yml through it.
 on:
+  push:
+    branches: [tooling-port]
   workflow_dispatch:
     inputs:
       version_override:
@@ -32,14 +34,14 @@ jobs:
     with:
       generate_chm: true
       publish_release: true
-      version_override: ${{ inputs.version_override }}
+      version_override: ${{ inputs.version_override || '22.0' }}
     secrets: inherit
 
   publish-site:
     needs: build-assets
     uses: ./.github/workflows/publish.yml
     with:
-      version_override: ${{ inputs.version_override }}
+      version_override: ${{ inputs.version_override || '22.0' }}
       set_as_latest: ${{ inputs.set_as_latest }}
-      site_url_override: ${{ inputs.site_url_override }}
+      site_url_override: ${{ inputs.site_url_override || 'https://xpqz.github.io/migrate-zensical/' }}
     secrets: inherit
