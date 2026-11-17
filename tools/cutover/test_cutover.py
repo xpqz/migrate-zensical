@@ -7,6 +7,7 @@ network: the house-style submodule is recorded as a gitlink, never fetched.
 """
 
 import subprocess
+import tomllib
 from pathlib import Path
 
 import convert
@@ -25,6 +26,8 @@ from fixture_tree import (
 )
 
 CUTOVER_DIR = Path(cutover.__file__).resolve().parent
+
+VERSION = "22.0"
 
 
 @pytest.fixture
@@ -52,7 +55,7 @@ def show(repo, path, rev="HEAD"):
 def run_both_commits(upstream, tooling):
     plan = cutover.rename_plan(upstream, cutover.load_mounts(upstream))
     a = cutover.commit_renames(upstream, plan)
-    b = cutover.commit_transform(upstream, tooling)
+    b = cutover.commit_transform(upstream, tooling, version=VERSION)
     return a, b
 
 
@@ -147,10 +150,51 @@ def test_commit_b_content_matches_the_conversion(upstream, tooling, tmp_path):
     docs = tree_digest(upstream / "docs")
     assert docs == tree_digest(oracle / "docs")
     assert tree_digest(upstream / "overrides") == tree_digest(oracle / "overrides")
-    expected_toml = (oracle / "zensical.toml").read_text(encoding="utf-8").replace(
-        'edit_uri = "edit/main/zensical/docs"', 'edit_uri = "edit/main/docs"')
-    assert (upstream / "zensical.toml").read_text(encoding="utf-8") == expected_toml
+    # zensical.toml is the conversion's, apart from the lines the cutover sets
+    # deliberately: edit_uri and the version (asserted on their own below).
+    deliberate = ("edit_uri = ", "version_")
+    expected = [line for line in (oracle / "zensical.toml").read_text(encoding="utf-8")
+                .splitlines() if not line.startswith(deliberate)]
+    actual = [line for line in (upstream / "zensical.toml").read_text(encoding="utf-8")
+              .splitlines() if not line.startswith(deliberate)]
+    assert actual == expected
+    assert 'edit_uri = "edit/main/docs"' in (upstream / "zensical.toml").read_text(
+        encoding="utf-8")
     assert git(upstream, "status", "--porcelain") == ""
+
+
+def test_commit_b_sets_the_version(upstream, tooling):
+    run_both_commits(upstream, tooling)
+    with open(upstream / "zensical.toml", "rb") as f:
+        extra = tomllib.load(f)["project"]["extra"]
+    assert extra["version_maj"] == 22
+    assert extra["version_min"] == 0
+    assert extra["version_majmin"] == "22.0"
+    assert extra["version_condensed"] == 220
+    # Other variables are carried over as converted.
+    assert extra["generator"] is False
+
+
+@pytest.mark.parametrize("version, expected", [
+    ("22.0", (22, 0, "22.0", 220)),
+    ("21.1", (21, 1, "21.1", 211)),
+])
+def test_version_variables(version, expected):
+    assert cutover.version_variables(version) == dict(zip(
+        ("version_maj", "version_min", "version_majmin", "version_condensed"), expected))
+
+
+@pytest.mark.parametrize("bad", ["22", "v22.0", "22.0.1", "22.x", ""])
+def test_version_variables_reject_malformed(bad):
+    with pytest.raises(ValueError, match="X.Y"):
+        cutover.version_variables(bad)
+
+
+def test_main_requires_a_version(upstream, tooling, capsys):
+    with pytest.raises(SystemExit):
+        cutover.main(["--upstream", str(upstream), "--freeze", "HEAD",
+                      "--tooling", str(tooling)])
+    assert "--version" in capsys.readouterr().err
 
 
 def test_jenkins_files_survive(upstream, tooling):
@@ -219,7 +263,7 @@ def test_commit_b_refuses_a_stale_overlay(upstream, tooling):
     cutover.commit_renames(upstream, plan)
     (upstream / "docs" / "index.md").write_text("# Edited upstream\n")
     with pytest.raises(ValueError, match="index.md"):
-        cutover.commit_transform(upstream, tooling)
+        cutover.commit_transform(upstream, tooling, version=VERSION)
 
 
 # --- the whole run -----------------------------------------------------------
@@ -245,7 +289,7 @@ def test_cutover_branches(upstream, tooling, tmp_path):
     origin_refs = git(origin, "show-ref")
     freeze = git(upstream, "rev-parse", "HEAD~1").strip()
 
-    cutover.cutover(upstream, freeze, tooling, "zensical-cutover",
+    cutover.cutover(upstream, freeze, tooling, "zensical-cutover", version=VERSION,
                     init_submodule=False, check_command=None)
 
     assert git(upstream, "rev-parse", "v21.0").strip() == freeze
@@ -259,11 +303,11 @@ def test_cutover_branches(upstream, tooling, tmp_path):
 def test_cutover_refuses_an_existing_release_branch(upstream, tooling):
     git(upstream, "branch", "v21.0")
     with pytest.raises(cutover.CutoverError, match="v21.0"):
-        cutover.cutover(upstream, "HEAD", tooling, "zensical-cutover",
+        cutover.cutover(upstream, "HEAD", tooling, "zensical-cutover", version=VERSION,
                         init_submodule=False, check_command=None)
 
 
 def test_cutover_reports_a_failing_check(upstream, tooling):
     with pytest.raises(cutover.CutoverError, match="check"):
-        cutover.cutover(upstream, "HEAD", tooling, "zensical-cutover",
+        cutover.cutover(upstream, "HEAD", tooling, "zensical-cutover", version=VERSION,
                         init_submodule=False, check_command=["git", "no-such-command"])

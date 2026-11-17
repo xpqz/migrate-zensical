@@ -55,6 +55,26 @@ jobs:
         # The chm group (in --all-groups) carries the build_chm.py extras.
         run: uv sync --all-groups --locked
 
+      - name: Determine version
+        # version_override, else zensical.toml's extra.version_majmin. On the
+        # default branch it must equal TRUNK_VERSION in tools/jenkins/Jenkinsfile
+        # (older versions are released from their vM.0 branch); the script
+        # stops the run otherwise. See tools/release_version.py.
+        id: release-version
+        env:
+          VERSION_OVERRIDE: ${{ inputs.version_override }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: uv run python tools/release_version.py
+
+      - name: Determine the release tag
+        id: version
+        env:
+          VERSION_XY: ${{ steps.release-version.outputs.VERSION }}
+        run: |
+          COMMIT_COUNT=$(git rev-list --count HEAD)
+          echo "VERSION=v${VERSION_XY}.${COMMIT_COUNT}" >> "$GITHUB_OUTPUT"
+          echo "Constructed version: v${VERSION_XY}.${COMMIT_COUNT}"
+
       - name: Locate the project
         id: project
         env:
@@ -86,23 +106,6 @@ jobs:
             --git-info "$GIT_INFO" \
             --build-date "$BUILD_DATE"
           ls -la chm/output/*.chm
-
-      - name: Determine the release tag
-        id: version
-        env:
-          VERSION_OVERRIDE: ${{ inputs.version_override }}
-          PROJECT: ${{ steps.project.outputs.DIR }}
-        run: |
-          VERSION_XY="$VERSION_OVERRIDE"
-          if [ -z "$VERSION_XY" ]; then
-            VERSION_XY=$(uv run python -c "import os, tomllib; print(tomllib.load(open(os.path.join(os.environ['PROJECT'], 'zensical.toml'), 'rb'))['project']['extra']['version_majmin'])")
-          fi
-          if ! echo "$VERSION_XY" | grep -qE '^[0-9]+\.[0-9]+$'; then
-            echo "ERROR: invalid version '$VERSION_XY' (expected X.Y)"; exit 1
-          fi
-          COMMIT_COUNT=$(git rev-list --count HEAD)
-          echo "VERSION=v${VERSION_XY}.${COMMIT_COUNT}" >> "$GITHUB_OUTPUT"
-          echo "Constructed version: v${VERSION_XY}.${COMMIT_COUNT}"
 
       - name: Manage draft releases and create the release
         env:

@@ -1,11 +1,13 @@
 """Replay the move to Zensical on a fresh local clone of Dyalog/documentation.
 
     uv run python tools/cutover/cutover.py --upstream PATH --freeze REF \\
-        --tooling PATH [--branch NAME] [--uv "uvx uv@0.13.9"]
+        --tooling PATH --version X.Y [--branch NAME] [--uv "uvx uv@0.13.9"]
 
 --upstream is a fresh clone of the documentation repository, --freeze the
 commit that becomes the v21.0 release branch and the base of the cutover,
---tooling this repository (its committed files are what gets copied).
+--tooling this repository (its committed files are what gets copied),
+--version the version main documents from the cutover on (the trunk version,
+TRUNK_VERSION in tools/jenkins/Jenkinsfile, e.g. 22.0).
 
 On the clone, in this order:
 
@@ -18,8 +20,8 @@ On the clone, in this order:
    is already in place), and language-bar/ to tools/language-bar/. Renames
    only, with the blobs unchanged, so `git log --follow` keeps each page's
    history; assert_pure_renames verifies it.
-4. Commit B: the content transforms, the content overlay, zensical.toml and
-   overrides/ at the root, the house-style submodule at
+4. Commit B: the content transforms, the content overlay, zensical.toml
+   (with --version as its version variables) and overrides/ at the root, the house-style submodule at
    docs/documentation-theme-zensical, this repository's tooling (minus
    tools/cutover/, the PoC project under zensical/ and design/), and the
    MkDocs-only and Docker files deleted. tools/jenkins/* stays.
@@ -32,6 +34,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -84,6 +87,8 @@ POC_EDIT_URI = 'edit_uri = "edit/main/zensical/docs"'
 ROOT_EDIT_URI = 'edit_uri = "edit/main/docs"'
 
 NO_PUSH = "no_push"
+
+_VERSION_RE = re.compile(r"(\d+)\.(\d+)")
 
 
 class CutoverError(Exception):
@@ -212,6 +217,18 @@ def assert_pure_renames(repo: Path, sha: str) -> None:
 # --- commit B ------------------------------------------------------------------
 
 
+def version_variables(version: str) -> dict:
+    """The [project.extra] version variables for an X.Y version, e.g. 22.0 →
+    version_maj 22, version_min 0, version_majmin "22.0", version_condensed
+    220. Raises ValueError for anything but X.Y."""
+    match = _VERSION_RE.fullmatch(version)
+    if not match:
+        raise ValueError(f"version {version!r} is not X.Y (for example 22.0)")
+    maj, minor = match.groups()
+    return {"version_maj": int(maj), "version_min": int(minor),
+            "version_majmin": version, "version_condensed": int(maj + minor)}
+
+
 def _theme_gitlink(tooling: Path) -> tuple[str, str]:
     """(commit, url) of the tooling repository's house-style submodule."""
     for path in THEME_PATHS_IN_TOOLING:
@@ -240,7 +257,8 @@ def _copy_tooling(tooling: Path, repo: Path) -> None:
         dest.chmod(0o755 if mode == "100755" else 0o644)
 
 
-def _write_toml(repo: Path, merged: dict, template: Path) -> None:
+def _write_toml(repo: Path, merged: dict, template: Path, version: str) -> None:
+    merged["extra"].update(version_variables(version))
     text = convert.render_zensical_toml(merged, template.read_text(encoding="utf-8"))
     if text.count(POC_EDIT_URI) != 1:
         raise CutoverError(f"{template} must contain {POC_EDIT_URI} exactly once")
@@ -248,15 +266,17 @@ def _write_toml(repo: Path, merged: dict, template: Path) -> None:
                                         encoding="utf-8")
 
 
-def commit_transform(repo: Path, tooling: Path) -> str:
+def commit_transform(repo: Path, tooling: Path, *, version: str) -> str:
     """Commit B on top of commit A: convert the content in place, swap the
-    tooling, and return the commit's sha. The overlay, zensical.toml template
+    tooling, set the version variables to version, and return the commit's
+    sha. The overlay, zensical.toml template
     and theme override come from the tooling's tools/cutover/."""
     repo, tooling = Path(repo), Path(tooling)
     cut = tooling / "tools" / "cutover"
     overlay = cut / "content"
     docs = repo / "docs"
 
+    version_variables(version)  # refuse a malformed version before writing
     root_config, sub_configs = load_configs(repo)
     mounts = convert.mount_points(sub_configs)
     # The guides are already at their aliases, so docs/<rel> is the source page.
@@ -270,7 +290,7 @@ def commit_transform(repo: Path, tooling: Path) -> str:
     shutil.copy2(cut / convert.OVERRIDES_DIR / "main.html",
                  repo / convert.OVERRIDES_DIR / "main.html")
     _write_toml(repo, convert.merge_configs(root_config, sub_configs),
-                cut / "zensical.toml.template")
+                cut / "zensical.toml.template", version)
 
     tracked = tracked_files(repo)
     doomed = [f"{guide}/mkdocs.yml" for guide in sub_configs] + [
@@ -301,7 +321,7 @@ def assert_stub_workflows(repo: Path) -> None:
 
 
 def cutover(upstream: Path, freeze: str, tooling: Path, branch: str = DEFAULT_BRANCH,
-            *, init_submodule: bool = True,
+            *, version: str, init_submodule: bool = True,
             check_command: list[str] | None = ("uv", "run", "python", "tools/check.py"),
             ) -> tuple[str, str, str]:
     """Run the cutover on the clone at upstream; return the freeze commit,
@@ -319,7 +339,7 @@ def cutover(upstream: Path, freeze: str, tooling: Path, branch: str = DEFAULT_BR
 
     a = commit_renames(upstream, rename_plan(upstream, load_mounts(upstream)))
     assert_pure_renames(upstream, a)
-    b = commit_transform(upstream, tooling)
+    b = commit_transform(upstream, tooling, version=version)
     assert_stub_workflows(upstream)
 
     if init_submodule:
@@ -366,8 +386,9 @@ Remaining manual steps, each needing explicit approval:
   - push {release} and {branch}, and open the pull request into main;
   - on {release}, pin the documentation-assets submodule in mkdocs-publish.yml
     (tools/jenkins/RELEASE.md procedure E);
-  - set version_majmin in zensical.toml and TRUNK_VERSION in the Jenkinsfile
-    for the next version.
+  - check that TRUNK_VERSION in tools/jenkins/Jenkinsfile is {version}, the
+    version zensical.toml now carries: publish.yml and chm.yml refuse to
+    release any other version from the default branch.
 """
 
 
@@ -379,18 +400,20 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--freeze", required=True, help="the content-freeze commit")
     parser.add_argument("--tooling", type=Path, required=True,
                         help="this repository (its committed files are copied)")
+    parser.add_argument("--version", required=True,
+                        help="the version main documents from now on, X.Y (TRUNK_VERSION)")
     parser.add_argument("--branch", default=DEFAULT_BRANCH)
     parser.add_argument("--uv", default="uv", help='the uv command, e.g. "uvx uv@0.13.9"')
     args = parser.parse_args(argv)
     check = [*shlex.split(args.uv), "run", "python", "tools/check.py"]
     try:
         base, a, b = cutover(args.upstream, args.freeze, args.tooling, args.branch,
-                             check_command=check)
+                             version=args.version, check_command=check)
     except (CutoverError, ValueError, FileNotFoundError) as error:
         print(f"cutover: {error}", file=sys.stderr)
         return 1
     print(NEXT_STEPS.format(branch=args.branch, upstream=args.upstream.resolve(), a=a, b=b,
-                            release=RELEASE_BRANCH, base=base))
+                            release=RELEASE_BRANCH, base=base, version=args.version))
     return 0
 
 
