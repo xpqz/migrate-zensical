@@ -78,10 +78,10 @@ def test_preserves_the_house_style_submodule_on_regen(source_tree, out_dir, over
     # Stand in for the submodule checkout landing at its path.
     sub = out_dir / "docs" / "documentation-theme-zensical" / "css"
     sub.mkdir(parents=True, exist_ok=True)
-    (sub / "dyalog.css").write_text("ASSET SENTINEL\n")
+    (sub / "dyalog.css").write_text("ASSET SENTINEL\n", encoding="utf-8")
     # Regenerating must not wipe the house style.
     run(source_tree, out_dir, overlay)
-    assert (sub / "dyalog.css").read_text() == "ASSET SENTINEL\n"
+    assert (sub / "dyalog.css").read_text(encoding="utf-8") == "ASSET SENTINEL\n"
 
 
 def test_wipes_a_stale_mkdocs_assets_directory_on_regen(source_tree, out_dir, overlay):
@@ -90,7 +90,7 @@ def test_wipes_a_stale_mkdocs_assets_directory_on_regen(source_tree, out_dir, ov
     # checkout is a stray, removed like any other.
     stale = out_dir / "docs" / "documentation-assets" / "css"
     stale.mkdir(parents=True)
-    (stale / "main.css").write_text("STALE\n")
+    (stale / "main.css").write_text("STALE\n", encoding="utf-8")
     run(source_tree, out_dir, overlay)
     assert not (out_dir / "docs" / "documentation-assets").exists()
 
@@ -102,16 +102,16 @@ def test_does_not_rewrite_markdown_inside_the_asset_directories(source_tree, out
     sub = out_dir / "docs" / "documentation-theme-zensical"
     sub.mkdir(parents=True, exist_ok=True)
     raw = '<h1 class="heading"><span class="name">Asset</span></h1>\n\n!!! Hint "x"\n'
-    (sub / "README.md").write_text(raw)
+    (sub / "README.md").write_text(raw, encoding="utf-8")
     run(source_tree, out_dir, overlay)
-    assert (sub / "README.md").read_text() == raw
+    assert (sub / "README.md").read_text(encoding="utf-8") == raw
 
 
 def test_places_the_version_warning_theme_override(source_tree, out_dir, overlay):
     run(source_tree, out_dir, overlay)
     override = out_dir / "overrides" / "main.html"
     assert override.is_file()
-    text = override.read_text()
+    text = override.read_text(encoding="utf-8")
     assert 'extends "base.html"' in text
     assert "block outdated" in text
     # The block must carry the warning and a link to latest, not be empty (an
@@ -123,13 +123,13 @@ def test_places_the_version_warning_theme_override(source_tree, out_dir, overlay
 
 def test_rewrites_raw_html_title_to_plain_heading_and_classifier(source_tree, out_dir, overlay):
     run(source_tree, out_dir, overlay)
-    page = (out_dir / "docs" / "compiler-user-guide" / "raw-heading.md").read_text()
+    page = (out_dir / "docs" / "compiler-user-guide" / "raw-heading.md").read_text(encoding="utf-8")
     assert page == "# Widget\n\nObject\n\nBody text.\n"
 
 
 def test_rewrites_styled_title_with_syntax_block_and_key_link(source_tree, out_dir, overlay):
     run(source_tree, out_dir, overlay)
-    page = (out_dir / "docs" / "compiler-user-guide" / "styled-title.md").read_text()
+    page = (out_dir / "docs" / "compiler-user-guide" / "styled-title.md").read_text(encoding="utf-8")
     assert page.startswith(
         "# <span class=\"title-name\">Comma Separated Values</span> `{R}←{X} ⎕CSV Y`\n\n```apl\n{R}←{X} ⎕CSV Y\n```\n"
         "[Key to notation](../language-reference-guide/key-to-notation.md)\n\n"
@@ -140,7 +140,7 @@ def test_rewrites_styled_title_with_syntax_block_and_key_link(source_tree, out_d
 
 def test_applies_admonition_shaded_and_example_transforms(source_tree, out_dir, overlay):
     run(source_tree, out_dir, overlay)
-    page = (out_dir / "docs" / "compiler-user-guide" / "examples.md").read_text()
+    page = (out_dir / "docs" / "compiler-user-guide" / "examples.md").read_text(encoding="utf-8")
     assert '!!! tip "Hints and Recommendations"' in page
     assert "|`0` (default)|do not repair|" in page
     assert "highlighted thus" not in page
@@ -149,7 +149,7 @@ def test_applies_admonition_shaded_and_example_transforms(source_tree, out_dir, 
 
 def test_replaces_toolbar_icons_with_overlay_images(source_tree, out_dir, overlay):
     run(source_tree, out_dir, overlay)
-    page = (out_dir / "docs" / "compiler-user-guide" / "toolbar.md").read_text()
+    page = (out_dir / "docs" / "compiler-user-guide" / "toolbar.md").read_text(encoding="utf-8")
     assert "![Exec toolbar button](../windows-ui-guide/img/tbt-exec.png)" in page
     assert (out_dir / "docs" / "windows-ui-guide" / "img" / "tbt-exec.png").read_bytes() == PNG_BYTES
 
@@ -162,8 +162,8 @@ def test_refuses_a_toolbar_icon_the_overlay_does_not_provide(source_tree, out_di
 
 def test_leaves_markdown_without_a_house_pattern_unchanged(source_tree, out_dir, overlay):
     run(source_tree, out_dir, overlay)
-    original = (source_tree / "compiler-user-guide" / "docs" / "basic-usage.md").read_text()
-    copied = (out_dir / "docs" / "compiler-user-guide" / "basic-usage.md").read_text()
+    original = (source_tree / "compiler-user-guide" / "docs" / "basic-usage.md").read_text(encoding="utf-8")
+    copied = (out_dir / "docs" / "compiler-user-guide" / "basic-usage.md").read_text(encoding="utf-8")
     assert copied == original
 
 
@@ -190,8 +190,8 @@ def test_rerun_removes_output_files_whose_source_disappeared(source_tree, out_di
 
 def test_rerun_removes_stray_files_planted_in_the_output(source_tree, out_dir, overlay):
     run(source_tree, out_dir, overlay)
-    (out_dir / "junk.txt").write_text("stray\n")
-    (out_dir / "docs" / "stray.md").write_text("# Stray\n")
+    (out_dir / "junk.txt").write_text("stray\n", encoding="utf-8")
+    (out_dir / "docs" / "stray.md").write_text("# Stray\n", encoding="utf-8")
     run(source_tree, out_dir, overlay)
     assert not (out_dir / "junk.txt").exists()
     assert not (out_dir / "docs" / "stray.md").exists()
@@ -212,7 +212,7 @@ def test_raises_file_not_found_when_an_expected_subproject_is_missing(
 def test_writes_nothing_outside_the_output_directory(source_tree, out_dir, overlay, tmp_path):
     repo_docs = tmp_path / "repo" / "docs" / "plans"
     repo_docs.mkdir(parents=True)
-    (repo_docs / "plan.md").write_text("# Plan\n")
+    (repo_docs / "plan.md").write_text("# Plan\n", encoding="utf-8")
 
     def outside_digest():
         prefix = out_dir.name + "/"
@@ -234,13 +234,13 @@ def test_overlay_replacement_page_is_used_when_its_sidecar_matches(
     source_tree, out_dir, overlay
 ):
     run(source_tree, out_dir, overlay)
-    assert (out_dir / "docs" / "index.md").read_text() == INDEX_OVERLAY_MD
+    assert (out_dir / "docs" / "index.md").read_text(encoding="utf-8") == INDEX_OVERLAY_MD
 
 
 def test_stale_overlay_sidecar_aborts_before_anything_is_written(
     source_tree, out_dir, overlay
 ):
-    (source_tree / "docs" / "index.md").write_text("# Documentation\n\nEdited upstream.\n")
+    (source_tree / "docs" / "index.md").write_text("# Documentation\n\nEdited upstream.\n", encoding="utf-8")
     with pytest.raises(ValueError, match="index.md"):
         run(source_tree, out_dir, overlay)
     assert not out_dir.exists()
@@ -474,7 +474,7 @@ def test_zensical_toml_takes_the_house_configuration_from_the_template(
 
 def test_zensical_toml_keeps_the_template_comments(source_tree, out_dir, overlay):
     run(source_tree, out_dir, overlay)
-    text = (out_dir / "zensical.toml").read_text()
+    text = (out_dir / "zensical.toml").read_text(encoding="utf-8")
     assert "# House style" in text
     assert "@@" not in text
 

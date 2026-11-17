@@ -171,7 +171,7 @@ _MD_SPECIAL_RE = re.compile(r"[\\`*_\[\]{}]")
 def load_yaml(path):
     """Parse a mkdocs.yml, tolerating the monorepo's !include tags by
     loading them as plain strings."""
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
@@ -425,7 +425,7 @@ def check_overlay(overlay, source, mounts):
         if src.is_file():
             if not sidecar.is_file():
                 problems.append(f"{rel}: replaces a source page but has no {SIDECAR_SUFFIX} sidecar")
-            elif sidecar.read_text().strip() != _sha256(src):
+            elif sidecar.read_text(encoding="utf-8").strip() != _sha256(src):
                 problems.append(
                     f"{rel}: source page changed since the replacement was written"
                     f" (re-merge, then update {sidecar.name})"

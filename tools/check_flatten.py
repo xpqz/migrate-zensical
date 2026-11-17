@@ -89,7 +89,7 @@ def load_baseline(path):
 
     Blank lines and lines beginning with '#' are ignored.
     """
-    lines = Path(path).read_text().splitlines()
+    lines = Path(path).read_text(encoding="utf-8").splitlines()
     return {
         stripped
         for line in lines

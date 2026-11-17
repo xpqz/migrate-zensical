@@ -217,49 +217,52 @@ def build_source_tree(root: Path) -> Path:
     src = root / "documentation"
 
     (src / "docs" / "javascripts").mkdir(parents=True)
-    (src / "mkdocs.yml").write_text(ROOT_MKDOCS)
-    (src / "docs" / "index.md").write_text(INDEX_MD)
-    (src / "docs" / "conventions.md").write_text("# Conventions\n")
-    (src / "docs" / "javascripts" / "mathjax.js").write_text(MATHJAX_JS)
+    (src / "mkdocs.yml").write_text(ROOT_MKDOCS, encoding="utf-8")
+    (src / "docs" / "index.md").write_text(INDEX_MD, encoding="utf-8")
+    (src / "docs" / "conventions.md").write_text("# Conventions\n", encoding="utf-8")
+    (src / "docs" / "javascripts" / "mathjax.js").write_text(MATHJAX_JS, encoding="utf-8")
 
     (src / "documentation-assets" / "css").mkdir(parents=True)
-    (src / "documentation-assets" / "css" / "main.css").write_text("body {}\n")
+    (src / "documentation-assets" / "css" / "main.css").write_text("body {}\n", encoding="utf-8")
 
     rn = src / "release-notes"
     (rn / "docs" / "announcements").mkdir(parents=True)
     (rn / "docs" / "javascripts").mkdir(parents=True)
     (rn / "docs" / "images").mkdir(parents=True)
-    (rn / "mkdocs.yml").write_text(RELEASE_NOTES_MKDOCS)
-    (rn / "docs" / "index.md").write_text("# Release Notes {{ version_majmin }}\n")
-    (rn / "docs" / "announcements" / "index.md").write_text("# Announcements\n")
+    (rn / "mkdocs.yml").write_text(RELEASE_NOTES_MKDOCS, encoding="utf-8")
+    (rn / "docs" / "index.md").write_text("# Release Notes {{ version_majmin }}\n", encoding="utf-8")
+    (rn / "docs" / "announcements" / "index.md").write_text("# Announcements\n", encoding="utf-8")
     (rn / "docs" / "announcements" / "deprecated-functionality.md").write_text(
-        "# Deprecated\nSee [conventions](../../conventions.md).\n"
+        "# Deprecated\nSee [conventions](../../conventions.md).\n",
+        encoding="utf-8",
     )
-    (rn / "docs" / "system-requirements.md").write_text("# System Requirements\n")
-    (rn / "docs" / "javascripts" / "mathjax.js").write_text(MATHJAX_JS)
+    (rn / "docs" / "system-requirements.md").write_text("# System Requirements\n", encoding="utf-8")
+    (rn / "docs" / "javascripts" / "mathjax.js").write_text(MATHJAX_JS, encoding="utf-8")
     (rn / "docs" / "images" / "logo.png").write_bytes(PNG_BYTES)
 
     cu = src / "compiler-user-guide"
     (cu / "docs").mkdir(parents=True)
-    (cu / "mkdocs.yml").write_text(COMPILER_MKDOCS)
-    (cu / "docs" / "index.md").write_text("# Compiler User Guide\n")
-    (cu / "docs" / "basic-usage.md").write_text("# Basic Usage\n")
+    (cu / "mkdocs.yml").write_text(COMPILER_MKDOCS, encoding="utf-8")
+    (cu / "docs" / "index.md").write_text("# Compiler User Guide\n", encoding="utf-8")
+    (cu / "docs" / "basic-usage.md").write_text("# Basic Usage\n", encoding="utf-8")
     # A page whose title is a raw-HTML heading (the pre-July object-reference
     # shape), to exercise the rewrite. Body left as plain text.
     (cu / "docs" / "raw-heading.md").write_text(
         '<h1 class="heading"><span class="name">Widget</span>'
-        ' <span class="right">Object</span></h1>\n\nBody text.\n'
+        ' <span class="right">Object</span></h1>\n\nBody text.\n',
+        encoding="utf-8",
     )
-    (cu / "docs" / "styled-title.md").write_text(STYLED_TITLE_MD)
-    (cu / "docs" / "examples.md").write_text(EXAMPLES_MD)
-    (cu / "docs" / "toolbar.md").write_text(TOOLBAR_MD)
+    (cu / "docs" / "styled-title.md").write_text(STYLED_TITLE_MD, encoding="utf-8")
+    (cu / "docs" / "examples.md").write_text(EXAMPLES_MD, encoding="utf-8")
+    (cu / "docs" / "toolbar.md").write_text(TOOLBAR_MD, encoding="utf-8")
 
     dn = src / "dotnet-interface-guide"
     (dn / "docs").mkdir(parents=True)
-    (dn / "mkdocs.yml").write_text(DOTNET_MKDOCS)
-    (dn / "docs" / "index.md").write_text("# .NET Interface Guide\n")
+    (dn / "mkdocs.yml").write_text(DOTNET_MKDOCS, encoding="utf-8")
+    (dn / "docs" / "index.md").write_text("# .NET Interface Guide\n", encoding="utf-8")
     (dn / "docs" / "installation.md").write_text(
-        "# Installation\n\nSee [the compiler](../compiler-user-guide/index.md).\n"
+        "# Installation\n\nSee [the compiler](../compiler-user-guide/index.md).\n",
+        encoding="utf-8",
     )
 
     return src
@@ -272,9 +275,10 @@ def build_overlay_tree(root: Path, source: Path) -> Path:
     overlay = root / "content"
     (overlay / "windows-ui-guide" / "img").mkdir(parents=True)
     (overlay / "windows-ui-guide" / "img" / "tbt-exec.png").write_bytes(PNG_BYTES)
-    (overlay / "index.md").write_text(INDEX_OVERLAY_MD)
+    (overlay / "index.md").write_text(INDEX_OVERLAY_MD, encoding="utf-8")
     (overlay / "index.md.source-sha256").write_text(
-        hashlib.sha256((source / "docs" / "index.md").read_bytes()).hexdigest() + "\n"
+        hashlib.sha256((source / "docs" / "index.md").read_bytes()).hexdigest() + "\n",
+        encoding="utf-8",
     )
     return overlay
 

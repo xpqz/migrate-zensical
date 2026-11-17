@@ -88,7 +88,8 @@ def test_load_baseline_ignores_comments_and_blank_lines(tmp_path):
         "# a comment\n"
         "anchor does not exist @ guide/page.md:3:98\n"
         "\n"
-        "page does not exist @ other/index.md:16:13\n"
+        "page does not exist @ other/index.md:16:13\n",
+        encoding="utf-8",
     )
     assert check_flatten.load_baseline(baseline) == {
         "anchor does not exist @ guide/page.md:3:98",
@@ -178,7 +179,8 @@ def test_main_returns_zero_on_a_clean_gate(tmp_path):
     baseline = tmp_path / "known-issues.txt"
     baseline.write_text(
         "anchor does not exist @ guide/page.md:3:98\n"
-        "page does not exist @ other/index.md:16:13\n"
+        "page does not exist @ other/index.md:16:13\n",
+        encoding="utf-8",
     )
     rc = check_flatten.main(
         ["--baseline", str(baseline)], runner=lambda _dir: (TWO_ISSUES, 0)
@@ -188,7 +190,7 @@ def test_main_returns_zero_on_a_clean_gate(tmp_path):
 
 def test_main_returns_one_when_the_gate_fails(tmp_path):
     baseline = tmp_path / "known-issues.txt"
-    baseline.write_text("anchor does not exist @ guide/page.md:3:98\n")
+    baseline.write_text("anchor does not exist @ guide/page.md:3:98\n", encoding="utf-8")
     rc = check_flatten.main(
         ["--baseline", str(baseline)], runner=lambda _dir: (TWO_ISSUES, 0)
     )
