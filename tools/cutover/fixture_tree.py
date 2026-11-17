@@ -464,7 +464,9 @@ def build_tooling_repo(root: Path, overlay: Path, cutover_dir: Path) -> Path:
     cut = tooling / "tools" / "cutover"
     shutil.copytree(overlay, cut / "content")
     shutil.copy2(cutover_dir / "zensical.toml.template", cut / "zensical.toml.template")
-    shutil.copy2(cutover_dir / "README.root.md", cut / "README.root.md")
+    # As committed in this repository (LF), whatever the checkout's line endings.
+    (cut / "README.root.md").write_bytes(
+        (cutover_dir / "README.root.md").read_bytes().replace(b"\r\n", b"\n"))
     (cut / "overrides").mkdir()
     shutil.copy2(cutover_dir / "overrides" / "main.html", cut / "overrides" / "main.html")
     _init_repo(tooling)
