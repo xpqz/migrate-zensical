@@ -34,10 +34,9 @@ content and build config:
 The source tree is never written to. The output directory is this
 repository's zensical/ directory, a self-contained generated project
 (zensical.toml and docs/ together). The script owns everything under it
-except the two asset directories under docs/ (documentation-assets, the
-retired MkDocs submodule, and documentation-assetsz, the Zensical assets):
-it regenerates the owned paths on every run, so orphaned and stray files do
-not survive, while leaving the assets intact. Nothing outside zensical/ is
+except the house style under docs/ (documentation-theme-zensical, a git
+submodule): it regenerates the owned paths on every run, so orphaned and
+stray files do not survive, while leaving the house style intact. Nothing outside zensical/ is
 ever written.
 
 Forward-looking by design: it reads MkDocs config and writes Zensical
@@ -88,10 +87,9 @@ TOOLS_DIR = Path(__file__).resolve().parent
 OUTPUT_ROOT = TOOLS_DIR.parent / "zensical"
 SOURCE_ROOT = TOOLS_DIR.parent.parent / "documentation"
 
-# Asset directories under docs/ that convert does not own: the retired MkDocs
-# style (a git submodule, kept until its removal is done as its own change)
-# and the Zensical style the build actually reads.
-PRESERVED_DIRS = frozenset({"documentation-assets", "documentation-assetsz"})
+# Directories under docs/ that convert does not own: the Zensical house style,
+# a git submodule (xpqz/documentation-theme-zensical).
+PRESERVED_DIRS = frozenset({"documentation-theme-zensical"})
 
 # The MathJax loader the monorepo carried in every sub-project. Nothing in the
 # corpus renders maths, so no copy is carried over.

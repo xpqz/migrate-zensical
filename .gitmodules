@@ -1,3 +1,3 @@
-[submodule "zensical/docs/documentation-assets"]
-	path = zensical/docs/documentation-assets
-	url = https://github.com/Dyalog/documentation-assets
+[submodule "zensical/docs/documentation-theme-zensical"]
+	path = zensical/docs/documentation-theme-zensical
+	url = https://github.com/xpqz/documentation-theme-zensical

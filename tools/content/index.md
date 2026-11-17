@@ -18,7 +18,7 @@ Alternatively, if you have a GitHub account, you can click the appropriate butto
 
 <div class="grid cards" markdown>
 
--   ![](documentation-assetsz/images/icon-gitissue-content-error.svg){ style="height:2em" } **Content error**
+-   ![](documentation-theme-zensical/images/icon-gitissue-content-error.svg){ style="height:2em" } **Content error**
 
     ---
 
@@ -26,7 +26,7 @@ Alternatively, if you have a GitHub account, you can click the appropriate butto
 
     [Report a content error](https://github.com/Dyalog/documentation/issues/new?assignees=FionaDyalog&labels=for-triage&template=content_error.md&title=)
 
--   ![](documentation-assetsz/images/icon-gitissue-technical-error.svg){ style="height:2em" } **Technical error**
+-   ![](documentation-theme-zensical/images/icon-gitissue-technical-error.svg){ style="height:2em" } **Technical error**
 
     ---
 
@@ -34,7 +34,7 @@ Alternatively, if you have a GitHub account, you can click the appropriate butto
 
     [Report a technical error](https://github.com/Dyalog/documentation/issues/new?assignees=FionaDyalog&labels=for-triage&template=technical_error.md&title=)
 
--   ![](documentation-assetsz/images/icon-gitissue-content-enhancement.svg){ style="height:2em" } **Content enhancement**
+-   ![](documentation-theme-zensical/images/icon-gitissue-content-enhancement.svg){ style="height:2em" } **Content enhancement**
 
     ---
 
@@ -42,7 +42,7 @@ Alternatively, if you have a GitHub account, you can click the appropriate butto
 
     [Suggest a content enhancement](https://github.com/Dyalog/documentation/issues/new?assignees=FionaDyalog&labels=for-triage&template=content_enhancement.md&title=)
 
--   ![](documentation-assetsz/images/icon-gitissue-technical-enhancement.svg){ style="height:2em" } **Technical enhancement**
+-   ![](documentation-theme-zensical/images/icon-gitissue-technical-enhancement.svg){ style="height:2em" } **Technical enhancement**
 
     ---
 

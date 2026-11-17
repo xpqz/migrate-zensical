@@ -19,6 +19,7 @@ not build or diff against MkDocs, and carries no fallback path.
 """
 
 import argparse
+import os
 import re
 import subprocess
 import sys
@@ -136,12 +137,21 @@ def run_build(project_dir):
 
     Invoked through the running interpreter (`-m zensical`) so it resolves
     the same environment's Zensical without depending on PATH.
+
+    The build runs with Zensical's polling file watcher unless the caller's
+    environment chooses otherwise. Zensical 0.1.1 sets up file watching even
+    for a one-off build; on one macOS machine its FSEvents registration was
+    seen to stall a full-corpus build for many minutes, while polling built it
+    in about 30 seconds and reported the same issues.
     """
+    env = dict(os.environ)
+    env.setdefault("ZENSICAL_POLL_WATCHER", "1")
     result = subprocess.run(
         [sys.executable, "-m", "zensical", "build", "-c"],
         cwd=project_dir,
         capture_output=True,
         text=True,
+        env=env,
     )
     return result.stdout + result.stderr, result.returncode
 

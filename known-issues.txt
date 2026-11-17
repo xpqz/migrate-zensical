@@ -2,12 +2,14 @@
 # for the flattened corpus and that pre-date the migration. The flatten must
 # introduce no issue outside this set (tools/check_flatten.py enforces this).
 #
-# Composition (4 entries): broken relative links already present in the
+# Composition (1 entry): a broken relative link already present in the
 # monorepo source, unrelated to the flatten. The rest of the July 2026
 # baseline (20 entries) was resolved upstream between July and September
 # 2026, or by mounting the .NET guides at their live-site aliases
-# (net-interface-guide/, net-framework-interface-guide/); the entries here
-# are the survivors, at their September line numbers.
+# (net-interface-guide/, net-framework-interface-guide/). Three more, links
+# of the form `page.md/#anchor`, stopped being reported with Zensical 0.1.1,
+# which resolves that form. The entry here is the survivor, at its September
+# line number.
 #
 # Not covered here: Zensical does not validate site-root-absolute links
 # (`](/...)`), so its checker never reports them; guarding against those is a
@@ -19,7 +21,4 @@
 #
 # Format: <type> @ <file>:<line>:<col>, one per line.
 
-page does not exist @ language-reference-guide/primitive-functions/deal.md:27:129
-page does not exist @ language-reference-guide/primitive-operators/reduce/reduce-n-wise.md:21:122
-page does not exist @ net-interface-guide/writing-dotnet-classes/creating-dotnet-classes-with-apl-source-files.md:18:138
 page does not exist @ programming-reference-guide/object-oriented-programming/class-members/properties/keyed-properties-print.md:23:197

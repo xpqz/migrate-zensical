@@ -11,7 +11,7 @@ links keep resolving.
 This repository is generated out-of-place from the monorepo source by a conversion script
 (retained under tooling until cutover) and becomes the authoring home once Zensical reaches
 parity. The phased migration is described in
-[docs/plans/zensical-port-plan.md](docs/plans/zensical-port-plan.md).
+[design/plans/zensical-port-plan.md](design/plans/zensical-port-plan.md).
 
 ## Status
 
@@ -20,19 +20,51 @@ parity. The phased migration is described in
 earlier authored-in-place experiments (Diátaxis tags, Tutorials and How-to hubs, the ⎕CSV
 rewrite, the "Was this page helpful?" widget) were discarded on 17 November 2026.
 
-The build is stock Zensical plus one stylesheet (`zensical/docs/documentation-assetsz/`); the
-house classes the MkDocs stylesheet styled were rewritten into plain Markdown at conversion time
-(see `tools/transforms.py`), and `docs/asset-switch-issues.md` records the design.
+The build is stock Zensical plus one stylesheet, the house style, kept in its own repository
+[xpqz/documentation-theme-zensical](https://github.com/xpqz/documentation-theme-zensical) and
+mounted as a submodule at `zensical/docs/documentation-theme-zensical/`. The house classes the
+MkDocs stylesheet styled were rewritten into plain Markdown at conversion time (see
+`tools/transforms.py`), and [design/asset-switch-issues.md](design/asset-switch-issues.md)
+records the design. Design notes, plans and reviews live under [design/](design/).
+
+## Local builds
+
+One [uv](https://docs.astral.sh/uv/) project at the repository root holds the whole toolchain:
+Zensical (pinned to 0.1.1), the Markdown extensions, the tooling under `tools/` and its tests.
+uv installs the Python it needs (3.11, from `.python-version`) along with the pinned packages
+from `uv.lock`.
+
+1. Install uv:
+   - macOS: `brew install uv`
+   - Linux: `curl -LsSf https://astral.sh/uv/install.sh | sh`
+   - Windows: `winget install astral-sh.uv`
+2. Clone with the house style submodule (`git clone --recurse-submodules …`, or
+   `git submodule update --init` in an existing clone), then from the repository root:
+
+   ```
+   uv sync                           # .venv with the build stack and tooling
+   cd zensical && uv run zensical serve   # live preview at http://localhost:8000
+   uv run python tools/check.py      # from the root: the checks
+   ```
+
+   `uv sync` includes the test runner (`uv run pytest`); `uv sync --all-groups` adds the deploy
+   tool (mike).
+
+On Windows, if uv is configured to link packages with symlinks and that fails (symlinks need
+Developer Mode or an elevated shell), have it copy instead: `set UV_LINK_MODE=copy` in `cmd`, or
+`$env:UV_LINK_MODE="copy"` in PowerShell, before `uv sync`.
+
+For editing, [Zensical Studio](https://marketplace.visualstudio.com/items?itemName=zensical.zensical-studio)
+for VS Code is recommended; the repository suggests it when opened (`.vscode/extensions.json`).
 
 ## Regenerating from the monorepo
 
 With a checkout of `dyalog/documentation` as a sibling directory named `documentation`:
 
 ```
-pip install -r tools/requirements-build.txt -r tools/requirements-dev.txt
-pip install -e tools/
-python tools/convert.py --regenerate   # rewrites zensical/ (keeps the two asset directories)
-python tools/check_flatten.py      # builds it and gates on known-issues.txt
+uv sync --all-groups
+uv run python tools/convert.py --regenerate   # rewrites zensical/ (keeps the house style submodule)
+uv run python tools/check_flatten.py          # builds it and gates on known-issues.txt
 ```
 
 `convert.py` refuses to run when a page in `tools/content/` (a hand-reworked replacement) no

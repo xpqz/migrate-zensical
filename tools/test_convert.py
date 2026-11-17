@@ -67,30 +67,39 @@ def test_copies_root_docs_pages_to_the_docs_root(source_tree, out_dir, overlay):
 
 
 def test_does_not_copy_documentation_assets(source_tree, out_dir, overlay):
-    # documentation-assets is a git submodule in the output repo, tracking the
-    # retired MkDocs style. It is not convert's to manage, so convert must not
-    # copy the source checkout's copy in.
+    # The source checkout's documentation-assets submodule is the MkDocs
+    # style. The Zensical build does not use it, so convert must not copy it in.
     run(source_tree, out_dir, overlay)
     assert not (out_dir / "docs" / "documentation-assets").exists()
 
 
-@pytest.mark.parametrize("assets", ["documentation-assets", "documentation-assetsz"])
-def test_preserves_the_asset_directories_on_regen(source_tree, out_dir, overlay, assets):
+def test_preserves_the_house_style_submodule_on_regen(source_tree, out_dir, overlay):
     run(source_tree, out_dir, overlay)
-    # Stand in for the asset checkout landing at its path.
-    sub = out_dir / "docs" / assets / "css"
+    # Stand in for the submodule checkout landing at its path.
+    sub = out_dir / "docs" / "documentation-theme-zensical" / "css"
     sub.mkdir(parents=True, exist_ok=True)
-    (sub / "main.css").write_text("ASSET SENTINEL\n")
-    # Regenerating must not wipe the assets.
+    (sub / "dyalog.css").write_text("ASSET SENTINEL\n")
+    # Regenerating must not wipe the house style.
     run(source_tree, out_dir, overlay)
-    assert (sub / "main.css").read_text() == "ASSET SENTINEL\n"
+    assert (sub / "dyalog.css").read_text() == "ASSET SENTINEL\n"
+
+
+def test_wipes_a_stale_mkdocs_assets_directory_on_regen(source_tree, out_dir, overlay):
+    run(source_tree, out_dir, overlay)
+    # The retired MkDocs submodule's path is no longer preserved: a leftover
+    # checkout is a stray, removed like any other.
+    stale = out_dir / "docs" / "documentation-assets" / "css"
+    stale.mkdir(parents=True)
+    (stale / "main.css").write_text("STALE\n")
+    run(source_tree, out_dir, overlay)
+    assert not (out_dir / "docs" / "documentation-assets").exists()
 
 
 def test_does_not_rewrite_markdown_inside_the_asset_directories(source_tree, out_dir, overlay):
     run(source_tree, out_dir, overlay)
     # A markdown file inside the assets with a raw <h1> must be left
     # byte-for-byte: the transforms must never write into the assets.
-    sub = out_dir / "docs" / "documentation-assetsz"
+    sub = out_dir / "docs" / "documentation-theme-zensical"
     sub.mkdir(parents=True, exist_ok=True)
     raw = '<h1 class="heading"><span class="name">Asset</span></h1>\n\n!!! Hint "x"\n'
     (sub / "README.md").write_text(raw)
@@ -445,7 +454,12 @@ def test_zensical_toml_takes_the_house_configuration_from_the_template(
 ):
     project = (run(source_tree, out_dir, overlay), read_toml(out_dir))[1]
     assert entry_names(project["plugins"]) == ["search", "macros"]
-    assert project["extra_css"] == ["documentation-assetsz/css/dyalog.css"]
+    assert project["extra_css"] == ["documentation-theme-zensical/css/dyalog.css"]
+    # The submodule's README and LICENCE are repository files, not site pages.
+    assert project["exclude_docs"].split() == [
+        "/documentation-theme-zensical/README.md",
+        "/documentation-theme-zensical/LICENCE",
+    ]
     assert "extra_javascript" not in project
     assert project["site_url"] == "https://docs.dyalog.com/"
     assert project["theme"]["custom_dir"] == "overrides"

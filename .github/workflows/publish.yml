@@ -38,28 +38,23 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-          # documentation-assets (the shared corporate style) is a submodule
+          # documentation-theme-zensical (the house style) is a submodule
           # under zensical/docs/; the build reads its CSS/fonts from there.
           submodules: recursive
 
-      - name: Drop the assets submodule's VCS pointer
+      - name: Drop the house style submodule's VCS pointer
         # Zensical copies the docs tree into the site verbatim, and mike's
         # git fast-import refuses any tree path named .git. The submodule's
         # working tree carries a .git pointer file after checkout; remove it so
-        # site/documentation-assets/.git never gets built or published. Only the
-        # pointer goes; the CSS/fonts stay.
-        run: rm -f zensical/docs/documentation-assets/.git
+        # site/documentation-theme-zensical/.git never gets built or published.
+        # Only the pointer goes; the CSS/fonts stay.
+        run: rm -f zensical/docs/documentation-theme-zensical/.git
 
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.11'
+      - uses: astral-sh/setup-uv@v10.3.3
 
       - name: Install build and deploy dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r tools/requirements-build.txt
-          pip install -e tools/
-          pip install -r tools/requirements-deploy.txt
+        # The Python version comes from .python-version, the pins from uv.lock.
+        run: uv sync --all-groups --locked
 
       - name: Determine version
         id: version
@@ -68,7 +63,7 @@ jobs:
         run: |
           VERSION="$VERSION_OVERRIDE"
           if [ -z "$VERSION" ]; then
-            VERSION=$(python -c "import tomllib; print(tomllib.load(open('zensical/zensical.toml','rb'))['project']['extra']['version_majmin'])")
+            VERSION=$(uv run python -c "import tomllib; print(tomllib.load(open('zensical/zensical.toml','rb'))['project']['extra']['version_majmin'])")
           fi
           if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+$'; then
             echo "ERROR: invalid version '$VERSION' (expected X.Y)"; exit 1
@@ -98,7 +93,7 @@ jobs:
         env:
           SITE_URL_OVERRIDE: ${{ inputs.site_url_override }}
         run: |
-          python - <<'PY'
+          uv run python - <<'PY'
           import os, re
           url = os.environ["SITE_URL_OVERRIDE"]
           p = "zensical/zensical.toml"
@@ -115,7 +110,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Gate on the built-in link/anchor checker
-        run: python tools/check_flatten.py
+        run: uv run python tools/check_flatten.py
 
       - name: Deploy the version
         working-directory: zensical
@@ -124,8 +119,8 @@ jobs:
           SET_AS_LATEST: ${{ inputs.set_as_latest }}
         run: |
           if [ "$SET_AS_LATEST" = "true" ]; then
-            mike deploy --push --update-aliases "$VERSION" latest
-            mike set-default --push latest
+            uv run mike deploy --push --update-aliases "$VERSION" latest
+            uv run mike set-default --push latest
           else
-            mike deploy --push "$VERSION"
+            uv run mike deploy --push "$VERSION"
           fi
