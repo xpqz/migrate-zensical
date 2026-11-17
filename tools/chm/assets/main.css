@@ -28,6 +28,15 @@ td.Dyalog {
     /* Fallback font stack */
 }
 
+/* Titles with a calling syntax: build_chm.py adds "syntax" to the h1, "name"
+   to the name span and "command" to the code, so .name floats left and
+   .command right as before July. overflow + zoom contain the floats (zoom
+   gives hasLayout in the help viewer's old IE engine). */
+h1.syntax {
+    overflow: hidden;
+    zoom: 1;
+}
+
 /* Example headings: build_chm.py adds class "example" to h2-h5 "Example(s)" */
 h2.example {
     font-size: 1.2em;

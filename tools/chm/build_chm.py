@@ -578,6 +578,30 @@ def mark_example_headings(html: str) -> str:
     return str(soup) if changed else html
 
 
+def mark_title_syntax(html: str) -> str:
+    """
+    Restore the pre-July CHM title layout: the name on the left, the calling
+    syntax flush right. A title `<h1><span class="title-name">N</span>
+    <code>S</code></h1>` gets class "syntax" on the h1, "name" on the span and
+    "command" on the code, so the stylesheet's old .name/.command floats apply.
+    Both parts float (rather than the code alone) because the help viewer's
+    old IE engine drops a right float that follows inline text onto the next
+    line. Classes, floats and overflow are all the viewer reliably supports.
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    changed = False
+    for h1 in soup.find_all("h1"):
+        name = h1.find("span", class_="title-name", recursive=False)
+        code = name.find_next_sibling("code") if name else None
+        if code is None:
+            continue
+        h1["class"] = h1.get("class", []) + ["syntax"]
+        name["class"] = name["class"] + ["name"]
+        code["class"] = code.get("class", []) + ["command"]
+        changed = True
+    return str(soup) if changed else html
+
+
 def convert_to_html(
     pages: List[Tuple[str, str]],
     css: str,
@@ -640,6 +664,7 @@ def convert_to_html(
         body = fix_apl_root_namespace_highlighting(body)
         body = mark_os_admonitions(body)
         body = mark_example_headings(body)
+        body = mark_title_syntax(body)
 
         # Extract the H1 content for use in the title tag, setting for_title=True
         # to only extract the name part (excluding command span)
