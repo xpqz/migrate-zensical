@@ -1,10 +1,11 @@
 name: Convert MkDocs to CHM
 
-# Dispatch stub. v20.0 and v21.0 are built with MkDocs from their release
-# branches, and GitHub only offers manual dispatch for workflows whose file
-# exists on the default branch. This file registers the name; choose the
-# vM.0 branch in "Run workflow" and that branch's own mkdocs-chm.yml runs.
-# Run on main it only fails. The v22 CHM is built by chm.yml.
+# Dispatch stub. v21.0 is built with MkDocs from its release branch, and
+# GitHub only offers manual dispatch for workflows whose file exists on the
+# default branch. This file registers the name; choose the v21.0 branch in
+# "Run workflow" and that branch's own mkdocs-chm.yml runs. (v20.0 has no
+# mkdocs-chm.yml; it builds its CHM through mkdocs-pdf.yml.) Run on main it
+# only fails. The v22 CHM is built by chm.yml.
 on:
   workflow_dispatch:
     inputs:
