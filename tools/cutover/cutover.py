@@ -424,7 +424,11 @@ def commit_transform(repo: Path, tooling: Path, *, version: str, repo_url: str,
     git(repo, "rm", "-r", "-q", "--", *doomed)
 
     copied = _copy_tooling(tooling, repo)
-    shutil.copyfile(cut / ROOT_README, repo / "README.md")
+    # From the tooling commit, like the rest of the tooling (a Windows
+    # checkout's working copy may have CRLF line endings).
+    (repo / "README.md").write_bytes(subprocess.run(
+        ["git", "-C", str(tooling), "show", f"HEAD:tools/cutover/{ROOT_README}"],
+        check=True, capture_output=True).stdout)
     (repo / ".gitmodules").write_text(
         f'[submodule "{THEME_PATH}"]\n\tpath = {THEME_PATH}\n\turl = {theme_url}\n',
         encoding="utf-8")

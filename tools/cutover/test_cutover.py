@@ -328,7 +328,7 @@ def test_commit_b_layout(upstream, tooling):
     # This repository's tooling replaces upstream's, minus the cutover itself,
     # the PoC project, planning notes and untracked files.
     assert show(upstream, "tools/buildgui/regen_properties.py") == b"# ported version\n"
-    assert show(upstream, "README.md") == (CUTOVER_DIR / "README.root.md").read_bytes()
+    assert show(upstream, "README.md") == show(tooling, "tools/cutover/README.root.md")
     assert "tools/check.py" in files and "uv.lock" in files
     assert not any(path.startswith(("tools/cutover/", "zensical/", "design/")) for path in files)
     assert "tools/scratch.txt" not in files
