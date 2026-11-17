@@ -7,7 +7,7 @@ name: Check
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, tooling-port]
   schedule:
     - cron: '0 6 * * 1'
   workflow_dispatch:
@@ -39,7 +39,7 @@ jobs:
         run: uv run python tools/check.py
 
   platforms:
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref_name == 'tooling-port')
     strategy:
       fail-fast: false
       matrix:
