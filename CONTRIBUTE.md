@@ -73,7 +73,7 @@ Run the tests of the tooling itself with `uv run pytest -q`.
 - **Search keywords:** reference pages end with a hidden block of search keywords. Add it with `uv run python tools/maintain/search_keywords.py PAGE…` (`--dry-run` to preview; pages are relative to the docs directory). Never add it to a page with `search: exclude: true`.
 - **Reordering the reference nav:** after adding a system function, system command or I-beam, run `uv run python tools/maintain/order_nav.py sysfns` (or `syscmds`, `ibeams`). More in [tools/maintain/README.md](tools/maintain/README.md). The Object Reference tables come from the audit tools in [tools/buildgui/README.md](tools/buildgui/README.md).
 - **Links** between pages are source-relative paths ending in `.md`. `zensical build --strict` validates them and their anchors.
-- **Variables:** macros are not available (no Jinja: no filters, expressions or `{% %}` blocks). Write `{{ name }}` for a scalar value from `[project.extra]` in `zensical/zensical.toml`; it is substituted everywhere on the page, code blocks included. The ones in use are `{{ version_majmin }}` (`21.0`), `{{ version_condensed }}` (`210`) and `{{ conga_version_condensed }}` (`36`). An unknown name is left as written and the build logs a warning.
+- **Variables:** macros are not available (no Jinja: no filters, expressions or `{% %}` blocks). Write `{{ name }}` for a scalar value from `[project.extra]` in `zensical.toml`; it is substituted everywhere on the page, code blocks included. The ones in use are `{{ version_majmin }}` (`21.0`), `{{ version_condensed }}` (`210`) and `{{ conga_version_condensed }}` (`36`). An unknown name is left as written and the build logs a warning.
 
 ## Issue
 

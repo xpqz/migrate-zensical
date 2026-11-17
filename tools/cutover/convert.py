@@ -13,7 +13,7 @@ content and build config:
   example headings, shaded default cells, sprite toolbar icons, the
   binding-strength layout classes, bespoke admonition types) are replaced by
   plain Markdown that stock Zensical renders,
-- lays the content overlay (tools/content/) over the copied tree: images the
+- lays the content overlay (tools/cutover/content/) over the copied tree: images the
   transforms reference that have no source in the monorepo, and whole-page
   replacements for the few pages that were reworked by hand. A replacement
   carries a sidecar recording the SHA-256 of the source page it was written
@@ -26,7 +26,7 @@ content and build config:
   path-prefixed with <sub>/, markdown_extensions folded into a superset
   (minus arithmatex, plus the caption and variables extensions), extra
   folded with the root winning conflicts,
-- renders zensical.toml from tools/zensical.toml.template, which holds the
+- renders zensical.toml from tools/cutover/zensical.toml.template, which holds the
   house configuration (theme, palette, stylesheet, plugins, copyright) with
   its rationale in comments, and receives the merged site name, repository
   URL, extensions, extra and nav.
@@ -80,12 +80,15 @@ SUBPROJECTS: tuple[str, ...] = (
     "unix-user-guide",
 )
 
+# tools/cutover/, which holds this script with its template, overlay and
+# theme override; the repository root is two levels up.
 TOOLS_DIR = Path(__file__).resolve().parent
+REPO_ROOT = TOOLS_DIR.parent.parent
 
 # The generated project directory inside this repository, and the sibling
 # monorepo checkout it is generated from.
-OUTPUT_ROOT = TOOLS_DIR.parent / "zensical"
-SOURCE_ROOT = TOOLS_DIR.parent.parent / "documentation"
+OUTPUT_ROOT = REPO_ROOT / "zensical"
+SOURCE_ROOT = REPO_ROOT.parent / "documentation"
 
 # Directories under docs/ that convert does not own: the Zensical house style,
 # a git submodule (xpqz/documentation-theme-zensical).
@@ -445,6 +448,42 @@ def apply_overlay(overlay, docs):
         shutil.copy2(overlay / rel, dest)
 
 
+def remove_mathjax(docs, mounts):
+    """Delete the root project's and every guide's MathJax loader from a
+    flattened docs tree, with its directory when that is left empty."""
+    docs = Path(docs)
+    for stray in [docs / MATHJAX_REL] + [docs / alias / MATHJAX_REL for alias in mounts]:
+        if stray.exists():
+            stray.unlink()
+            if not any(stray.parent.iterdir()):
+                stray.parent.rmdir()
+
+
+def transform_pages(docs, overlay=CONTENT_OVERLAY):
+    """Run transform_markdown over every page of a flattened docs tree in
+    place, skipping the preserved asset directories. Raises ValueError when a
+    page references a toolbar icon the overlay does not provide."""
+    docs = Path(docs)
+    provided_icons = {
+        p.stem[len("tbt-") :]
+        for p in (Path(overlay) / transforms.TOOLBAR_IMG_DIR).glob("tbt-*.png")
+    }
+    preserved = [docs / name for name in PRESERVED_DIRS]
+    for md_file in sorted(docs.rglob("*.md")):
+        if any(root in md_file.parents for root in preserved):
+            continue
+        text = md_file.read_text(encoding="utf-8")
+        rewritten, icons = transform_markdown(text, md_file.relative_to(docs).as_posix())
+        missing = icons - provided_icons
+        if missing:
+            raise ValueError(
+                f"{md_file.relative_to(docs)} references toolbar icons the overlay"
+                f" does not provide: {', '.join(sorted(missing))}"
+            )
+        if rewritten != text:
+            md_file.write_text(rewritten, encoding="utf-8")
+
+
 def copy_content(source, output, mounts, overlay=CONTENT_OVERLAY):
     """Copy content out-of-place from the source monorepo to the output.
 
@@ -472,31 +511,9 @@ def copy_content(source, output, mounts, overlay=CONTENT_OVERLAY):
     shutil.copytree(source / "docs", docs, dirs_exist_ok=True)
     for alias, name in mounts.items():
         shutil.copytree(source / name / "docs", docs / alias)
-    for stray in [docs / MATHJAX_REL] + [docs / alias / MATHJAX_REL for alias in mounts]:
-        if stray.exists():
-            stray.unlink()
-            if not any(stray.parent.iterdir()):
-                stray.parent.rmdir()
 
-    provided_icons = {
-        p.stem[len("tbt-") :]
-        for p in (Path(overlay) / transforms.TOOLBAR_IMG_DIR).glob("tbt-*.png")
-    }
-    preserved = [docs / name for name in PRESERVED_DIRS]
-    for md_file in sorted(docs.rglob("*.md")):
-        if any(root in md_file.parents for root in preserved):
-            continue
-        text = md_file.read_text(encoding="utf-8")
-        rewritten, icons = transform_markdown(text, md_file.relative_to(docs).as_posix())
-        missing = icons - provided_icons
-        if missing:
-            raise ValueError(
-                f"{md_file.relative_to(docs)} references toolbar icons the overlay"
-                f" does not provide: {', '.join(sorted(missing))}"
-            )
-        if rewritten != text:
-            md_file.write_text(rewritten, encoding="utf-8")
-
+    remove_mathjax(docs, mounts)
+    transform_pages(docs, overlay)
     apply_overlay(overlay, docs)
 
     # Place the theme override (the outdated-version warning banner) that

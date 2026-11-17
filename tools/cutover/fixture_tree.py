@@ -15,9 +15,19 @@ default cell, and a sprite toolbar icon.
 build_overlay_tree builds the matching content overlay: the toolbar icon
 image the sprite page needs, and a front-page replacement with its
 source-hash sidecar.
+
+For the cutover script, build_upstream_repo turns the miniature monorepo into
+a git repository with the rest of the upstream shape around it (the Jenkins
+files at their fixed paths, the MkDocs-era workflows, chm/, pdf/, the Docker
+tooling, the assets submodule, root language-bar/), and build_tooling_repo
+builds the matching miniature of this repository: tracked tooling, the
+dispatch stub workflows, the house-style gitlink and tools/cutover/ with the
+overlay, template and theme override the cutover reads.
 """
 
 import hashlib
+import shutil
+import subprocess
 import textwrap
 from pathlib import Path
 
@@ -290,3 +300,158 @@ def tree_digest(root: Path) -> dict:
         for p in sorted(root.rglob("*"))
         if p.is_file()
     }
+
+
+# --- git repositories for the cutover script -----------------------------
+
+# The four Jenkins files old release branches copy from main.
+JENKINS_FILES = {
+    "tools/jenkins/Jenkinsfile": "pipeline { agent any }\n",
+    "tools/jenkins/service.yml": "service: docs\n",
+    "tools/jenkins/.rsync-exclude": "22.0\n",
+    "tools/jenkins/get_svn_docbin": "#!/bin/sh\nsvn export \"$1\"\n",
+}
+
+# The workflow names old branches dispatch; main must keep files so named.
+STUB_WORKFLOWS = ("mkdocs-publish.yml", "mkdocs-chm.yml", "mkdocs-pdf.yml", "full-release.yml")
+
+# Upstream files around the content, as on Dyalog/documentation main. The
+# .gitignore is upstream's in the parts that matter: it ignores the files the
+# Zensical project consists of.
+UPSTREAM_FILES = {
+    **JENKINS_FILES,
+    ".gitattributes": "* text=auto eol=lf\n",
+    ".gitignore": "*.toml\n*.lock\n.vscode/\n",
+    ".github/workflows/mkdocs-publish.yml": "name: Publish MkDocs Documentation\n",
+    ".github/workflows/mkdocs-chm.yml": "name: Build CHM\n",
+    ".github/workflows/full-release.yml": "name: Full release\n",
+    ".github/dependabot.yml": "version: 2\n",
+    "LICENCE": "Licence text\n",
+    "README.md": "# Upstream readme\n",
+    "CONTRIBUTE.md": "# Upstream contributing guide\n",
+    "chm/mkdocs2chm.py": "print('chm')\n",
+    "pdf/mkdocs2pdf.py": "print('pdf')\n",
+    "language-bar/README.md": "# Language bar\n",
+    "language-bar/toc.json": "{}\n",
+    "tools/docker-compose.yml": "services: {}\n",
+    "tools/nginx/nginx.conf": "server {}\n",
+    "tools/utils/doc_utils.py": "pass\n",
+    "tools/.env.template": "DOCS_DIR=.\n",
+    "tools/mkdocs/Dockerfile": "FROM python\n",
+    "tools/one_shot_transform.py": "pass\n",
+    "tools/requirements-docs.txt": "mkdocs\n",
+    "tools/README.md": "# Docker tools\n",
+    "tools/buildgui/regen_properties.py": "# upstream version\n",
+}
+
+# Any commit id serves as a gitlink target: nothing checks the submodule out.
+ASSETS_GITLINK = "c1825129a637f886413cef8bb3e60383f02dff74"
+THEME_GITLINK = "b5c2eef97ed26e3a376c0745ba0b63cfd129eea0"
+THEME_URL = "https://github.com/xpqz/documentation-theme-zensical"
+
+# This repository's tracked files outside the content, in miniature.
+TOOLING_FILES = {
+    ".gitignore": "/zensical/site/\n/site/\n.venv/\n",
+    ".python-version": "3.11\n",
+    ".vscode/extensions.json": "{}\n",
+    "pyproject.toml": "[project]\nname = \"tooling\"\n",
+    "uv.lock": "version = 1\n",
+    "README.md": "# Zensical readme\n",
+    "CONTRIBUTE.md": "# Zensical contributing guide\n",
+    "known-issues.txt": "# baseline\n",
+    "unlisted-pages.txt": "# unlisted\n",
+    "tools/check.py": "print('check')\n",
+    "tools/buildgui/regen_properties.py": "# ported version\n",
+    "tools/language-bar/README.md": "# Language bar\n",
+    "tools/language-bar/toc.json": "{}\n",
+    "tools/cutover/convert.py": "# conversion, removed at cutover\n",
+    "design/notes.md": "# planning notes\n",
+    "zensical/zensical.toml": "# the PoC project\n",
+    "zensical/docs/index.md": "# PoC page\n",
+    ".github/workflows/check.yml": "name: Check\n",
+    ".github/workflows/publish.yml": "name: Publish\n",
+    **{f".github/workflows/{name}": f"name: stub {name}\n" for name in STUB_WORKFLOWS},
+}
+
+GIT_IDENTITY = {
+    "GIT_AUTHOR_NAME": "Fixture",
+    "GIT_AUTHOR_EMAIL": "fixture@example.invalid",
+    "GIT_COMMITTER_NAME": "Fixture",
+    "GIT_COMMITTER_EMAIL": "fixture@example.invalid",
+}
+
+
+def git(repo: Path, *args: str) -> str:
+    """Run git in repo and return its stdout."""
+    return subprocess.run(
+        ["git", "-C", str(repo), *args], check=True, capture_output=True, text=True
+    ).stdout
+
+
+def _write_files(root: Path, files: dict) -> None:
+    for rel, content in files.items():
+        path = root / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+
+
+def _init_repo(repo: Path) -> None:
+    git(repo, "init", "-q", "-b", "main")
+    git(repo, "config", "user.name", GIT_IDENTITY["GIT_AUTHOR_NAME"])
+    git(repo, "config", "user.email", GIT_IDENTITY["GIT_AUTHOR_EMAIL"])
+    git(repo, "config", "commit.gpgsign", "false")
+
+
+def _add_gitlink(repo: Path, path: str, sha: str, url: str) -> None:
+    git(repo, "update-index", "--add", "--cacheinfo", f"160000,{sha},{path}")
+    git(repo, "config", "-f", ".gitmodules", f"submodule.{path}.path", path)
+    git(repo, "config", "-f", ".gitmodules", f"submodule.{path}.url", url)
+    git(repo, "add", ".gitmodules")
+
+
+def build_upstream_repo(root: Path) -> Path:
+    """The miniature monorepo as a committed git repository with the upstream
+    shape around its content, and a clone of it standing in for the fresh
+    local clone the cutover runs on. Returns the clone; its origin is the
+    original."""
+    src = build_source_tree(root)
+    _write_files(src, UPSTREAM_FILES)
+    (src / "tools" / "jenkins" / "get_svn_docbin").chmod(0o755)
+    # documentation-assets is a submodule upstream, not a directory.
+    shutil.rmtree(src / "documentation-assets")
+    _init_repo(src)
+    git(src, "add", "-A")
+    _add_gitlink(src, "documentation-assets", ASSETS_GITLINK,
+                 "https://github.com/Dyalog/documentation-assets")
+    git(src, "commit", "-q", "-m", "Upstream history before the cutover")
+    page = src / "compiler-user-guide" / "docs" / "basic-usage.md"
+    page.write_text("# Basic Usage\n\nA later edit.\n", encoding="utf-8")
+    git(src, "commit", "-q", "-am", "Edit a page before the freeze")
+
+    clone = root / "clone"
+    subprocess.run(["git", "clone", "-q", str(src), str(clone)], check=True)
+    git(clone, "config", "user.name", GIT_IDENTITY["GIT_AUTHOR_NAME"])
+    git(clone, "config", "user.email", GIT_IDENTITY["GIT_AUTHOR_EMAIL"])
+    git(clone, "config", "commit.gpgsign", "false")
+    return clone
+
+
+def build_tooling_repo(root: Path, overlay: Path, cutover_dir: Path) -> Path:
+    """A miniature of this repository, committed: the files the cutover
+    copies, the paths it must not copy, the house-style gitlink, and
+    tools/cutover/ holding overlay (as content/) plus the zensical.toml
+    template and theme override taken from cutover_dir."""
+    tooling = root / "tooling"
+    _write_files(tooling, TOOLING_FILES)
+    cut = tooling / "tools" / "cutover"
+    shutil.copytree(overlay, cut / "content")
+    shutil.copy2(cutover_dir / "zensical.toml.template", cut / "zensical.toml.template")
+    (cut / "overrides").mkdir()
+    shutil.copy2(cutover_dir / "overrides" / "main.html", cut / "overrides" / "main.html")
+    _init_repo(tooling)
+    git(tooling, "add", "-A")
+    _add_gitlink(tooling, "zensical/docs/documentation-theme-zensical", THEME_GITLINK, THEME_URL)
+    git(tooling, "commit", "-q", "-m", "Tooling")
+    # An untracked file is not tooling: the cutover copies tracked files only.
+    (tooling / "tools" / "scratch.txt").write_text("untracked\n", encoding="utf-8")
+    return tooling

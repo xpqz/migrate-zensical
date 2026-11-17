@@ -22,7 +22,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          # The house style is a submodule under zensical/docs/.
+          # The house style is a submodule under the project's docs/.
           submodules: recursive
 
       - uses: astral-sh/setup-uv@v10.3.3

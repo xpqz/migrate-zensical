@@ -23,7 +23,7 @@ dependencies = [
     # (admonition, attr_list, footnotes, md_in_html and toc are built-ins).
     "pymdown-extensions==12.0.1",
     "markdown-tables-extended==0.1.3",
-    # convert.py: reads mkdocs.yml, writes zensical.toml, rewrites raw HTML.
+    # tools/cutover/convert.py: reads mkdocs.yml, writes zensical.toml, rewrites raw HTML.
     "pyyaml",
     "beautifulsoup4==4.14.3",
     "tomli-w==1.2.0",
@@ -55,4 +55,6 @@ package-dir = { "" = "tools" }
 
 [tool.pytest.ini_options]
 testpaths = ["tools"]
-pythonpath = ["tools"]
+# tools/cutover/ holds the conversion and cutover scripts, which import each
+# other by module name; it is deleted after the cutover.
+pythonpath = ["tools", "tools/cutover"]
