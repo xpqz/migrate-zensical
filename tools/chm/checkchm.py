@@ -25,7 +25,7 @@ class ResolvedEntry:
     dropped_segments: int
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: List[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Verify CHM help URLs against generated project files.")
     parser.add_argument(
         "--help_urls",
@@ -40,7 +40,26 @@ def parse_args() -> argparse.Namespace:
         help="Directory that contains the CHM project as chm/ (default: out/ in the "
         "repository, where `build_chm.py --project-dir out/chm` writes it).",
     )
-    return parser.parse_args()
+    parser.add_argument(
+        "--baseline",
+        type=Path,
+        default=Path(__file__).resolve().parent / "known-missing-help-urls.txt",
+        help="Known-missing HELP_URL paths, one per line ('#' comments); missing "
+        "paths listed here do not fail the check (default: %(default)s).",
+    )
+    return parser.parse_args(argv)
+
+
+def read_baseline(path: Path) -> set[str]:
+    """The project-relative .htm paths in a baseline file; empty if there is none."""
+    if not path.is_file():
+        return set()
+    entries = set()
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.split("#", 1)[0].strip()
+        if line:
+            entries.add(line)
+    return entries
 
 
 def strip_line_comment(line: str) -> str:
@@ -216,8 +235,8 @@ def resolve_entry(entry: HelpUrlEntry, project_root: Path) -> ResolvedEntry:
     return ResolvedEntry(entry=entry, found_path=None, dropped_segments=len(parts))
 
 
-def main() -> int:
-    args = parse_args()
+def main(argv: List[str] | None = None) -> int:
+    args = parse_args(argv)
     help_urls_path = args.help_urls.resolve()
     if not help_urls_path.is_file():
         print(f"error: {help_urls_path} does not exist or is not a file", file=sys.stderr)
@@ -237,9 +256,22 @@ def main() -> int:
     missing = [item for item in resolved_entries if item.found_path is None]
     trimmed = [item for item in resolved_entries if item.found_path is not None and item.dropped_segments > 0]
 
-    if missing:
+    baseline = read_baseline(args.baseline)
+    known = [item for item in missing if item.entry.relative_path in baseline]
+    new = [item for item in missing if item.entry.relative_path not in baseline]
+    resolved = sorted(baseline - {item.entry.relative_path for item in missing})
+
+    if known:
+        print(f"Known missing (in {args.baseline.name}):")
+        for item in known:
+            print(f"  {item.entry.relative_path} (from {item.entry.key!r} on line {item.entry.source_line})")
+    if resolved:
+        print(f"Baseline entries now resolved (remove them from {args.baseline.name}):")
+        for path in resolved:
+            print(f"  {path}")
+    if new:
         print("Missing files:", file=sys.stderr)
-        for item in missing:
+        for item in new:
             print(
                 f"  {item.entry.relative_path} (from {item.entry.key!r} on line {item.entry.source_line})",
                 file=sys.stderr,
@@ -253,8 +285,11 @@ def main() -> int:
             )
 
     total = len(entries)
-    print(f"Checked {total} HELP_URL entries; {len(missing)} missing; {len(trimmed)} trimmed.")
-    return 1 if missing else 0
+    print(
+        f"Checked {total} HELP_URL entries; {len(new)} missing; "
+        f"{len(known)} known missing; {len(trimmed)} trimmed."
+    )
+    return 1 if new else 0
 
 
 if __name__ == "__main__":

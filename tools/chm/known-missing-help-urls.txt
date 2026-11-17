@@ -1,0 +1,15 @@
+# HELP_URL targets in help_urls.h with no page in the CHM. checkchm.py fails
+# only on missing targets not listed here. All twelve were already missing
+# from the v21 CHM (2026-11-17); remove an entry once its page exists.
+object-reference/methodorevents/showsip.htm
+object-reference/methodorevents/getallevents.htm
+object-reference/properties/fbcol.htm
+object-reference/properties/allevents.htm
+object-reference/properties/reportimagelist.htm
+object-reference/properties/wizard.htm
+object-reference/properties/sipmode.htm
+object-reference/properties/sipresize.htm
+object-reference/properties/height.htm
+object-reference/properties/endpos.htm
+object-reference/properties/rowtitle3d.htm
+object-reference/properties/evaluationdays.htm

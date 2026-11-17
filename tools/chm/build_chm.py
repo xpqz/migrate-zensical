@@ -566,18 +566,18 @@ def mark_os_admonitions(html: str) -> str:
     return str(soup) if changed else html
 
 
-def mark_title_banner(html: str) -> str:
+def mark_example_headings(html: str) -> str:
     """
-    Add class "heading" to a title h1 with a calling syntax (a leading
-    span.title-name), so the old .heading banner rule styles it. The CHM
-    viewer's browser engine has no :has(), so this cannot be left to CSS.
+    Add class "example" to h2-h5 headings reading exactly "Example" or
+    "Examples". In v21 these were <hN class="example"> in the source, which
+    the site turned into plain headings; the CHM stylesheet's h2.example rule
+    sets them in the smaller v21 size again.
     """
     soup = BeautifulSoup(html, "html.parser")
     changed = False
-    for h1 in soup.find_all("h1"):
-        first = next((c for c in h1.children if isinstance(c, Tag)), None)
-        if first is not None and first.name == "span" and "title-name" in first.get("class", []):
-            h1["class"] = h1.get("class", []) + ["heading"]
+    for heading in soup.find_all(["h2", "h3", "h4", "h5"]):
+        if heading.get_text().strip() in ("Example", "Examples"):
+            heading["class"] = heading.get("class", []) + ["example"]
             changed = True
     return str(soup) if changed else html
 
@@ -643,7 +643,7 @@ def convert_to_html(
         body = fix_external_links(body)
         body = fix_apl_root_namespace_highlighting(body)
         body = mark_os_admonitions(body)
-        body = mark_title_banner(body)
+        body = mark_example_headings(body)
 
         # Extract the H1 content for use in the title tag, setting for_title=True
         # to only extract the name part (excluding command span)

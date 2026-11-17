@@ -19,9 +19,8 @@ td.Dyalog {
     font-family: 'APL385 Unicode';
 }
 
-/* Style the right-aligned command (in a site title: the calling syntax) */
-.command,
-h1.heading>code {
+/* Style the right-aligned command */
+.command {
     float: right;
     /* Align to the right */
     color: black;
@@ -29,6 +28,7 @@ h1.heading>code {
     /* Fallback font stack */
 }
 
+/* Example headings: build_chm.py adds class "example" to h2-h5 "Example(s)" */
 h2.example {
     font-size: 1.2em;
 }
@@ -70,9 +70,7 @@ td {
     text-align: left;
 }
 
-/* Style the heading container for the Language Reference. A site title with
-   a calling syntax, h1:has(> span.title-name), gets class "heading" from
-   build_chm.py: the CHM viewer's browser engine does not support :has(). */
+/* Style the heading container for the Language Reference */
 .heading {
     overflow: hidden;
     /* Clearfix for floated children */
@@ -82,9 +80,8 @@ td {
     padding-left: 5pt;
 }
 
-/* Style the left-aligned name (in a site title: span.title-name) */
-.name,
-h1.heading>span.title-name {
+/* Style the left-aligned name */
+.name {
     float: left;
     /* Align to the left */
     color: black;

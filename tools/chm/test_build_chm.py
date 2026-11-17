@@ -169,11 +169,21 @@ def test_os_admonitions_get_os_class():
     assert '<div class="admonition info"><p class="admonition-title">Information' in out
 
 
-def test_title_banner_class():
-    html = '<h1 id="x"><span class="title-name">N</span> <code>S</code></h1><h1>Other</h1>'
-    out = build_chm.mark_title_banner(html)
-    assert '<h1 class="heading" id="x">' in out or '<h1 id="x" class="heading">' in out
-    assert "<h1>Other</h1>" in out
+def test_example_headings_get_example_class():
+    html = (
+        '<h2 id="example">Example</h2><h4 id="e">Examples</h4>'
+        '<h2 id="x">Example 1</h2><h1>Example</h1>'
+    )
+    out = build_chm.mark_example_headings(html)
+    assert '<h2 class="example" id="example">' in out or '<h2 id="example" class="example">' in out
+    assert 'class="example"' in out.split("Examples")[0]
+    assert '<h2 id="x">Example 1</h2>' in out
+    assert "<h1>Example</h1>" in out
+
+
+def test_titles_keep_plain_h1():
+    html = '<h1 id="x"><span class="title-name">N</span> <code>S</code></h1>'
+    assert build_chm.mark_example_headings(html) == html
 
 
 def test_images_come_from_included_guides(site):
