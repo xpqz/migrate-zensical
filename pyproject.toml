@@ -26,12 +26,12 @@ dependencies = [
     "markdown-tables-extended==0.1.3",
     # tools/cutover/convert.py: reads mkdocs.yml, writes zensical.toml, rewrites raw HTML.
     "pyyaml",
-    "beautifulsoup4==4.14.3",
+    "beautifulsoup4==4.15.0",
     "tomli-w==1.2.0",
 ]
 
 [dependency-groups]
-dev = ["pytest==9.1.1"]
+dev = ["pytest==9.2.0"]
 # mike: the squidfunk fork that builds with Zensical rather than MkDocs, pinned
 # to a commit because it is distributed from GitHub only. `mike deploy <ver>`
 # runs `zensical build` and writes the gh-pages version layout the theme's
@@ -45,7 +45,7 @@ deploy = [
 # tools/requirements-docs.txt.
 chm = [
     "pygments",  # also a Zensical dependency; its version is resolved there
-    "cssutils==2.14.0",
+    "cssutils==2.15.0",
     # htmlmin2: htmlmin 0.1.12 minus its `import cgi` (removed in Python 3.13);
     # otherwise identical, so the CHM output is unchanged.
     "htmlmin2==0.1.13",
