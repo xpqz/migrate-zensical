@@ -7,7 +7,7 @@ import ast
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List, Tuple
+from typing import Callable, Dict, Iterable, List, Tuple
 
 
 @dataclass
@@ -222,17 +222,24 @@ def parse_help_urls(lines: Iterable[str]) -> Tuple[List[HelpUrlEntry], Dict[str,
     return entries, macros
 
 
+def resolve_path(relative: str, exists: Callable[[str], bool]) -> Tuple[str | None, int]:
+    """The first of `relative` and its suffixes (leading segments dropped one
+    at a time) that `exists`, and how many segments were dropped."""
+    parts = relative.split("/")
+    for dropped in range(len(parts)):
+        candidate = "/".join(parts[dropped:])
+        if exists(candidate):
+            return candidate, dropped
+    return None, len(parts)
+
+
 def resolve_entry(entry: HelpUrlEntry, project_root: Path) -> ResolvedEntry:
-    relative = Path(entry.relative_path)
-    candidate = project_root / relative
-    if candidate.exists():
-        return ResolvedEntry(entry=entry, found_path=candidate, dropped_segments=0)
-    parts = relative.parts
-    for dropped in range(1, len(parts)):
-        candidate = project_root.joinpath(*parts[dropped:])
-        if candidate.exists():
-            return ResolvedEntry(entry=entry, found_path=candidate, dropped_segments=dropped)
-    return ResolvedEntry(entry=entry, found_path=None, dropped_segments=len(parts))
+    found, dropped = resolve_path(entry.relative_path, lambda rel: (project_root / rel).exists())
+    return ResolvedEntry(
+        entry=entry,
+        found_path=project_root / found if found is not None else None,
+        dropped_segments=dropped,
+    )
 
 
 def main(argv: List[str] | None = None) -> int:

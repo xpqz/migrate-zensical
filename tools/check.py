@@ -2,19 +2,22 @@
 
 Exit status is 1 if any problem has severity "error". Internal link and
 anchor validation is not re-implemented here: it comes from the Zensical
-build (via build_gate) and the known-issues.txt baseline.
+build (via build_gate) and the known-issues.txt baseline. check_links covers
+only the links that build skips (no .md, or to other files).
 """
 
 from __future__ import annotations
 
 import argparse
+import json
+import os
 import posixpath
 import re
 import sys
 import urllib.parse
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Literal
+from typing import Callable, Iterator, Literal
 
 import yaml
 
@@ -178,7 +181,8 @@ def check_search_exclusions(site: Site) -> list[Problem]:
 
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"}
 _MD_TARGET = re.compile(r"\]\(\s*(?:<([^>]*)>|([^)\s]+))")
-_REF_DEF = re.compile(r"^ {0,3}\[[^\]]+\]:\s*(?:<([^>]*)>|(\S+))", re.MULTILINE)
+# Reference definitions; footnote definitions ([^1]: text) are not links.
+_REF_DEF = re.compile(r"^ {0,3}\[(?!\^)[^\]]+\]:\s*(?:<([^>]*)>|(\S+))", re.MULTILINE)
 _HTML_TAG = re.compile(r"<([a-zA-Z][\w-]*)\b([^>]*)>")
 _HTML_ATTR = re.compile(
     r"""(?<![\w-])(src|srcset|href|poster)\s*=\s*(?:"([^"]*)"|'([^']*)')""",
@@ -232,6 +236,37 @@ def _is_image(target: str) -> bool:
     return posixpath.splitext(path)[1].lower() in IMAGE_SUFFIXES
 
 
+def _prose_text(site: Site, page: str) -> str:
+    """The page with fenced lines blanked, so offsets still give editor line
+    numbers."""
+    prose = {n: line for n, line in docsite.prose_lines(site.read(page))}
+    return "\n".join(prose.get(i, "") for i in range(1, max(prose, default=0) + 1))
+
+
+def _targets(text: str) -> Iterator[tuple[int, str, bool, str | None]]:
+    """(offset, target, embedded, html) for every link or embed target.
+
+    html is "tag.attr" for a raw HTML attribute, else None. Embedded targets
+    are Markdown images and <img src/srcset>.
+    """
+    for m in _MD_TARGET.finditer(text):
+        if not _escaped(text, m.start()):
+            yield m.start(), m[1] or m[2] or "", _is_embedded(text, m.start()), None
+    for m in _REF_DEF.finditer(text):
+        yield m.start(), m[1] or m[2] or "", False, None
+    for tag in _HTML_TAG.finditer(text):
+        name = tag[1].lower()
+        for attr in _HTML_ATTR.finditer(tag[2]):
+            key, value = attr[1].lower(), attr[2] if attr[2] is not None else attr[3]
+            pos = tag.start(2) + attr.start()
+            if key == "srcset":
+                for cand in value.split(","):
+                    if cand.split():
+                        yield pos, cand.split()[0], name == "img", f"{name}.{key}"
+            else:
+                yield pos, value, name == "img" and key == "src", f"{name}.{key}"
+
+
 def _page_image_refs(site: Site, page: str) -> list[tuple[int, str, bool]]:
     """(line, docs-relative path, embedded) for each local image reference.
 
@@ -240,33 +275,13 @@ def _page_image_refs(site: Site, page: str) -> list[tuple[int, str, bool]]:
     when they point at an image file, and only mark it as used. Prose only.
     """
     base = posixpath.dirname(page)
-    # Fenced lines blank, so offsets still give editor line numbers.
-    prose = {n: line for n, line in docsite.prose_lines(site.read(page))}
-    text = "\n".join(prose.get(i, "") for i in range(1, max(prose, default=0) + 1))
+    text = _prose_text(site, page)
     found: list[tuple[int, str, bool]] = []
-
-    def add(pos: int, target: str, embedded: bool) -> None:
+    for pos, target, embedded, _ in _targets(text):
         if not embedded and not _is_image(target):
-            return
+            continue
         if (path := _resolve(base, target)) is not None:
             found.append((text.count("\n", 0, pos) + 1, path, embedded))
-
-    for m in _MD_TARGET.finditer(text):
-        if not _escaped(text, m.start()):
-            add(m.start(), m[1] or m[2] or "", _is_embedded(text, m.start()))
-    for m in _REF_DEF.finditer(text):
-        add(m.start(), m[1] or m[2] or "", False)
-    for tag in _HTML_TAG.finditer(text):
-        is_img = tag[1].lower() == "img"
-        for attr in _HTML_ATTR.finditer(tag[2]):
-            name, value = attr[1].lower(), attr[2] if attr[2] is not None else attr[3]
-            pos = tag.start(2) + attr.start()
-            if name == "srcset":
-                for cand in value.split(","):
-                    if cand.split():
-                        add(pos, cand.split()[0], is_img)
-            else:
-                add(pos, value, is_img and name == "src")
     return found
 
 
@@ -328,10 +343,122 @@ def check_images(site: Site, prune: bool = False) -> list[Problem]:
     return problems
 
 
+def _page_url_dir(page: str) -> str:
+    """The directory a browser resolves a page's relative hrefs against:
+    a/b.md is served as a/b/, a/index.md as a/."""
+    stem = posixpath.splitext(page)[0]
+    if posixpath.basename(stem) == "index":
+        return posixpath.dirname(stem)
+    return stem
+
+
+def check_links(site: Site) -> list[Problem]:
+    """Links the Zensical build does not validate.
+
+    The build checks links to .md files (Markdown or raw HTML) and their
+    anchors. It copies every other relative href into the page unchecked:
+    - a link to a file (x.pdf, img/a.png) is resolved against the page's
+      source directory; a missing file is an error. Targets outside docs/
+      are skipped: the web server's files/ directory, filled from SVN by
+      tools/jenkins/get_svn_docbin, is one;
+    - a link without an extension (bare `page` or directory-style `page/`)
+      is resolved by the browser against the page's URL, which for a.md is
+      a/, one level below its source directory. One that lands on no page is
+      an error; one that works is a warning, since the build will not notice
+      when its target moves, with the .md form to write instead.
+    """
+    pages = set(site.pages())
+    files = {f.relative_to(site.docs).as_posix()
+             for f in site.docs.rglob("*") if f.is_file()}
+    problems = []
+    for page in sorted(pages):
+        base, url_dir = posixpath.dirname(page), _page_url_dir(page)
+        text = _prose_text(site, page)
+        for pos, raw, embedded, html in _targets(text):
+            target = raw.strip()
+            if (embedded or (html is not None and html != "a.href")
+                    or not target or target.startswith("#")
+                    or _EXTERNAL.match(target) or "{{" in target):
+                continue
+            path, _, fragment = target.partition("#")
+            path = urllib.parse.unquote(path.split("?", 1)[0])
+            if path.rstrip("/").endswith(".md"):
+                continue  # the build checks these (x.md/ too)
+            line = text.count("\n", 0, pos) + 1
+            if posixpath.splitext(path.rstrip("/"))[1] and not path.endswith("/"):
+                resolved = _resolve(base, path)
+                if resolved.startswith("../"):
+                    continue  # outside docs/, e.g. files/ (Jenkins fills it from SVN)
+                if resolved not in files:
+                    problems.append(Problem(page, line, f"linked file not found: {raw}", "error"))
+                continue
+            dest = posixpath.normpath(
+                path.lstrip("/") if path.startswith("/") else posixpath.join(url_dir, path))
+            dest = "" if dest == "." else dest
+            found = next((c for c in (f"{dest}.md" if dest else None,
+                                      posixpath.join(dest, "index.md"))
+                          if c in pages), None)
+            if found is None or dest.startswith(".."):
+                problems.append(Problem(
+                    page, line, f"link does not lead to a page: {raw} (links "
+                    "between pages are source-relative paths ending in .md)", "error"))
+                continue
+            suggestion = posixpath.relpath(found, base or ".")
+            if fragment:
+                suggestion += "#" + fragment
+            problems.append(Problem(
+                page, line, f"link written without .md, so the build does not "
+                f"check it: {raw} -> write {suggestion}", "warning"))
+    return problems
+
+
+def check_help_urls(site: Site, help_urls: Path,
+                    baseline: Path | None = None) -> list[Problem]:
+    """HELP_URL targets in help_urls.h (from the interpreter sources) that no
+    page would provide in the CHM.
+
+    The same check as tools/chm/checkchm.py, but against the Markdown source,
+    so no CHM build is needed. Targets listed in
+    tools/chm/known-missing-help-urls.txt are not reported while missing.
+    """
+    sys.path.insert(0, str(Path(__file__).resolve().parent / "chm"))
+    import build_chm
+    import checkchm
+
+    if baseline is None:
+        baseline = build_chm.HERE / "known-missing-help-urls.txt"
+    if not help_urls.is_file():
+        return [Problem(str(help_urls), None, "help_urls.h not found", "error")]
+    exclude = json.loads((build_chm.HERE / "config.json").read_text(
+        encoding="utf-8")).get("exclude", [])
+    nav = build_chm.load_nav(site, exclude=exclude)
+    topics = {out for _, out in build_chm.chm_pages(site, nav, verbose=False)}
+    topics.add("welcome.htm")
+    entries, _ = checkchm.parse_help_urls(
+        help_urls.read_text(encoding="utf-8").splitlines())
+    known = checkchm.read_baseline(baseline)
+    missing = set()
+    problems = []
+    for entry in entries:
+        found, _ = checkchm.resolve_path(entry.relative_path, topics.__contains__)
+        if found is not None:
+            continue
+        missing.add(entry.relative_path)
+        if entry.relative_path not in known:
+            problems.append(Problem(
+                str(help_urls), entry.source_line,
+                f"HELP_URL {entry.key!r} names {entry.relative_path}, which no "
+                "page in the CHM provides", "error"))
+    problems += [Problem(str(baseline), None, f"{rel} is no longer missing; "
+                         "remove it", "warning")
+                 for rel in sorted(known - missing)]
+    return problems
+
+
 # Cheap checks that need only the site; the build, unlisted and image checks
 # take extra inputs and are wired in main().
 CHECKS: list[Callable[[Site], list[Problem]]] = [
-    check_nav_targets, check_admonitions, check_search_exclusions]
+    check_nav_targets, check_admonitions, check_search_exclusions, check_links]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -343,6 +470,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--project", type=Path, default=None)
     parser.add_argument("--unlisted", type=Path, default=UNLISTED_PATH)
     parser.add_argument("--baseline", type=Path, default=BASELINE_PATH)
+    parser.add_argument(
+        "--help-urls", type=Path, default=os.environ.get("DYALOG_HELP_URLS"),
+        help="also check the HELP_URL targets in this help_urls.h (default: "
+        "$DYALOG_HELP_URLS, if set)")
     args = parser.parse_args(argv)
 
     site = Site.load(args.project or docsite.find_project())
@@ -350,6 +481,8 @@ def main(argv: list[str] | None = None) -> int:
     for fn in CHECKS:
         problems += fn(site)
     problems += check_unlisted(site, load_list(args.unlisted))
+    if args.help_urls:
+        problems += check_help_urls(site, args.help_urls)
     if not args.skip_build:
         problems += check_build(site, args.baseline)
     # Pruning deletes files, so only do it when nothing at all is in error.
