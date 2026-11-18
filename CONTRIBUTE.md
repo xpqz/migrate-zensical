@@ -48,7 +48,9 @@ From the repository root:
 uv run python tools/check.py
 ```
 
-This builds the site with Zensical and compares the build's warnings (broken links and anchors among them) with `known-issues.txt`, the baseline of known warnings, which only shrinks: any warning not in the baseline fails the check. It then runs the repository's own checks: images, admonitions, nav targets, `search: exclude` pages and `unlisted-pages.txt` (pages deliberately outside the nav). It prints nothing and exits 0 when everything passes. Add `--skip-build` for a quick pass that omits the build. `--prune-images` deletes images no page references; it is skipped if any check reports an error.
+This builds the site with Zensical and compares the build's warnings (broken links and anchors among them) with `known-issues.txt`, the baseline of known warnings, which only shrinks: any warning not in the baseline fails the check. It then runs the repository's own checks: links the build does not check (see **Links** below), images, admonitions, nav targets, `search: exclude` pages and `unlisted-pages.txt` (pages deliberately outside the nav). It prints nothing and exits 0 when everything passes. Add `--skip-build` for a quick pass that omits the build. `--prune-images` deletes images no page references; it is skipped if any check reports an error.
+
+To also check that every `HELP_URL` in the interpreter's `help_urls.h` names a page the CHM will contain, pass its path with `--help-urls PATH`, or set `DYALOG_HELP_URLS` to it once. This works from the Markdown, so no CHM build is needed. `tools/chm/known-missing-help-urls.txt` lists the targets already known to be missing.
 
 Run the tests of the tooling itself with `uv run pytest -q`.
 
@@ -73,7 +75,7 @@ Run the tests of the tooling itself with `uv run pytest -q`.
 
 - **Search keywords:** reference pages end with a hidden block of search keywords. Add it with `uv run python tools/maintain/search_keywords.py PAGE…` (`--dry-run` to preview; pages are relative to the docs directory). Never add it to a page with `search: exclude: true`.
 - **Reordering the reference nav:** after adding a system function, system command or I-beam, run `uv run python tools/maintain/order_nav.py sysfns` (or `syscmds`, `ibeams`). More in [tools/maintain/README.md](tools/maintain/README.md). The Object Reference tables come from the audit tools in [tools/buildgui/README.md](tools/buildgui/README.md).
-- **Links** between pages are source-relative paths ending in `.md`. The Zensical build validates them and their anchors, and `tools/check.py` fails on any broken one not already in `known-issues.txt`.
+- **Links** between pages are source-relative paths ending in `.md`. The Zensical build validates them and their anchors, and `tools/check.py` fails on any broken one not already in `known-issues.txt`. The build does not check a link written without `.md` (`../page` or `../page/`): the browser resolves it against the page's URL, one directory deeper than its source file. `tools/check.py` reports such a link as an error if it leads nowhere, and otherwise as a warning giving the `.md` form to write instead. It also reports links to files (`.pdf`, `.docx` and so on) that are missing from `docs/`.
 - **Variables:** macros are not available (no Jinja: no filters, expressions or `{% %}` blocks). Write `{{ name }}` for a scalar value from `[project.extra]` in `zensical.toml`; it is substituted everywhere on the page, code blocks included. The ones in use are `{{ version_majmin }}` (the documented version, such as `21.0`), `{{ version_condensed }}` (`210` for 21.0) and `{{ conga_version_condensed }}` (`36`). An unknown name is left as written and the build logs a warning.
 
 ## Issue

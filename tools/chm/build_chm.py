@@ -319,7 +319,7 @@ def _nav_paths(navdata) -> List[str]:
     return [path for item in navdata for path in _nav_paths(item)]
 
 
-def chm_pages(site: Site, nav: dict) -> List[Tuple[str, str]]:
+def chm_pages(site: Site, nav: dict, verbose: bool = True) -> List[Tuple[str, str]]:
     """
     The Markdown pages that go into the CHM, as (docs-relative source path,
     CHM topic path) pairs: every page under a guide directory the nav
@@ -341,7 +341,7 @@ def chm_pages(site: Site, nav: dict) -> List[Tuple[str, str]]:
             continue
         pages.append((page, chm_path(page)))
 
-    if excluded_print_files:
+    if excluded_print_files and verbose:
         print(
             f"\nExcluded {len(excluded_print_files)} -print.md files from all processing:"
         )

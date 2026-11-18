@@ -421,3 +421,138 @@ def test_excludes_search_is_public():
     assert check.excludes_search("---\nsearch:\n  exclude: true\n---\n\n# T\n")
     assert not check.excludes_search("---\nsearch:\n  boost: 2\n---\n\n# T\n")
     assert not check.excludes_search("# T\n")
+
+
+# --- links the build does not check ----------------------------------------
+
+def link_site(tmp_path, page_rel, body, extra=()):
+    site = make(tmp_path, files=("index.md", "a/index.md", "a/extra.md",
+                                 "b/other.md", *extra))
+    page(site, page_rel, body)
+    return site
+
+
+def link_problems(site):
+    return [(p.path, p.line, p.severity, p.message) for p in check.check_links(site)]
+
+
+def test_md_links_are_left_to_the_build(tmp_path):
+    site = link_site(tmp_path, "a/extra.md",
+                     "[x](gone.md) [y](../b/other.md/#z) <a href=\"nope.md\">r</a>\n")
+    assert link_problems(site) == []
+
+
+def test_working_bare_link_is_warning_with_md_form(tmp_path):
+    # a/extra.md is served at a/extra/, so ../../b/other reaches b/other.md
+    site = link_site(tmp_path, "a/extra.md", "# T\n\n[x](../../b/other/#sec)\n")
+    [(path, line, severity, message)] = link_problems(site)
+    assert (path, line, severity) == ("a/extra.md", 3, "warning")
+    assert message.endswith("-> write ../b/other.md#sec")
+
+
+def test_bare_link_from_index_page_and_to_directory(tmp_path):
+    # a/index.md is served at a/, so ../b/other and ../a/ resolve there
+    site = link_site(tmp_path, "a/index.md", "[x](../b/other) [y](../a/)\n")
+    msgs = [m for *_, m in link_problems(site)]
+    assert len(msgs) == 2 and all("without .md" in m for m in msgs)
+    assert msgs[0].endswith("write ../b/other.md")
+    assert msgs[1].endswith("write index.md")
+
+
+def test_bare_link_resolved_like_source_path_is_broken(tmp_path):
+    # Source-relative "other" would be a sibling, but the browser looks
+    # under b/page/ for it.
+    site = link_site(tmp_path, "b/page.md", "[x](other)\n", extra=("b/page.md",))
+    [(_, _, severity, message)] = link_problems(site)
+    assert severity == "error" and "does not lead to a page: other" in message
+
+
+def test_raw_html_bare_href_is_checked(tmp_path):
+    site = link_site(tmp_path, "index.md", '<a href="nowhere/">x</a>\n')
+    assert [s for _, _, s, _ in link_problems(site)] == ["error"]
+
+
+def test_linked_file_must_exist(tmp_path):
+    site = link_site(tmp_path, "a/extra.md", "[d](files/x.pdf) [e](files/y.pdf)\n",
+                     extra=("a/files/x.pdf",))
+    [(_, _, severity, message)] = link_problems(site)
+    assert severity == "error" and message.endswith("files/y.pdf")
+
+
+def test_skipped_targets(tmp_path):
+    body = ("[a](https://x.org/p) [b](#here) [c](mailto:a@b.c) "
+            "[d]({{ url }}) ![e](pic) [f](../files/outside.docx)\n\n"
+            "[^1]: Functions that compute\n")
+    site = link_site(tmp_path, "index.md", body)
+    assert link_problems(site) == []
+
+
+# --- help_urls.h against the source -----------------------------------------
+
+HELP_TOML = """\
+[project]
+site_name = "T"
+nav = [
+    { "Lang" = ["language-reference-guide/index.md"] },
+    { "NET" = ["net-interface-guide/index.md"] },
+    { "Dyalog for Unix" = ["unix-user-guide/index.md"] },
+]
+"""
+
+HELP_URLS = '''\
+#define LR "language-reference-guide"
+HELP_URL("A", LR "/a")
+HELP_URL("N", "dotnet-interface-guide/n")
+HELP_URL("U", "unix-user-guide/u")
+HELP_URL("G", LR "/gone")
+HELP_URL("D", "extra/language-reference-guide/a")
+'''
+
+
+def help_site(tmp_path):
+    (tmp_path / "zensical.toml").write_text(HELP_TOML, encoding="utf-8")
+    for rel in ("language-reference-guide/index.md", "language-reference-guide/a.md",
+                "net-interface-guide/index.md", "net-interface-guide/n.md",
+                "unix-user-guide/index.md", "unix-user-guide/u.md"):
+        p = tmp_path / "docs" / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text("# T\n", encoding="utf-8")
+    (tmp_path / "help_urls.h").write_text(HELP_URLS, encoding="utf-8")
+    return docsite.Site.load(tmp_path)
+
+
+def test_help_urls_resolved_against_chm_topics(tmp_path):
+    site = help_site(tmp_path)
+    baseline = tmp_path / "known.txt"
+    baseline.write_text("# known\nlanguage-reference-guide/gone.htm\n", encoding="utf-8")
+    # A: present. N: .NET guide under its CHM name. D: found after dropping a
+    # leading segment, as checkchm.py does. G: known missing. U: the Unix
+    # guide is not in the CHM (tools/chm/config.json).
+    problems = check.check_help_urls(site, tmp_path / "help_urls.h", baseline)
+    assert [(p.line, p.severity) for p in problems] == [(4, "error")]
+    assert "'U'" in problems[0].message
+
+
+def test_help_urls_stale_baseline_entry_is_warning(tmp_path):
+    site = help_site(tmp_path)
+    baseline = tmp_path / "known.txt"
+    baseline.write_text("language-reference-guide/gone.htm\nlanguage-reference-guide/a.htm\n",
+                        encoding="utf-8")
+    problems = check.check_help_urls(site, tmp_path / "help_urls.h", baseline)
+    assert [(p.severity, p.message) for p in problems if p.severity == "warning"] == [
+        ("warning", "language-reference-guide/a.htm is no longer missing; remove it")]
+
+
+def test_help_urls_missing_file_is_error(tmp_path):
+    site = help_site(tmp_path)
+    [p] = check.check_help_urls(site, tmp_path / "nope.h")
+    assert p.severity == "error"
+
+
+def test_main_reads_help_urls_from_environment(tmp_path, monkeypatch, capsys):
+    help_site(tmp_path)
+    monkeypatch.setenv("DYALOG_HELP_URLS", str(tmp_path / "help_urls.h"))
+    rc = check.main(["--project", str(tmp_path), "--skip-build",
+                     "--unlisted", str(tmp_path / "none.txt")])
+    assert rc == 1
+    assert "help_urls.h:4: error" in capsys.readouterr().out

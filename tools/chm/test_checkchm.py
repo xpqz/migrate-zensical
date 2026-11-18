@@ -41,3 +41,10 @@ def test_resolved_baseline_entries_are_reported(tmp_path, capsys):
     assert rc == 0
     out = capsys.readouterr().out
     assert "now resolved" in out and "  object-reference/properties/a.htm" in out
+
+
+def test_resolve_path_drops_leading_segments():
+    have = {"a/b.htm", "c.htm"}.__contains__
+    assert checkchm.resolve_path("a/b.htm", have) == ("a/b.htm", 0)
+    assert checkchm.resolve_path("x/y/a/b.htm", have) == ("a/b.htm", 2)
+    assert checkchm.resolve_path("x/d.htm", have) == (None, 2)
