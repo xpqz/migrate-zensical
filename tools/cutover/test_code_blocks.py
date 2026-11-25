@@ -959,3 +959,9 @@ def test_classify_accepts_short_caret_in_error_triple(cb):
     cls = cb.classify(cb.find_blocks("a.md", md)[0])
     assert cls.roles == ["input", "output", "output", "output", "input"]
     assert cls.kind == "session"
+
+
+@needs_dyalog
+def test_run_page_harness_leaves_no_names_in_the_workspace(cb):
+    res, _ = _run(cb, (None, ["≢⎕NL ¯2 ¯9"]))
+    assert _out(res) == [["0"]]

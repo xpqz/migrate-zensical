@@ -9,13 +9,14 @@
 args←2⎕NQ'.' 'GetCommandLineArgs'
 src←⊃⎕NGET(⊃⌽args/⍨'.apls'∘≡¨¯5↑¨args)1
 {}⎕SE.⎕FIX 2↓¨src/⍨'⍝|'∘≡¨2↑¨src
-⎕SE.CB.Main⊃⌽2⎕NQ'.' 'GetCommandLineArgs'
+⎕SE.CB.Main⊃⌽args
 ⎕OFF
 ⍝|:Namespace CB
 ⍝|    ⎕IO←1 ⋄ ⎕ML←1
 ⍝|
 ⍝|    ∇ Main file;req;blk;i;lines;tok
 ⍝|      req←⎕JSON⊃⎕NGET file
+⍝|      {}#.⎕EX'args' 'src'  ⍝ the bootstrap's names must not reach user code
 ⍝|      tok←'⍝CB-',req.token,'-'
 ⍝|      #.⎕IO←1 ⋄ #.⎕ML←1 ⋄ ⎕PW←req.pw
 ⍝|      :For blk :In ,req.blocks
