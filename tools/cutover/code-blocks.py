@@ -78,8 +78,9 @@ Reasons:
     error           not-run: an error the printed output does not show
     dependency      not-run: such an error after a block that did not run
     suspect-input   an input line may be printed output: not-run for an
-                    unexpected SYNTAX/VALUE ERROR, differs when a line with
-                    no printed output printed something; split ambiguous
+                    unexpected SYNTAX/VALUE ERROR; differs, or not-run in
+                    place of volatile/environment, when a line with no
+                    printed output printed something; split ambiguous
     incomplete      not-run: fewer results than input lines, no timeout
     unreached       not-run: after the block where the interpreter stopped
     exited          timeout: the interpreter exited early (no time-out)
@@ -87,7 +88,8 @@ Reasons:
     diamond         differs: a line has ⋄-separated statements, which the
                     harness runs one at a time
     annotation      match or differs: column-0 ⍝ lines in the output, not
-                    compared; split ambiguous
+                    compared; split ambiguous (also when another reason
+                    takes the field: such blocks are always ambiguous)
     indented-output an output line is indented six or more spaces; split
                     ambiguous unless the block matches
     split-check     the split would lose or move a line; split ambiguous
@@ -868,7 +870,8 @@ def judge(
        fewer results than input lines without timeout: not-run/incomplete;
     3. any skipped line: not-run with the skipped value as reason;
     4. a volatile facility in an input line: not-run/volatile; a
-       machine-dependent one: not-run/environment;
+       machine-dependent one: not-run/environment (either: not-run/
+       suspect-input if a line with no printed output printed something);
     5. an error the printed output does not show: not-run/suspect-input
        (SYNTAX/VALUE ERROR, no prior unrun block), dependency (prior
        unrun block) or error;
@@ -881,7 +884,9 @@ def judge(
 
     `actual` is the session-style actual output (each input at six-space
     indent, then its output, newline-terminated) for differs and for the
-    not-run reasons error, dependency and suspect-input; else None.
+    not-run reasons error, dependency and suspect-input; else None. A
+    suspect line is one with no printed output that printed something
+    (not an error line, not a user command).
     """
     if not cls.runnable:
         return "not-run", cls.reason, None
@@ -893,13 +898,21 @@ def judge(
     for res in results:
         if res.skipped:
             return "not-run", res.skipped, None
-    if any(_is_volatile(t) for t in inputs):
-        return "not-run", "volatile", None
-    if any(_is_environment(t) for t in inputs):
-        return "not-run", "environment", None
-
     expected = expected_outputs(block, cls)
     actual = "".join(ln + "\n" for ln in _session(inputs, results))
+    # A line with no printed output printed something: it may be a folded
+    # output row read as input. (A user command line cannot be output.)
+    suspect = any(
+        not res.error
+        and not text.lstrip().startswith("]")
+        and not _normalise(exp)
+        and _normalise(res.output)
+        for text, exp, res in zip(inputs, expected, results)
+    )
+    for unjudged, test in (("volatile", _is_volatile), ("environment", _is_environment)):
+        if any(test(t) for t in inputs):
+            return ("not-run", "suspect-input", actual) if suspect else ("not-run", unjudged, None)
+
     for idx, (exp, res) in enumerate(zip(expected, results)):
         if not res.error:
             continue
@@ -922,8 +935,8 @@ def judge(
         _normalise(e) == _normalise(r.output) for e, r in zip(expected, results)
     ):
         return "match", ("annotation" if cls.annotation else None), None
-    if any(not _normalise(e) and _normalise(r.output) for e, r in zip(expected, results)):
-        reason = "suspect-input"  # printed output read as input, perhaps
+    if suspect:
+        reason = "suspect-input"
     elif prior_unrun:
         reason = "after-unrun"
     elif any(_top_level_diamond(t) for t in inputs):

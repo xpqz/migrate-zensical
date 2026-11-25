@@ -1331,3 +1331,21 @@ def test_main_page_merge_when_page_has_no_entries_left(cb, tmp_path):
     _main(cb, tmp_path, "--no-run", "--page", "sub/*.md")
     _, after = cb.read_log(log)
     assert after == [e for e in entries if e["page"] == "g/a.md"]
+
+
+def test_judge_suspect_input_applies_to_volatile_and_environment(cb):
+    # Any verdict but match: a line with no printed output that printed
+    # something may be a folded output row.
+    for line in ("      ?6", "      ⎕AN"):
+        v, r, actual = _judge(cb, [line], [_lr(cb, ["3"])])
+        assert (v, r) == ("not-run", "suspect-input") and actual == f"{line}\n3\n"
+        b, c = _block(cb, line)
+        assert cb.split_kind(c, v, r) == "ambiguous"
+    assert _judge(cb, ["      ?6", "3"], [_lr(cb, ["4"])])[:2] == ("not-run", "volatile")
+
+
+def test_judge_user_command_output_is_not_suspect(cb):
+    # ]box on prints "Was OFF": a user command line cannot be folded output.
+    lines = ["      ]box on", "      1+1", "2"]
+    res = [_lr(cb, ["Was OFF"]), _lr(cb, ["3"])]
+    assert _judge(cb, lines, res)[:2] == ("differs", None)
