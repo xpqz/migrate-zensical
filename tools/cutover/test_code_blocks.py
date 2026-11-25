@@ -1226,3 +1226,51 @@ def test_split_kind_suspect_input_is_ambiguous_for_any_verdict(cb):
     _, c = _block(cb, "      x", "1")
     for verdict in ("differs", "not-run", "match"):
         assert cb.split_kind(c, verdict, "suspect-input") == "ambiguous"
+
+
+# --- keeping review decisions ------------------------------------------------
+
+
+def test_carry_decisions_across_confirmed_and_unambiguous(cb):
+    old = [_entry(split="confirmed", decision="apply")]
+    out = cb.carry_decisions(old, [_entry(split="unambiguous")])
+    assert out[0]["decision"] == "apply"
+    old = [_entry(split="unambiguous", decision="skip")]
+    out = cb.carry_decisions(old, [_entry(split="confirmed")])
+    assert out[0]["decision"] == "skip"
+    # a changed proposal or an ambiguous split still resets
+    old = [_entry(split="confirmed", decision="apply")]
+    out = cb.carry_decisions(old, [_entry(split="ambiguous", proposed=None)])
+    assert out[0]["decision"] == "pending"
+
+
+@pytest.mark.parametrize("extra", [["--guide", "nope"], ["--page", "zzz*.md"]])
+def test_main_missing_guide_or_no_pages_leaves_log_untouched(cb, tmp_path, capsys, extra):
+    _docs(tmp_path, {"a.md": _PAGE})
+    log = tmp_path / "log.yml"
+    log.write_text("previous\n", encoding="utf-8")
+    argv = ["--docs", str(tmp_path / "docs"), "--guide", "g", "--log", str(log), "--no-run"]
+    rc = cb.main(argv + extra)
+    assert rc != 0
+    assert log.read_text(encoding="utf-8") == "previous\n"
+    assert not (tmp_path / "log.yml.bak").exists()
+    assert capsys.readouterr().err.strip()
+
+
+def test_main_keeps_a_backup_and_reports_reset_decisions(cb, tmp_path, capsys):
+    _docs(tmp_path, {"a.md": _PAGE})
+    _, log = _main(cb, tmp_path, "--no-run")
+    meta, entries = cb.read_log(log)
+    entries[0]["decision"] = "apply"
+    entries[0]["proposed"] = "an older proposal\n"  # reset: proposal changed
+    entries[1]["decision"] = "skip"
+    entries[1]["sha256"] = "0" * 64  # dropped: the block is gone
+    cb.write_log(log, meta, entries)
+    before = log.read_text(encoding="utf-8")
+    capsys.readouterr()
+    _main(cb, tmp_path, "--no-run")
+    assert (tmp_path / "log.yml.bak").read_text(encoding="utf-8") == before
+    out = capsys.readouterr().out
+    assert "Decisions: 1 reset to pending, 1 dropped" in out
+    _, after = cb.read_log(log)
+    assert [e["decision"] for e in after] == ["pending", "pending"]

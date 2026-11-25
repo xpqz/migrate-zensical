@@ -939,8 +939,22 @@ def read_log(path: Path) -> tuple[dict, list[dict]]:
     return data["meta"], data["entries"]
 
 
-def carry_decisions(old: list[dict], new: list[dict]) -> list[dict]:
-    """Keep earlier decisions for blocks whose proposal is unchanged."""
+_SPLITS = frozenset({"confirmed", "unambiguous"})
+
+
+def carry_decisions(
+    old: list[dict], new: list[dict], stats: Counter | None = None
+) -> list[dict]:
+    """Keep earlier decisions for blocks whose proposal is unchanged.
+
+    Entries match by page and sha256 (duplicates in order). A decision is
+    kept when `proposed` is equal and the split is equal or both splits
+    propose (confirmed or unambiguous: a --no-run rerun or a timeout turns
+    confirmed into unambiguous without changing the proposal). `stats`, if
+    given, counts the decisions other than pending that were `reset` (the
+    block is unchanged but its proposal changed) or `dropped` (the block
+    changed or is gone).
+    """
     prior: dict[tuple, list[dict]] = {}
     for e in old:
         prior.setdefault((e["page"], e["sha256"]), []).append(e)
@@ -949,13 +963,22 @@ def carry_decisions(old: list[dict], new: list[dict]) -> list[dict]:
         entry = dict(entry)
         queue = prior.get((entry["page"], entry["sha256"]))
         before = queue.pop(0) if queue else None
-        same = (
-            before is not None
-            and before["proposed"] == entry["proposed"]
-            and before["split"] == entry["split"]
-        )
-        entry["decision"] = before["decision"] if same else "pending"
+        if before is None:
+            entry["decision"] = "pending"
+        elif before["proposed"] == entry["proposed"] and (
+            before["split"] == entry["split"]
+            or {before["split"], entry["split"]} <= _SPLITS
+        ):
+            entry["decision"] = before["decision"]
+        else:
+            entry["decision"] = "pending"
+            if stats is not None and before["decision"] != "pending":
+                stats["reset"] += 1
         out.append(entry)
+    if stats is not None:
+        stats["dropped"] += sum(
+            e["decision"] != "pending" for q in prior.values() for e in q
+        )
     return out
 
 
@@ -1081,6 +1104,9 @@ def main(argv: list[str] | None = None) -> int:
 
     docs = Path(args.docs)
     root = docs / args.guide
+    if not root.is_dir():
+        print(f"error: no guide directory {root}", file=sys.stderr)
+        return 2
     pages = sorted(
         (p for p in root.rglob("*.md") if p.is_file()),
         key=lambda p: p.relative_to(root).as_posix(),
@@ -1090,6 +1116,10 @@ def main(argv: list[str] | None = None) -> int:
             p for p in pages
             if fnmatch.fnmatch(p.relative_to(root).as_posix(), args.page)
         ]
+    if not pages:
+        what = f"matching {args.page!r} " if args.page else ""
+        print(f"error: no pages {what}under {root}", file=sys.stderr)
+        return 2
 
     entries: list[dict] = []
     total = listings = 0
@@ -1105,17 +1135,20 @@ def main(argv: list[str] | None = None) -> int:
         listings += lst
 
     log = Path(args.log)
-    if log.exists():
+    stats: Counter = Counter()
+    had_log = log.exists()
+    if had_log:
         old = read_log(log)[1]
         if args.page:
             done = {p.relative_to(docs).as_posix() for p in pages}
             kept = [e for e in old if e["page"] not in done]
             replaced = carry_decisions(
-                [e for e in old if e["page"] in done], entries
+                [e for e in old if e["page"] in done], entries, stats
             )
             entries = sorted(kept + replaced, key=lambda e: (e["page"], e["line"]))
         else:
-            entries = carry_decisions(old, entries)
+            entries = carry_decisions(old, entries, stats)
+        shutil.copy2(log, log.with_name(log.name + ".bak"))
     meta = {
         "guide": args.guide,
         "dyalog": dyalog_version(dyalogscript) if dyalogscript else None,
@@ -1128,6 +1161,11 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"Blocks: {total} total, {listings} listing (not logged)")
     print(f"Entries: {len(entries)} in {log}")
+    if had_log:
+        print(
+            f"Decisions: {stats['reset']} reset to pending, "
+            f"{stats['dropped']} dropped (previous log in {log.name}.bak)"
+        )
     for key in ("verdict", "split"):
         counts = Counter(e[key] for e in entries)
         print(f"By {key}: " + ", ".join(f"{k} {v}" for k, v in sorted(counts.items())))
