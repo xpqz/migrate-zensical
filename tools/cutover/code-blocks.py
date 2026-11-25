@@ -432,7 +432,7 @@ SIDE_EFFECTS = frozenset(
 )
 # I-beams known to be pure (no files, processes or workspace changes).
 PURE_IBEAMS = frozenset({8, 181, 201, 219, 220, 1200, 1500, 5581, 7162, 16808})
-_IBEAM_NUM_RE = re.compile(r"(?<![\w∆⍙_.])(\d+)\s*$")
+_IBEAM_NUM_RE = re.compile(r"(?<![\w∆⍙_.¯])(\d+)\s*$")
 _SAFE_COMMANDS = frozenset({"box", "boxing", "display", "disp", "rows"})
 
 _QUAD_NAME_RE = re.compile(r"⎕[A-Za-z0-9_]*")
@@ -511,10 +511,18 @@ def has_side_effect(line: str) -> bool:
     text = _strip_comment(line)
     if text.lstrip().startswith("]"):
         parts = text.lstrip()[1:].split()
-        return not parts or parts[0].lower() not in _SAFE_COMMANDS
+        if not parts or parts[0].lower() not in _SAFE_COMMANDS:
+            return True
+        # An allowed command still evaluates its argument: check the rest.
     if any(st.lstrip().startswith(")") for st in _statements(text)):
         return True
-    if {m.upper() for m in _QUAD_NAME_RE.findall(text)} & SIDE_EFFECTS:
+    names = {m.upper() for m in _QUAD_NAME_RE.findall(text)}
+    if names & SIDE_EFFECTS:
+        return True
+    # A string that starts a system command, or a name built at run time.
+    if re.search(r"'\s*\)[A-Za-z]", text):
+        return True
+    if "⍎" in text and names & {"⎕UCS", "⎕AV"}:
         return True
     for m in re.finditer("⌶", text):
         num = _IBEAM_NUM_RE.search(text[: m.start()])

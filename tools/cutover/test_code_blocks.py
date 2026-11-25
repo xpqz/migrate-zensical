@@ -967,13 +967,16 @@ def test_has_side_effect(cb):
         "⎕se.SALT.Load 'x'", "⎕ED 'x'", "⎕EXPORT 'x'", "⎕NEW ⍬", "⎕FIO.x",
         "⎕HTTPCMD 'x'", "85⌶'1'", "(85⌶)'1'", "⌶", "x⌶1", "1 ⋄ )load x",
         ")load x", "1 ⋄ 2 ⋄  )off", "2⌶1", "8⌶1 ⋄ 85⌶'1'",
+        "]display ⎕SH 'rm x'", "]rows ⎕NDELETE 'x'", "]box on ⍎')load x'",
+        "]disp ⍎'⎕NDELETE ''x'''", "⍎'⎕',⎕UCS 83 72", "⍎⎕AV[5]", "¯8⌶1",
+        "(¯8 ⌶)1",
     ]:
         assert cb.has_side_effect(line), line
     for line in [
         "]box on", "]Boxing", "]DISPLAY ⍳3", "]disp 1", "]rows 5",
         "1 ⍝ ⎕NDELETE ⎕SH", "⎕NDELETEX", "⎕SEX", "1+1", "'a)b'", "1 ⋄ 2)",
         "8⌶1", "(181⌶)1", "(201 ⌶)1", "219⌶4", "1200⌶1", "16808⌶1",
-        "(7162 ⌶)'x'",
+        "(7162 ⌶)'x'", "]box on", "]display 2 2⍴⍳4", "⎕UCS 83 72",
     ]:
         assert not cb.has_side_effect(line), line
 
