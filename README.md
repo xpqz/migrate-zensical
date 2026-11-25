@@ -71,6 +71,11 @@ results are those of Linux Dyalog 21.0 in that image. Without Docker it only pro
 uv run python tools/cutover/code-blocks.py --log code-blocks.yml
 ```
 
+With `--define-shown`, a block that shows a variable the page never defines (`      M` followed by
+its printed value) is proposed with an array-notation definition in its place, such as
+`M←[10 20 30 40` / `   50 60 70 80]`, but only when a further run proves it: the name then
+displays the printed value and the block matches.
+
 Set each entry's `decision` to `apply` or `skip`; reruns keep decisions whose proposal is
 unchanged. The options, the log's fields and every verdict, reason and split value are described in
 the module docstring.

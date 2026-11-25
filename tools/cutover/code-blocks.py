@@ -2,7 +2,7 @@
 
     uv run python tools/cutover/code-blocks.py [--guide language-reference-guide]
         [--log code-blocks.yml] [--page GLOB] [--no-run] [--timeout SECONDS]
-        [--image IMAGE] [--docs zensical/docs]
+        [--image IMAGE] [--docs zensical/docs] [--define-shown]
 
 The `apl` fences mix session input (the six-space indent) with output. For
 each fence of the guide under --docs, the tool proposes splitting it into an
@@ -19,7 +19,8 @@ existing one is copied to <log>.bak first), --page a glob, relative to the
 guide, that limits the run to matching pages (their entries replace those
 pages' entries in an existing log; other pages' entries are kept),
 --no-run proposes splits without running anything, --timeout is the limit
-in seconds for each page's container, --image the Docker image to run in.
+in seconds for each page's container, --image the Docker image to run in,
+--define-shown proposes definitions for shown values (below).
 The tool exits
 with status 2, leaving the log alone, if the guide does not exist or no
 page matches.
@@ -121,6 +122,39 @@ Splits:
     unambiguous  every line's role is clear without running it
     ambiguous    the roles are uncertain; no proposal (reason says why)
     none         nothing to split (a nested block)
+
+Defining shown values (--define-shown, off by default): a block often shows
+a variable's value (an input line that is just the name, then the value)
+that the page never defines. A candidate is an input line that is exactly a
+name N, where no earlier line of an `apl` block on the page assigns N (N←,
+or a ∇ line naming it), N is not an earlier candidate on the page, the run
+gives `VALUE ERROR: Undefined name: N` for it and its printed output is not
+an error. The printed output becomes array notation: one row of numbers
+(¯, decimals, E exponents, J complex) `N←1 2 3` (a scalar for one number);
+several such rows a matrix `N←[1 2 ⋄ 3 4]`; one row of other text
+`N←'text'` (quotes doubled); several rows, not all numeric, a character
+matrix `N←['abc' ⋄ 'de']` (trailing spaces removed; array notation pads
+rows). A matrix is proposed on several lines, rows aligned under the first
+element after `[`. Anything else (no output, box drawing, a blank line
+inside, numbers and text in one row, a column-0 ⍝ note among the output
+lines) is unsupported. The definition
+replaces the line and its output; with no output, it joins the following
+input in the same `apl` block. Proof: the page runs again with every
+definition, exactly as proposed (a multi-line definition as one input unit,
+run as source), each followed by a hidden check, the bare name, which is not
+judged or proposed. A definition is accepted only if the check displays the
+printed output and the rewritten block's verdict is match; the failures are
+dropped and the rest proved once more (if that fails too, none is applied).
+Later blocks are judged in the run with the accepted definitions. Extra
+fields, only with the option:
+
+    rewrite           aplan: `proposed` defines the names in `defines`
+    defines           the names defined
+    rewrite_rejected  {name: why} for names not defined: unsupported (why),
+                      or why the proof failed; the entry is judged as usual
+
+`original` and `sha256` stay the original block's. The tool prints how many
+definitions were accepted, rejected and unsupported.
 
 Decisions are carried to the new log by page and sha256 (duplicate blocks
 in order): an entry keeps its decision while `proposed` is unchanged and
@@ -1470,6 +1504,13 @@ def shown_candidates(
             earlier.extend(b.body)
             continue
         printed = expected_outputs(b, cls)
+        # Each input line's following lines, ⍝ notes included.
+        spans: list[list[str]] = []
+        for raw, role in zip(b.body, cls.roles):
+            if role == "input":
+                spans.append([])
+            elif spans:
+                spans[-1].append(raw)
         k = -1
         for raw, role in zip(b.body, cls.roles):
             if role == "input":
@@ -1486,6 +1527,9 @@ def shown_candidates(
                 ):
                     seen.add(name)
                     try:
+                        if any(ln.startswith("⍝") for ln in spans[k]):
+                            # The rewrite drops the output: a note would go too.
+                            raise Unsupported("annotation in the output")
                         oneline, lines = aplan(name, printed[k])
                         shown = Shown(i, k, name, oneline, tuple(lines), None)
                     except Unsupported as e:

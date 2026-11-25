@@ -1960,3 +1960,11 @@ def test_define_shown_char_matrix_with_short_rows_and_diamonds(cb, tmp_path):
     _, (e,) = cb.read_log(log)
     assert e["rewrite"] == "aplan" and e["verdict"] == "match"
     assert e["proposed"].startswith("```apl\nC←['a⋄b'\n   'cd']\n⍴C\n```\n")
+
+
+def test_shown_candidates_annotation_in_the_output_is_unsupported(cb):
+    # The rewrite drops the name's output; a ⍝ note there would be lost.
+    md = "```apl\n      M\n1 2\n⍝ a note\n      M+1\n2 3\n```\n"
+    _, found = _cands(cb, md, {0: [_ve(cb, "M"), _ve(cb, "M")]})
+    (s,) = found[0]
+    assert s.unsupported and "annotation" in s.unsupported

@@ -281,6 +281,92 @@ A block whose verdict is `differs` still gets its split proposed (from the
 printed output, not the actual output); the two are separate decisions for
 the reviewer.
 
+### Defining shown values
+
+Off by default; `--define-shown` turns it on (user decision). Pages often
+show a variable's value without defining it:
+
+```
+      M
+10 20 30 40
+50 60 70 80
+      M[⊂1 2]
+20
+```
+
+With the option, the proposal defines it in array notation (square
+brackets build the rows of a higher-rank array; parentheses, for nested
+vectors, are out of scope) and splits as usual:
+
+````
+```apl
+M←[10 20 30 40
+   50 60 70 80]
+M[⊂1 2]
+```
+
+```text
+20
+```
+````
+
+The assignment has no output, so it joins the following input in the same
+`apl` block.
+
+**Candidates.** An input line that is exactly a name N (trailing whitespace
+aside) where no earlier line of an `apl` block on the page assigns N (`N←`,
+or a `∇` line naming it), N is not an earlier candidate on the page, the run
+gives `VALUE ERROR: Undefined name: N` for that line, and the printed output
+is not an error.
+
+**Value to array notation.**
+
+- One row, all numbers (`¯`, decimals, `E` exponents, `J` complex):
+  `N←1 2 3`, the numbers single-spaced; a scalar for one number.
+- Several rows, all numbers: a matrix, `N←[1 2 ⋄ 3 4]`.
+- One row, not numbers: a character vector, `N←'text'`, quotes doubled.
+- Several rows, not all numbers: a character matrix, `N←['abc' ⋄ 'de']`,
+  each row without its trailing spaces (array notation pads short rows).
+- Anything else is unsupported and logged as `define-shown: unsupported
+  (why)`: no output (`⍬`, say), box drawing (nested or boxed), a blank
+  line inside (rank 3 or more), numbers and text in one row, a column-0
+  `⍝` note among the output lines (the rewrite would drop it).
+
+A matrix is proposed on several lines, the continuation rows aligned
+under the first element after `[`.
+
+**Proof.** The page runs again with every candidate's definition in place
+of its line, sent exactly as proposed: the harness takes a multi-line
+input unit and runs it as literal source (below). A hidden check, the bare
+name, follows each definition; it is not judged and not proposed. A
+definition is accepted only if the check displays the printed output (after
+the usual normalisation) and the rewritten block's verdict is `match`.
+Failures are dropped and the rest proved in one more run; if that fails
+too, no definition on the page is applied and the first run stands. Pages
+without candidates run once. Later blocks are judged in the run with the
+accepted definitions, so blocks that use N now run.
+
+**Multi-line units.** A request line is either a string (one session line,
+run and displayed as before) or a list of strings, run as source: the
+harness fixes the lines as the body of a niladic function with a reserved
+name in `#`, calls it (so the names it assigns are `#`'s) and expunges it.
+A unit gets one BEGIN/END pair; an error is displayed as its message and
+does not stop the run; a function that does not fix is a `DEFN ERROR`; a
+system command, `⎕OFF` or `⍞` on any line skips the unit as for single
+lines. Only `--define-shown` sends such units now. The same mechanism
+could later run multi-line dfns, traditional functions in session-editor
+notation and other multi-line inputs; that would need a rule for which
+following indented lines continue a unit, session-style display of values
+the lines do not assign (a function's lines print without `]box`), and
+error display in session form.
+
+**Log.** The entry gains `rewrite: aplan` and `defines: [N, …]`;
+`proposed` is the rewritten split, `actual` follows the usual rules.
+`original` and `sha256` stay the original block's (the apply step replaces
+it). Names not defined are listed as `rewrite_rejected: {N: why}`, and the
+entry is judged as usual. The tool prints "define-shown: K rewrites
+accepted, R rejected, U unsupported".
+
 ## The log
 
 One YAML file (`pyyaml` is already a dependency), one entry per session or
@@ -331,10 +417,11 @@ is printed to stdout.
 ```
 uv run python tools/cutover/code-blocks.py [--guide language-reference-guide]
     [--log code-blocks.yml] [--page GLOB] [--no-run] [--timeout SECONDS]
-    [--image IMAGE]
+    [--image IMAGE] [--define-shown]
 ```
 
-`--no-run` skips execution (splits only where unambiguous). `--page`
+`--no-run` skips execution (splits only where unambiguous).
+`--define-shown` proposes definitions for shown values (above). `--page`
 restricts to matching pages for iteration. `--image` replaces the image
 built from `tools/cutover/docker/Dockerfile`. Without Docker the tool runs
 as `--no-run` and says so.
