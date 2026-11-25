@@ -63,7 +63,7 @@ Role = Literal["input", "output", "blank"]
 
 _WS = " \u00a0"
 _SESSION_INDENT_RE = re.compile(r"^[ \u00a0]{6}(?=\S)")
-_ERROR_RE = re.compile(r"^[A-Z ]*ERROR\b")
+_ERROR_RE = re.compile(r"^(?=\S)[A-Z ]*ERROR\b")
 _CARET_RE = re.compile(r"^ {6,}[∧^ ]*[∧^][∧^ ]*$")
 _DEL_LINE_RE = re.compile(r"^\[\d+\]")
 _SCRIPT_RE = re.compile(r"^:(Class|Namespace|Interface)")

@@ -12,6 +12,7 @@ import pytest
 def cb():
     path = Path(__file__).with_name("code-blocks.py")
     spec = importlib.util.spec_from_file_location("code_blocks", path)
+    assert spec is not None and spec.loader is not None
     mod = importlib.util.module_from_spec(spec)
     sys.modules["code_blocks"] = mod
     spec.loader.exec_module(mod)
@@ -171,3 +172,14 @@ def test_classify_style_max_min_off(cb):
     assert _classify(cb, "      x", "1 2").style == "off"
     # Only output lines are inspected: box characters in input do not count.
     assert _classify(cb, "      '┌→┐'", "1").style == "off"
+
+
+def test_classify_indented_error_message_is_not_a_triple(cb):
+    c = _classify(cb, "      1÷0", "   VALUE ERROR", "      1÷0", "       ∧")
+    assert c.roles == ["input", "output", "input", "output"]
+    assert (c.kind, c.reason, c.runnable) == ("ambiguous", "indented-output", True)
+
+
+def test_classify_bare_error_message_is_a_triple(cb):
+    c = _classify(cb, "      x", "ERROR", "      x", "      ∧")
+    assert c.roles == ["input", "output", "output", "output"]
