@@ -2,14 +2,14 @@
 
     uv run python tools/cutover/code-blocks.py [--guide language-reference-guide]
         [--log code-blocks.yml] [--page GLOB] [--no-run] [--timeout SECONDS]
-        [--docs zensical/docs]
+        [--image IMAGE] [--docs zensical/docs]
 
 The `apl` fences mix session input (the six-space indent) with output. For
 each fence of the guide under --docs, the tool proposes splitting it into an
 `apl` block of input followed by a `text` block of output, runs the input
-under `dyalogscript` (one interpreter per page, through
+in Docker (one locked-down container and interpreter per page, through
 code-blocks-harness.apls) and compares what Dyalog prints with the printed
-output. It writes a YAML log for people to review entry by entry; the
+output. Examples never run on the host. It writes a YAML log for people to review entry by entry; the
 approved entries are applied later, during the cutover. The tool only reads
 the corpus; it never writes to it. Design:
 design/superpowers/specs/2026-11-25-code-blocks-design.md.
@@ -19,25 +19,40 @@ existing one is copied to <log>.bak first), --page a glob, relative to the
 guide, that limits the run to matching pages (their entries replace those
 pages' entries in an existing log; other pages' entries are kept),
 --no-run proposes splits without running anything, --timeout is the limit
-in seconds for each page's interpreter. `dyalogscript` is taken from
-$DYALOGSCRIPT or PATH; without it the tool runs as --no-run. The tool exits
+in seconds for each page's container, --image the Docker image to run in.
+The tool exits
 with status 2, leaving the log alone, if the guide does not exist or no
 page matches.
 
-Side effects: an example is never run if any input line of its block may
-act outside the interpreter's workspace. A line is a side effect if it uses
-a system name not in SAFE_QUADS, an I-beam not in PURE_IBEAMS, a system
-command (`)` at a statement start), a user command other than ]box,
-]boxing, ]display, ]disp and ]rows, bare `⎕` input, a .NET name
-(`System.…`, `Microsoft.…`), ⍎, ⎕FX or 85⌶ with a computed argument, or a
-⎕TRAP action built at run time. Every string is checked as if it were
-code. After ⎕USING appears on a page, none of its later blocks run. On
-macOS the interpreter runs under sandbox-exec, with no network and no
-writes outside its temporary directory.
+Docker: Docker must be running; without it the tool says so on stderr and
+runs as --no-run. The default image is built from docker/Dockerfile next to
+this file (Dyalog 21.0, pinned by digest, plus the .NET runtime) and tagged
+code-blocks-dyalog:<first 12 hex of the Dockerfile's sha256>; it is built
+when missing, the only time the network is used. An --image is pulled when
+missing. Each page runs in a fresh container with no network, no
+capabilities, no new privileges, a read-only root, at most 64 processes,
+512 MB and one CPU; only /work (the working directory), /tmp and the home
+directory are writable, as small tmpfs mounts, and the harness and request
+are mounted read-only. Files a page writes persist across its blocks and
+vanish with the container. A timed-out or interrupted container is killed
+and removed. Results are those of Linux Dyalog in that image.
+
+Side effects: inside the container, files, workspaces (⎕CY, ⎕FIX,
+⎕EXPORT), .NET, shell commands (⎕SH, ⎕CMD, ⎕SHELL) and ⎕NA may run. An
+example is still never run if any input line of its block may break or
+escape the run: a line is a side effect if it uses a system name not in
+SAFE_QUADS (⎕SE, ⎕SV*, the GUI, ⎕CLEAR, ⎕LOAD, ⎕SAVE, ⎕OFF, ⎕ARBOUT,
+⎕CS, ⎕PATH, ...), an I-beam not in PURE_IBEAMS, a system command (`)` at a
+statement start), a user command other than ]box, ]boxing, ]display, ]disp
+and ]rows, bare `⎕` input, ⍎, ⎕FX or 85⌶ with a computed argument, a
+dyadic ⍎ whose left argument is not a plain name, # or a literal string, or
+a ⎕TRAP action built at run time. Every string is checked as if it were
+code.
 
 The log (YAML) has `meta` and `entries`. `meta`: guide, dyalog (the
-interpreter's version, null without one), platform, generated (UTC), and
-pages (verdict counts for each page with at least one `differs`). Each
+interpreter's version, null without a run), image, image_id and platform
+(the container's image tag, id and platform, e.g. linux/arm64; null
+without a run), generated (UTC), and pages (verdict counts for each page with at least one `differs`). Each
 entry is one session or ambiguous block (listings without input lines are
 only counted), ordered by page and line:
 
@@ -69,12 +84,12 @@ Reasons:
     indent          not run: input at an odd indent
     nested          not run: the fence is indented (in a list, say)
     side-effect     not run: a side effect, or after ⎕USING (above)
-    not-run         not run: --no-run, or no dyalogscript
+    not-run         not run: --no-run, or no Docker
     system-command  not run: the harness skipped a system command or
                     ⎕OFF (these are normally side-effect already)
     quote-quad      not run: uses ⍞
     volatile        ran, not judged: time, random numbers, the stack, ...
-    environment     ran, not judged: depends on the machine (⎕AN, files, ...)
+    environment     ran, not judged: depends on the machine (⎕AN, ⎕SD, ...)
     error           not-run: an error the printed output does not show
     dependency      not-run: such an error after a block that did not run
     suspect-input   an input line may be printed output: not-run for an

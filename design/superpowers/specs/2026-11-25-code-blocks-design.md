@@ -159,9 +159,9 @@ A block is:
 
 ### Running a page
 
-One `dyalogscript DYALOG_INITSESSION=1` process per page, under a hard
-timeout (the `~/.claude/scripts/dyalog-run.sh` pattern: kill the process
-group). The page's session blocks are passed in order; state persists across
+One `dyalogscript DYALOG_INITSESSION=1` process per page, in its own
+Docker container (see "Execution in Docker"), under a hard timeout that
+kills and removes the container. The page's session blocks are passed in order; state persists across
 the blocks of a page and is fresh for each page (`⎕IO←1`, `⎕ML←1`,
 `⎕PW←80` unless the page sets them).
 
@@ -175,6 +175,55 @@ For each input line the harness:
 3. On error, produces the session's error display from `⎕DMX`.
 4. Writes a sentinel after each line so Python can attribute output to the
    line that produced it.
+
+### Execution in Docker
+
+Examples never run on the host. User decisions (2026-11-25):
+
+1. Run examples in plain Docker for now. (abrudz/sandbox, the nsjail
+   image, is x86-only today: the published amd64 image is killed under
+   emulation on arm64, and a local arm64 build fails on its seccomp
+   policy.)
+2. File-system examples may run inside the jail; side effects outside it
+   must never happen.
+3. The container must be .NET-capable, and .NET examples may run inside
+   the jail. There is no .NET tag of the Dyalog 21.0 image, so the tool
+   builds a derived image from `tools/cutover/docker/Dockerfile` (the
+   pinned base `dyalog/dyalog@sha256:d9c0dda7…ceb32` plus the .NET 10
+   runtime), tagged `code-blocks-dyalog:<first 12 hex of the Dockerfile's
+   sha256>`, when it is missing. The network is used only for that build.
+4. Shell commands (`⎕SH`, `⎕CMD`, `⎕SHELL`) and `⎕NA` may run inside the
+   jail too.
+
+Each page runs in one fresh container:
+
+```
+docker run --rm -i --name cb-<run token> --network none --read-only \
+  --cap-drop ALL --security-opt no-new-privileges --pids-limit 64 \
+  --memory 512m --cpus 1 \
+  --tmpfs /work:rw,size=16m,mode=1777 --tmpfs /tmp:rw,size=64m \
+  --tmpfs /home/dyalog:rw,size=16m,uid=1000,gid=1000 -w /work \
+  -v <temp dir with harness + request>:/cb:ro --entrypoint dyalogscript \
+  <image> DYALOG_INITSESSION=1 /cb/code-blocks-harness.apls /cb/request.json
+```
+
+The interpreter runs as uid 1000 with no network and can write only to
+/work, /tmp (64 MB, which the .NET runtime needs) and its home directory,
+all of which vanish with the container. Files a page writes persist across
+its blocks and never reach another page. On a time-out or any exception
+the tool kills and removes the container and the local docker client, and
+checks that the container is gone. `--image` overrides the image. Without
+Docker the tool runs as `--no-run` and says so. The log's `meta` records the
+image tag, its id and the container's platform (e.g. `linux/arm64`).
+
+What still never runs, because it would break or escape the run rather
+than touch the host: `⎕SE` (any use), shared variables (`⎕SV*`), the GUI
+(`⎕W*`, `⎕NQ`, `⎕DQ`), `⎕CLEAR`, `⎕LOAD`, `⎕OFF` and system commands,
+`⎕ARBOUT`, user commands other than the display ones, impure I-beams,
+`⍎`, `⎕FX` and `85⌶` with a computed argument, `⎕CS` and `⎕PATH`, and a
+dyadic `⍎` whose left argument is not a plain name, `#` or a literal
+string. `⎕SAVE` is blocked too: after it, every later execute in the
+harness fails with error 85, so nothing more on the page would show.
 
 ### Comparing
 
@@ -261,28 +310,34 @@ is printed to stdout.
 ```
 uv run python tools/cutover/code-blocks.py [--guide language-reference-guide]
     [--log code-blocks.yml] [--page GLOB] [--no-run] [--timeout SECONDS]
+    [--image IMAGE]
 ```
 
 `--no-run` skips execution (splits only where unambiguous). `--page`
-restricts to matching pages for iteration. `dyalogscript` is found on
-`PATH` or via `DYALOGSCRIPT`; without it the tool runs as `--no-run` and
-says so.
+restricts to matching pages for iteration. `--image` replaces the image
+built from `tools/cutover/docker/Dockerfile`. Without Docker the tool runs
+as `--no-run` and says so.
 
 ## Constraints
 
 - Python 3.14, run with `uv`, as the rest of `tools/`.
 - Must not write under `zensical/` or the source tree.
-- Dyalog 21.0 via `dyalogscript`; results are as this platform (macOS)
-  produces them, and the log records the Dyalog version and platform.
-- Leaves no interpreter running: every `dyalogscript` run is under a hard
-  timeout that kills the process group.
+- Requires Docker. Dyalog 21.0 via `dyalogscript` in the pinned image;
+  results are those of Linux Dyalog in that image (not of the host), and
+  the log records the Dyalog version, the image and the container's
+  platform.
+- Examples never run on the host, only in the locked-down container.
+- Leaves nothing running: every container runs under a hard timeout, and
+  is killed and removed on a time-out or any error.
 
 ## Testing
 
 Unit tests (pytest, `tools/cutover/test_code_blocks.py`) for block finding,
 classification, the split rules, the no-lost-lines check and YAML
 round-tripping, using small fixture pages. Harness tests that need
-`dyalogscript` are skipped when it is not installed. The tool is then run
+Docker are skipped when Docker or the image is not available; they include
+checks of the jail (no network, no writes outside /work, files persist
+within a page and not across pages, no container left after a time-out). The tool is then run
 over the whole guide, and a sample of each verdict and split kind is
 checked by hand.
 

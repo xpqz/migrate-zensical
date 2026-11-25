@@ -62,8 +62,10 @@ substitutes `{{ name }}` with the scalar of that name in `[project.extra]` inste
 ## Reviewing code examples
 
 `tools/cutover/code-blocks.py` proposes splitting the session examples in the language reference
-guide's `apl` blocks into input (`apl`) and output (`text`), runs them under `dyalogscript`, and
-writes a review log (it never edits `zensical/`):
+guide's `apl` blocks into input (`apl`) and output (`text`), runs them in Docker (one locked-down
+container per page, no network; the image is built from `tools/cutover/docker/Dockerfile` when
+missing), and writes a review log (it never edits `zensical/`). Examples never run on the host;
+results are those of Linux Dyalog 21.0 in that image. Without Docker it only proposes splits.
 
 ```
 uv run python tools/cutover/code-blocks.py --log code-blocks.yml
