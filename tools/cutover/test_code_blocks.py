@@ -48,3 +48,35 @@ def test_find_blocks_accepts_longer_closing_fence(cb):
     (b,) = cb.find_blocks("a.md", md)
     assert b.body == ["1+1"]
     assert b.text == "~~~apl\n1+1\n~~~~~\n"
+
+
+def test_find_blocks_does_not_split_on_unicode_line_breaks(cb):
+    body = "a\u2028b\x85c\fd"
+    md = f"```apl\n{body}\n```\n"
+    (b,) = cb.find_blocks("a.md", md)
+    assert b.body == [body]
+    assert b.text == md
+    assert b.sha256 == hashlib.sha256(md.encode()).hexdigest()
+
+
+def test_find_blocks_keeps_crlf_verbatim(cb):
+    md = "```apl\r\n1+1\r\n```\r\n"
+    (b,) = cb.find_blocks("a.md", md)
+    assert b.text == md
+    assert b.sha256 == hashlib.sha256(md.encode()).hexdigest()
+
+
+def test_find_blocks_skips_apl_line_inside_longer_c_fence(cb):
+    assert cb.find_blocks("a.md", "````c\n```apl\nx\n```\n````\n") == []
+
+
+def test_find_blocks_closer_cannot_have_trailing_text(cb):
+    md = "```apl\n1+1\n``` x\n2\n```\n"
+    (b,) = cb.find_blocks("a.md", md)
+    assert b.body == ["1+1", "``` x", "2"]
+
+
+def test_find_blocks_tilde_line_does_not_close_backtick_fence(cb):
+    md = "```apl\n1+1\n~~~\n2\n```\n"
+    (b,) = cb.find_blocks("a.md", md)
+    assert b.body == ["1+1", "~~~", "2"]

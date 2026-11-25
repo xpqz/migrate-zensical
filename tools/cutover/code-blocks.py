@@ -24,7 +24,11 @@ class Block:
 
 def find_blocks(page: str, markdown: str) -> list[Block]:
     """Return every closed fence whose info string is exactly `apl`."""
-    lines = markdown.splitlines()
+    # Split on "\n" only: U+2028, \x85, \f and a lone "\r" stay inside lines,
+    # so `text` and `sha256` carry the file's exact characters.
+    lines = markdown.split("\n")
+    if lines and lines[-1] == "":
+        lines.pop()
     blocks: list[Block] = []
     i = 0
     while i < len(lines):
