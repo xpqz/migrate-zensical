@@ -2,7 +2,10 @@
 
 import hashlib
 import importlib.util
+import re
+import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -290,3 +293,109 @@ def test_split_output_before_input(cb):
     assert cb.split_block(b, c) == (
         "```text\n1 2\n```\n\n```apl\nx\n```\n\n```text\n3\n```\n"
     )
+
+
+# --- Running examples under dyalogscript ---------------------------------
+
+
+def _dyalogscript():
+    path = Path(__file__).with_name("code-blocks.py")
+    spec = importlib.util.spec_from_file_location("code_blocks_probe", path)
+    assert spec is not None and spec.loader is not None
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.find_dyalogscript()
+
+
+needs_dyalog = pytest.mark.skipif(
+    _dyalogscript() is None, reason="dyalogscript is not installed"
+)
+
+
+def _run(cb, *blocks, timeout=60.0):
+    """Run (style, lines) blocks, numbered from 1."""
+    rb = [cb.RunBlock(i, st, ln) for i, (st, ln) in enumerate(blocks, 1)]
+    return cb.run_page(rb, cb.find_dyalogscript(), timeout=timeout)
+
+
+def _out(results, block=1):
+    return [r.output for r in results[block]]
+
+
+@needs_dyalog
+def test_run_page_displays_non_shy_result_and_suppresses_shy(cb):
+    res, timed_out = _run(cb, (None, ["2+3", "x←5", "x"]))
+    assert timed_out is False
+    assert _out(res) == [["5"], [], ["5"]]
+    assert [r.error for r in res[1]] == [False] * 3
+    assert [r.skipped for r in res[1]] == [None] * 3
+
+
+@needs_dyalog
+def test_run_page_state_carries_across_blocks(cb):
+    res, _ = _run(cb, (None, ["x←7"]), (None, ["x+1"]))
+    assert _out(res, 2) == [["8"]]
+
+
+@needs_dyalog
+def test_run_page_error_display(cb):
+    res, _ = _run(
+        cb, (None, ["1÷0", "⎕←3 ⋄ 1÷0", "foo 1", "1+(2 3+4 5 6)"]))
+    r = res[1]
+    assert r[0].output == ["DOMAIN ERROR: Divide by zero", "      1÷0", "       ∧"]
+    assert r[0].error is True
+    assert r[1].output == [
+        "3",
+        "DOMAIN ERROR: Divide by zero",
+        "      ⎕←3 ⋄ 1÷0",
+        "             ∧",
+    ]
+    assert r[2].output == ["VALUE ERROR: Undefined name: foo", "      foo 1", "      ∧"]
+    assert r[3].output[1:] == ["      1+(2 3+4 5 6)", "            ∧"]
+
+
+@needs_dyalog
+def test_run_page_box_max(cb):
+    res, _ = _run(cb, ("max", ["2 2⍴1 'ab' (1 2) 3"]), ("off", ["2 2⍴1 'ab' (1 2) 3"]))
+    assert _out(res)[0][0] == "┌→───────────┐"
+    assert [ln.rstrip() for ln in _out(res, 2)[0]] == ["   1  ab", " 1 2   3"]
+
+
+@needs_dyalog
+def test_run_page_user_command(cb):
+    res, _ = _run(cb, (None, ["]box on", "1+1"]))
+    assert res[1][0].output and res[1][0].output != [""]
+    assert res[1][0].error is False
+
+
+@needs_dyalog
+def test_run_page_skips_off(cb):
+    res, _ = _run(cb, (None, ["⎕OFF", ")off", "1+1"]))
+    assert [(r.skipped, r.output) for r in res[1]] == [
+        ("system-command", []),
+        ("system-command", []),
+        (None, ["2"]),
+    ]
+
+
+@needs_dyalog
+def test_run_page_input_does_not_hang(cb):
+    start = time.monotonic()
+    _run(cb, (None, ["⍞"]), timeout=10)
+    assert time.monotonic() - start < 15
+
+
+@needs_dyalog
+def test_run_page_timeout_kills_process(cb):
+    res, timed_out = _run(cb, (None, ["1+1", "⎕DL 1000"]), timeout=5)
+    assert timed_out is True
+    assert _out(res) == [["2"]]  # the finished line is kept
+    left = subprocess.run(
+        ["pgrep", "-f", "code-blocks-harness"], capture_output=True, text=True
+    )
+    assert left.stdout == ""
+
+
+@needs_dyalog
+def test_dyalog_version(cb):
+    assert re.fullmatch(r"\d+\.\d+\.\d+(\.\d+)?", cb.dyalog_version(cb.find_dyalogscript()))

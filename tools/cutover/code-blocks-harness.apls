@@ -1,0 +1,96 @@
+#!/usr/bin/env dyalogscript
+⍝ Harness for code-blocks.py: runs request lines the way a session would display them.
+⍝ Usage: dyalogscript DYALOG_INITSESSION=1 code-blocks-harness.apls request.json
+⍝ Protocol (stdout, lines end in CR): "⍝CB-BEGIN <id> <index>" before each input line, then
+⍝ "⍝CB-END" (plain), "⍝CB-END ERROR" or "⍝CB-END SKIP" after it.
+⍝ The harness code is the ⍝| lines below, fixed into ⎕SE.CB (out of reach of user code);
+⍝ user lines execute in #.
+args←2⎕NQ'.' 'GetCommandLineArgs'
+src←⊃⎕NGET(⊃⌽args/⍨'.apls'∘≡¨¯5↑¨args)1
+{}⎕SE.⎕FIX 2↓¨src/⍨'⍝|'∘≡¨2↑¨src
+⎕SE.CB.Main⊃⌽2⎕NQ'.' 'GetCommandLineArgs'
+⎕OFF
+⍝|:Namespace CB
+⍝|    ⎕IO←1 ⋄ ⎕ML←1
+⍝|
+⍝|    ∇ Main file;req;blk;i;lines
+⍝|      req←⎕JSON⊃⎕NGET file
+⍝|      #.⎕IO←1 ⋄ #.⎕ML←1 ⋄ ⎕PW←req.pw
+⍝|      :For blk :In ,req.blocks
+⍝|          :If ⎕NULL≢blk.style
+⍝|              Style blk.style
+⍝|          :EndIf
+⍝|          lines←,¨⊆blk.lines
+⍝|          :For i :In ⍳≢lines
+⍝|              ⎕←'⍝CB-BEGIN ',(⍕blk.id),' ',⍕i-1
+⍝|              ⎕←'⍝CB-END',(1+Line i⊃lines)⊃'' ' ERROR' ' SKIP'
+⍝|          :EndFor
+⍝|      :EndFor
+⍝|    ∇
+⍝|
+⍝|    ∇ Style s;_
+⍝|      :Trap 0
+⍝|          :Select s
+⍝|          :Case 'max' ⋄ _←⎕SE.UCMD'box on -style=max'
+⍝|          :Case 'min' ⋄ _←⎕SE.UCMD'box on -style=min'
+⍝|          :Case 'off' ⋄ _←⎕SE.UCMD'box off'
+⍝|          :EndSelect
+⍝|      :EndTrap
+⍝|    ∇
+⍝|
+⍝|    ⍝ Display a value as the session would. ⎕← inside a function bypasses the ]box output
+⍝|    ⍝ filter (it only sees top-level output), so with boxing on we ask the filter for the
+⍝|    ⍝ formatted lines and print those.
+⍝|    ∇ Show v;out
+⍝|      ⎕PP←#.⎕PP
+⍝|      :If 2=⌊⎕NC'⎕SE.Dyalog.Out.B.state'
+⍝|      :AndIf 'on'≡⎕SE.Dyalog.Out.B.state
+⍝|          ⎕SE.Dyalog.Out.B.view←⎕SE.Dyalog.Out.B.style ⍝ simulation mode formats per view, event 3 = suspended + return the lines
+⍝|          out←v ⎕SE.Dyalog.Out.Filter 3
+⍝|          {⎕←⍵}¨out
+⍝|      :Else
+⍝|          ⎕←v
+⍝|      :EndIf
+⍝|    ∇
+⍝|
+⍝|    ⍝ Run one input line; result 0 = ran, 1 = error displayed, 2 = skipped.
+⍝|    ∇ state←Line text;t;res
+⍝|      cur←text ⋄ state←0
+⍝|      t←(∨\text≠' ')/text
+⍝|      :If 0=≢t
+⍝|          :Return
+⍝|      :EndIf
+⍝|      :If (')'=⊃t)∨∨/'⎕OFF'⍷text
+⍝|          state←2 ⋄ :Return
+⍝|      :EndIf
+⍝|      :Trap 0
+⍝|          :If ']'=⊃t
+⍝|              res←⎕SE.UCMD 1↓t
+⍝|              :If 0<≢res
+⍝|                  Show res
+⍝|              :EndIf
+⍝|          :Else
+⍝|              Show #.⍎'1(85⌶)⎕SE.CB.cur'
+⍝|          :EndIf
+⍝|      :Else
+⍝|          :If 85≠⎕DMX.EN
+⍝|              state←1
+⍝|              #.⍎'{⎕←⍵}¨⎕SE.CB.Err ⎕SE.CB.cur'
+⍝|          :EndIf
+⍝|      :EndTrap
+⍝|    ∇
+⍝|
+⍝|    ⍝ Session display of the current error: message, the line, and a caret under the position.
+⍝|    ∇ r←Err line;dm;c;p
+⍝|      r←,⊂⎕DMX.EM,(0<≢⎕DMX.Message)/': ',⎕DMX.Message
+⍝|      dm←⎕DMX.DM
+⍝|      :If 3=≢dm
+⍝|          p←(≢2⊃dm)-≢line
+⍝|          c←(3⊃dm)⍳'∧'
+⍝|          :If (c≤≢3⊃dm)∧c>p
+⍝|              r,←(⊂'      ',line),⊂(5+c-p)⍴' '
+⍝|              r[3]←⊂(⊃r[3]),'∧'
+⍝|          :EndIf
+⍝|      :EndIf
+⍝|    ∇
+⍝|:EndNamespace

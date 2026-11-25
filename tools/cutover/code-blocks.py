@@ -6,9 +6,16 @@ The tool only reads the corpus; it never writes to it.
 """
 
 import hashlib
+import json
+import os
 import re
+import shutil
+import signal
+import subprocess
+import tempfile
 from collections import Counter
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Literal
 
 OPEN_RE = re.compile(r"^(\s*)(`{3,}|~{3,})(.*)$")
@@ -258,3 +265,122 @@ def check_no_lost_lines(original: Block, proposed: str) -> None:
             raise SplitError(
                 f"{original.page}:{original.line}: {side} lines differ: {dict(diff)}"
             )
+
+
+# --- Running examples under dyalogscript ---------------------------------
+
+HARNESS = Path(__file__).with_name("code-blocks-harness.apls")
+SENTINEL_RE = re.compile(r"⍝CB-(?:BEGIN (\d+) (\d+)\n|END( ERROR| SKIP)?\n)")
+
+
+@dataclass
+class LineResult:
+    output: list[str]
+    error: bool
+    skipped: str | None
+
+
+@dataclass
+class RunBlock:
+    id: int
+    style: str | None  # "max" | "min" | "off" | None (leave the box setting)
+    lines: list[str]
+
+
+def find_dyalogscript() -> str | None:
+    """`$DYALOGSCRIPT`, else `dyalogscript` on PATH, else None."""
+    return os.environ.get("DYALOGSCRIPT") or shutil.which("dyalogscript")
+
+
+def _launch(argv: list[str], timeout: float) -> tuple[str, bool]:
+    """Run argv in its own process group; kill the group on timeout and on exit.
+
+    Returns (stdout with CR/CRLF turned into LF, timed_out).
+    """
+    proc = subprocess.Popen(
+        argv,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    timed_out = False
+    try:
+        out, _ = proc.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        timed_out = True
+        _kill_group(proc.pid)
+        out, _ = proc.communicate()
+    finally:
+        _kill_group(proc.pid)  # an interpreter may outlive the launcher
+    text = out.decode("utf-8", errors="replace")
+    return text.replace("\r\n", "\n").replace("\r", "\n"), timed_out
+
+
+def _kill_group(pgid: int) -> None:
+    try:
+        os.killpg(pgid, signal.SIGKILL)
+    except (ProcessLookupError, PermissionError):
+        pass
+
+
+def dyalog_version(dyalogscript: str) -> str:
+    """The interpreter's version field, e.g. "21.0.54424.0"."""
+    with tempfile.TemporaryDirectory() as tmp:
+        script = Path(tmp, "version.apls")
+        script.write_text("⎕←2⊃#⎕WG'APLVersion'\n⎕OFF\n", encoding="utf-8")
+        out, _ = _launch([dyalogscript, str(script)], timeout=30)
+    return out.strip()
+
+
+def run_page(
+    blocks: list[RunBlock], dyalogscript: str, timeout: float = 60.0
+) -> tuple[dict[int, list[LineResult]], bool]:
+    """Run each block's input lines in one fresh interpreter.
+
+    Results are keyed by block id; blocks not reached are absent. The flag is
+    True if the run timed out or the interpreter stopped before the last line.
+    """
+    request = {
+        "pw": 80,
+        "blocks": [
+            {"id": b.id, "style": b.style, "lines": b.lines} for b in blocks
+        ],
+    }
+    with tempfile.TemporaryDirectory() as tmp:
+        req = Path(tmp, "request.json")
+        req.write_text(json.dumps(request, ensure_ascii=False), encoding="utf-8")
+        out, timed_out = _launch(
+            [dyalogscript, "DYALOG_INITSESSION=1", str(HARNESS), str(req)], timeout
+        )
+    results, done = _parse_output(out)
+    expected = sum(len(b.lines) for b in blocks)
+    return results, timed_out or done < expected
+
+
+def _parse_output(text: str) -> tuple[dict[int, list[LineResult]], int]:
+    """Parse harness sentinels. Returns (results, number of finished lines)."""
+    results: dict[int, list[LineResult]] = {}
+    current: int | None = None
+    start = 0
+    done = 0
+    for m in SENTINEL_RE.finditer(text):
+        if m.group(1) is not None:
+            current, start = int(m.group(1)), m.end()
+            continue
+        if current is None:
+            continue
+        lines = text[start : m.start()].split("\n")
+        if lines and lines[-1] == "":
+            lines.pop()
+        flag = m.group(3)
+        results.setdefault(current, []).append(
+            LineResult(
+                output=lines,
+                error=flag == " ERROR",
+                skipped="system-command" if flag == " SKIP" else None,
+            )
+        )
+        current = None
+        done += 1
+    return results, done
