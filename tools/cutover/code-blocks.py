@@ -346,6 +346,30 @@ def dyalog_version(dyalogscript: str) -> str:
     return out.strip()
 
 
+SANDBOX_EXEC = "/usr/bin/sandbox-exec"
+# Defence in depth on macOS, behind the side-effect allowlist: the interpreter
+# may write only in the run's temporary directory and to /dev/null and the
+# terminal, and has no network.
+_SANDBOX_PROFILE = """\
+(version 1)
+(allow default)
+(deny network*)
+(deny file-write*)
+(allow file-write*
+    (subpath (param "RUN_DIR"))
+    (literal "/dev/null")
+    (literal "/dev/tty")
+    (literal "/dev/dtracehelper"))
+"""
+
+
+def _sandboxed(argv: list[str], run_dir: str) -> list[str]:
+    """argv under sandbox-exec, if this system has it."""
+    if not os.path.exists(SANDBOX_EXEC):
+        return argv
+    return [SANDBOX_EXEC, "-D", f"RUN_DIR={run_dir}", "-p", _SANDBOX_PROFILE, *argv]
+
+
 def run_page(
     blocks: list[RunBlock], dyalogscript: str, timeout: float = 60.0
 ) -> tuple[dict[int, list[LineResult]], bool]:
@@ -363,10 +387,12 @@ def run_page(
         ],
     }
     with tempfile.TemporaryDirectory() as tmp:
+        tmp = os.path.realpath(tmp)  # the sandbox matches resolved paths
         req = Path(tmp, "request.json")
         req.write_text(json.dumps(request, ensure_ascii=False), encoding="utf-8")
+        argv = [dyalogscript, "DYALOG_INITSESSION=1", str(HARNESS), str(req)]
         out, timed_out = _launch(
-            [dyalogscript, "DYALOG_INITSESSION=1", str(HARNESS), str(req)],
+            _sandboxed(argv, tmp),
             timeout,
             cwd=tmp,  # examples that write files must not litter the caller's cwd
         )
@@ -419,23 +445,43 @@ VOLATILE = frozenset(
     }
 )
 
-# Facilities with side effects on files, processes, the workspace or the GUI.
-SIDE_EFFECTS = frozenset(
+# System names known to be free of side effects outside the interpreter's
+# own workspace (Dyalog 21.0). Any other ⎕ name is a side effect, so a name
+# this list does not know (a new system function, a typo, a Classic ⎕U name)
+# is never run. Left out on purpose: anything that writes files or devices
+# (⎕N*, ⎕F* writers, ⎕MKDIR, ⎕CSV, ⎕NINFO, which can set properties, ⎕ARBOUT,
+# ⎕ARBIN, ⎕MAP, ⎕XT), runs processes or native code (⎕SH ⎕CMD ⎕SHELL ⎕NA),
+# talks to shared variables (⎕SV*), .NET or COM (⎕USING ⎕NEW ⎕EXCEPTION ⎕WX),
+# the GUI or the session (⎕W* ⎕NQ ⎕DQ ⎕SE ⎕ED ⎕SM ⎕SR ⎕PFKEY ⎕NXLATE), clears,
+# loads, saves or fixes code (⎕CLEAR ⎕LOAD ⎕SAVE ⎕CY ⎕FIX ⎕OFF ⎕EXPORT), and
+# ⎕RSI ⎕NSI ⎕XSI ⎕STACK, which hand user code a way back into the harness in
+# ⎕SE. Read-only file functions (⎕NGET ⎕NEXISTS ⎕FLIB) are allowed.
+# Volatile and environment names stay here: those blocks run, and judging
+# then reports them as not run.
+SAFE_QUADS = frozenset(
     "⎕" + n
     for n in (
-        "SH CMD SHELL NA MKDIR NCREATE NERASE NDELETE NMOVE NCOPY NPUT NAPPEND "
-        "NREPLACE NRENAME NRESIZE NTIE NSHARE NLOCK FCREATE FTIE FSTIE FERASE "
-        "FAPPEND FREPLACE FRENAME FRESIZE FDROP FHOLD FUNTIE NUNTIE FCOPY FPACK "
-        "FSTAC FCHK SAVE LOAD CY FIX WC WS NQ DQ TGET TPUT CSV MAP SE ED EXPORT NEW "
-        "FIO HTTPCMD"
+        "A AI AN AT ATX AV AVU BASE C CLASS CR CS CT D DCT DF DIV DL DM DMX DR "
+        "DT EM EN EX FAVAIL FLIB FMT FNAMES FNUMS FR FX INSTANCES IO JSON KL LC "
+        "LOCK LX ML MONITOR NC NEXISTS NGET NL NNAMES NNUMS NPARTS NR NS NULL OPT "
+        "OR PATH PP PROFILE PW R REFS RL RTL S SD SHADOW SI SIGNAL SIZE SRC STATE "
+        "STOP TALLOC TC TCNUMS THIS TID TNAME TNUMS TPOOL TRACE TRAP TREQ TS "
+        "TSYNC UCS VFI VGET VR VSET WA WSID XML"
     ).split()
 )
-# I-beams known to be pure (no files, processes or workspace changes).
+# I-beams known to be pure (no files, processes or workspace changes). 85⌶
+# (execute) is handled like ⍎.
 PURE_IBEAMS = frozenset({8, 181, 201, 219, 220, 1200, 1500, 5581, 7162, 16808})
 _IBEAM_NUM_RE = re.compile(r"(?<![\w∆⍙_.¯])(\d+)\s*$")
 _SAFE_COMMANDS = frozenset({"box", "boxing", "display", "disp", "rows"})
 
 _QUAD_NAME_RE = re.compile(r"⎕[A-Za-z0-9_]*")
+_DOTNET_RE = re.compile(r"(?<![\w∆⍙_.])(System|Microsoft)\.")
+_NAME_CHAR_RE = re.compile(r"[A-Za-z_∆⍙⍺⍵⎕#]")
+# What may follow the literal argument of ⍎, ⎕FX or 85⌶: the end of the
+# statement or a closing bracket. Anything else (`,`, a name, `¨`) means the
+# argument is computed.
+_ARG_END = frozenset(")]};⋄")
 
 
 def _code_only(line: str) -> str:
@@ -469,6 +515,89 @@ def _strip_comment(line: str) -> str:
     return line
 
 
+def _string_contents(text: str) -> list[str]:
+    """The contents of each '…' string in a comment-free line, '' undoubled.
+
+    An unterminated string runs to the end of the line.
+    """
+    out: list[str] = []
+    i = 0
+    while i < len(text):
+        if text[i] != "'":
+            i += 1
+            continue
+        i += 1
+        buf: list[str] = []
+        while i < len(text):
+            if text[i] == "'":
+                if text[i + 1 : i + 2] == "'":
+                    buf.append("'")
+                    i += 2
+                    continue
+                break
+            buf.append(text[i])
+            i += 1
+        out.append("".join(buf))
+        i += 1
+    return out
+
+
+def _literal_end(text: str, i: int) -> int | None:
+    """Index after the '…' string starting at text[i], or None if none does."""
+    if text[i : i + 1] != "'":
+        return None
+    i += 1
+    while i < len(text):
+        if text[i] == "'":
+            if text[i + 1 : i + 2] == "'":
+                i += 2
+                continue
+            return i + 1
+        i += 1
+    return None
+
+
+def _literal_arg(text: str, i: int, strand: bool) -> bool:
+    """True if the argument starting at text[i] is a literal string.
+
+    With `strand`, a strand of literal strings ('a' 'b') also counts. The
+    literal must be followed by the end of the statement or a closing bracket.
+    """
+    n = 0
+    while True:
+        while i < len(text) and text[i] == " ":
+            i += 1
+        end = _literal_end(text, i)
+        if end is None:
+            break
+        n += 1
+        i = end
+        if not strand:
+            break
+    while i < len(text) and text[i] == " ":
+        i += 1
+    return n > 0 and (i == len(text) or text[i] in _ARG_END)
+
+
+def _executes_computed(text: str, code: str) -> bool:
+    """True if ⍎, ⎕FX or 85⌶ in code (outside strings) gets a computed argument."""
+    for m in re.finditer("⍎", code):
+        if not _literal_arg(text, m.end(), strand=False):
+            return True
+    for m in re.finditer(r"⎕FX(?![A-Za-z0-9_])", code, re.I):
+        if not _literal_arg(text, m.end(), strand=True):
+            return True
+    for m in re.finditer("⌶", code):
+        num = _IBEAM_NUM_RE.search(code[: m.start()])
+        if num and int(num.group(1)) == 85:
+            j = m.end()
+            if code[j : j + 1] == ")":
+                j += 1
+            if not _literal_arg(text, j, strand=False):
+                return True
+    return False
+
+
 def _is_volatile(line: str) -> bool:
     code = _code_only(line)
     # Non-quad entries (`?`) match anywhere in code; ⎕ names match whole
@@ -500,35 +629,54 @@ def _statements(text: str) -> list[str]:
     return parts
 
 
-def has_side_effect(line: str) -> bool:
+def has_side_effect(line: str, nested: bool = False) -> bool:
     """True if an input line may have a side effect.
 
-    Matching is deliberately string-blind in the cautious direction: only the
-    comment is removed, so a facility named inside a string (for `⍎`, `⎕FX`,
-    `85⌶`) counts. A string that merely mentions one is an accepted false
-    positive.
+    Allowlist-based: every ⎕ name must be in SAFE_QUADS, every I-beam in
+    PURE_IBEAMS (or 85⌶ with a literal argument), ⍎ and ⎕FX may only take
+    literal strings, and .NET names (`System.…`, `Microsoft.…`) are refused.
+    Every string on the line is checked by the same rules as if it were code
+    (it may be executed by ⍎, ⎕FX, 85⌶ or a ⎕TRAP action), so a string that
+    merely mentions a facility is an accepted false positive. `nested` marks
+    such string content: there `]` is not a user command and `)` starts a
+    system command only when a name follows.
     """
     text = _strip_comment(line)
-    if text.lstrip().startswith("]"):
+    code = _code_only(text)
+    if not nested and text.lstrip().startswith("]"):
         parts = text.lstrip()[1:].split()
         if not parts or parts[0].lower() not in _SAFE_COMMANDS:
             return True
         # An allowed command still evaluates its argument: check the rest.
-    if any(st.lstrip().startswith(")") for st in _statements(text)):
-        return True
-    names = {m.upper() for m in _QUAD_NAME_RE.findall(text)}
-    if names & SIDE_EFFECTS:
-        return True
-    # A string that starts a system command, or a name built at run time.
-    if re.search(r"'\s*\)[A-Za-z]", text):
-        return True
-    if "⍎" in text and names & {"⎕UCS", "⎕AV"}:
-        return True
-    for m in re.finditer("⌶", text):
-        num = _IBEAM_NUM_RE.search(text[: m.start()])
-        if not num or int(num.group(1)) not in PURE_IBEAMS:
+        cmd = text.lstrip()[1:].lstrip()[len(parts[0]) :]
+        return has_side_effect(cmd)
+    for st in _statements(text):
+        s = st.lstrip()
+        if s.startswith(")") and (not nested or re.match(r"\)\s*[A-Za-z]", s)):
             return True
-    return False
+    for m in _QUAD_NAME_RE.finditer(code):
+        name = m.group().upper()
+        if name == "⎕":
+            # Bare ⎕ is evaluated input unless it is the ⎕← output.
+            if not re.match(r"\s*←", code[m.end() :]):
+                return True
+        elif name not in SAFE_QUADS:
+            return True
+    if _DOTNET_RE.search(code):
+        return True
+    for m in re.finditer("⌶", code):
+        num = _IBEAM_NUM_RE.search(code[: m.start()])
+        if not num or int(num.group(1)) not in PURE_IBEAMS | {85}:
+            return True
+    if _executes_computed(text, code):
+        return True
+    # A ⎕TRAP 'E' action is executed: it must not be built at run time.
+    for st in _statements(code):
+        if re.search("⎕TRAP", st, re.I):
+            rest = re.sub("⎕TRAP", "", st, flags=re.I)
+            if _NAME_CHAR_RE.search(rest):
+                return True
+    return any(has_side_effect(s, nested=True) for s in _string_contents(text))
 
 
 def expected_outputs(block: Block, cls: Classification) -> list[list[str]]:
@@ -768,6 +916,7 @@ def carry_decisions(old: list[dict], new: list[dict]) -> list[dict]:
 # --- Command line -----------------------------------------------------------
 
 _BOX_RE = re.compile(r"\]box(ing)?\b", re.I)
+_USING_RE = re.compile(r"⎕USING(?![A-Za-z0-9_])", re.I)
 
 
 def _process_page(
@@ -784,13 +933,18 @@ def _process_page(
     sent: dict[int, int] = {}  # block index -> number of lines sent
     if dyalogscript:
         boxed = False
+        dotnet = False
         to_run: list[RunBlock] = []
         for i, b in enumerate(blocks):
             cls = classes.get(i)
-            if cls is None or not cls.runnable:
+            if cls is None or cls.kind == "listing":
                 continue
             lines = _input_texts(b, cls)
-            if any(has_side_effect(t) for t in lines):
+            # .NET reaches anything; after ⎕USING on a page nothing more runs.
+            dotnet = dotnet or any(_USING_RE.search(_strip_comment(t)) for t in lines)
+            if not cls.runnable:
+                continue
+            if dotnet or any(has_side_effect(t) for t in lines):
                 side.add(i)
                 continue
             boxed = boxed or any(_BOX_RE.match(t) for t in lines)

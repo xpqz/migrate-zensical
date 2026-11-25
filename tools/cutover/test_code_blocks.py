@@ -965,8 +965,8 @@ def test_has_side_effect(cb):
         "⍎'⎕NDELETE ''x'''", "⍎'⎕SH ''rm x'''", "85⌶'⎕SH ''x'''",
         "⎕FX 'f' '⎕NDELETE ''x'''", "'⎕NDELETE'", "⎕SE.UCMD 'x'",
         "⎕se.SALT.Load 'x'", "⎕ED 'x'", "⎕EXPORT 'x'", "⎕NEW ⍬", "⎕FIO.x",
-        "⎕HTTPCMD 'x'", "85⌶'1'", "(85⌶)'1'", "⌶", "x⌶1", "1 ⋄ )load x",
-        ")load x", "1 ⋄ 2 ⋄  )off", "2⌶1", "8⌶1 ⋄ 85⌶'1'",
+        "⎕HTTPCMD 'x'", "⌶", "x⌶1", "1 ⋄ )load x",
+        ")load x", "1 ⋄ 2 ⋄  )off", "2⌶1", "8⌶1 ⋄ 85⌶x",
         "]display ⎕SH 'rm x'", "]rows ⎕NDELETE 'x'", "]box on ⍎')load x'",
         "]disp ⍎'⎕NDELETE ''x'''", "⍎'⎕',⎕UCS 83 72", "⍎⎕AV[5]", "¯8⌶1",
         "(¯8 ⌶)1",
@@ -974,11 +974,114 @@ def test_has_side_effect(cb):
         assert cb.has_side_effect(line), line
     for line in [
         "]box on", "]Boxing", "]DISPLAY ⍳3", "]disp 1", "]rows 5",
-        "1 ⍝ ⎕NDELETE ⎕SH", "⎕NDELETEX", "⎕SEX", "1+1", "'a)b'", "1 ⋄ 2)",
+        "1 ⍝ ⎕NDELETE ⎕SH", "1+1", "'a)b'", "1 ⋄ 2)",
         "8⌶1", "(181⌶)1", "(201 ⌶)1", "219⌶4", "1200⌶1", "16808⌶1",
         "(7162 ⌶)'x'", "]box on", "]display 2 2⍴⍳4", "⎕UCS 83 72",
     ]:
         assert not cb.has_side_effect(line), line
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        # Evidence from the full run: these ran or were sent.
+        "⎕XT'V'", "'V' ⎕XT 'file'", "9 ⎕ARBOUT 49 50 51", "⎕CLEAR",
+        "'DDE:X'⎕SVO'X'", "⎕SVC 'X'", "⎕SVS 'X'", "⎕SVR 'X'", "⎕SVQ 'X'",
+        "⎕USING←'System.IO' ⋄ File.Delete⊂'x'",
+        "⍎'⎕','SH ''ls'''",
+        # Allowlist: unknown or writing system names.
+        "⎕NDELETEX", "⎕SEX", "⎕U234E 'x'", "⎕NINFO 'x'", "⎕OFF", "⎕WG 'x'",
+        "⎕TKILL 0", "⎕TGET 1", "⎕PFKEY 1", "⎕NXLATE 0", "⎕SM",
+        # Refs or names that lead back into the harness in ⎕SE.
+        "⎕RSI", "⊃⎕NSI", "⊃⎕XSI", "⎕STACK",
+        # Evaluated input.
+        "x←⎕", "⎕", "1+⎕",
+        # .NET names.
+        "System.IO.File.Delete⊂'x'", "Microsoft.Win32.Registry", "x←'System.IO'",
+        # Execute, ⎕FX and 85⌶ with an argument that is not a literal.
+        "⍎x", "⍎¨'a' 'b'", "⍎&'1'", "⍎'1',x", "⍎'1' x", "{⍎⍵}'1'",
+        "⎕FX f", "⎕FX ↑'a' 'b'", "⎕FX¨('a' 'b')", "⎕FX 'f' x",
+        "85⌶x", "1(85⌶)x", "(85⌶)'1',x",
+        # A literal is checked by the same rules.
+        "⍎'⍎x'", "⎕FX 'r←f' 'r←⍎⍵'", "⍎'⎕XT''V'''", "1(85⌶)'⎕CLEAR'",
+        # ⎕TRAP actions built at run time.
+        "⎕TRAP←0 'E' x", "⎕TRAP←0 'E' (⎕UCS 41)", "⎕TRAP←0 'E' '⎕SH''x'''",
+    ],
+)
+def test_has_side_effect_allowlist_flags(cb, line):
+    assert cb.has_side_effect(line), line
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "⎕IO←0", "⎕io", "⎕←1", "⎕ ← 'a'", "x←⎕←2", "⎕NGET 'x'", "⎕NEXISTS 'x'",
+        "⎕SIGNAL 11", "⎕WSID", "⎕FLIB 'x'", "⎕JSON '[1]'", "⎕DT 'Z'", "⎕AN",
+        "⍎'2+2'", "⍎ '1+1'", "A←⍎''", "(⍎'1+2')+3", "'#' ⍎ '⎕PP ⎕CT ⎕RL'",
+        "4=⍎'1+1 ⋄ 2+2'", "⍎'A←2|¯1↑⎕TS ⋄ →0⍴⍨A ⋄ A'",
+        "⎕FX'r←foo' 'r←10'", "F←⎕OR ⎕FX'R←FOO' 'R←10'", "1(85⌶)'2+2'",
+        "85⌶'1'", "(85⌶)'1'", "⎕TRAP⍴⍨←0", "≡⎕TRAP←0'C' '''Eh?'''",
+        "'it''s'", "'a',⍕1",
+    ],
+)
+def test_has_side_effect_allowlist_passes(cb, line):
+    assert not cb.has_side_effect(line), line
+
+
+def test_safe_quads_exclude_writers_and_harness_refs(cb):
+    for name in (
+        "⎕XT", "⎕ARBOUT", "⎕ARBIN", "⎕CLEAR", "⎕SVO", "⎕USING", "⎕SE", "⎕NA",
+        "⎕NINFO", "⎕CSV", "⎕RSI", "⎕NSI", "⎕XSI", "⎕STACK", "⎕EXCEPTION",
+        "⎕OFF", "⎕SAVE", "⎕LOAD", "⎕FIX", "⎕CY", "⎕WX",
+    ):
+        assert name not in cb.SAFE_QUADS, name
+    # Side effect wins over volatile and environment: a name may be in both.
+    for name in ("⎕TS", "⎕AI", "⎕DL", "⎕WSID", "⎕AN", "⎕FLIB"):
+        assert name in cb.SAFE_QUADS, name
+
+
+def test_main_using_taints_the_block_and_later_blocks(cb, tmp_path, monkeypatch):
+    md = (
+        "```apl\n      1+1\n2\n```\n\n"
+        "```apl\n      ⎕USING←'System.IO'\n```\n\n"
+        "```apl\n      File.Delete⊂'x'\n```\n\n"
+        "```apl\n      2+2\n4\n```\n"
+    )
+    _docs(tmp_path, {"a.md": md})
+    calls = _fake_run(
+        cb, monkeypatch, lambda bs: {b.id: [_lres(cb, ["2"])] for b in bs}
+    )
+    _, log = _main(cb, tmp_path)
+    assert [[b.id for b in c] for c in calls] == [[0]]
+    _, entries = cb.read_log(log)
+    assert [e["reason"] for e in entries[1:]] == ["side-effect"] * 3
+
+
+def test_main_evidence_forms_are_never_sent(cb, tmp_path, monkeypatch):
+    lines = [
+        "⎕XT'V'", "9 ⎕ARBOUT 49 50 51", "⎕CLEAR", "'DDE:X'⎕SVO'X'",
+        "⍎'⎕','SH ''ls'''", "System.IO.File.Delete⊂'x'",
+    ]
+    md = "".join(f"```apl\n      {ln}\n```\n\n" for ln in lines)
+    _docs(tmp_path, {"a.md": md + "```apl\n      2+2\n4\n```\n"})
+    calls = _fake_run(
+        cb, monkeypatch, lambda bs: {b.id: [_lres(cb, ["4"])] for b in bs}
+    )
+    _main(cb, tmp_path)
+    assert [[b.lines for b in c] for c in calls] == [[["2+2"]]]
+
+
+@needs_dyalog
+@pytest.mark.skipif(
+    not Path("/usr/bin/sandbox-exec").exists(), reason="no macOS sandbox-exec"
+)
+def test_run_page_sandbox_blocks_writes_outside_the_run_directory(cb, tmp_path):
+    # run_page does not filter side effects; the sandbox must stop this write.
+    target = tmp_path / "escaped.txt"
+    res, _ = _run(cb, (None, [f"(⊂'x') ⎕NPUT '{target}'", "1+1"]))
+    assert not target.exists()
+    assert res[1][0].error is True
+    assert _out(res)[1] == ["2"]
 
 
 def test_judge_value_error_suspect_only_if_name_not_used_elsewhere(cb):
@@ -1005,7 +1108,7 @@ def test_main_side_effect_forms_are_never_sent(cb, tmp_path, monkeypatch):
         "      ⍎'⎕SH ''rm x'''",
         "      1 ⋄ )load x",
         "      ⎕SE.UCMD 'x'",
-        "      85⌶'x'",
+        "      85⌶x",  # a literal argument would be checked and allowed
         "      2+2\n4",
     ]
     md = "".join(f"```apl\n{b}\n```\n\n" for b in blocks)
