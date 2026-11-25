@@ -866,3 +866,10 @@ def test_main_end_to_end_match_and_differs(cb, tmp_path):
     assert [e["verdict"] for e in entries] == ["match", "differs"]
     assert [e["split"] for e in entries] == ["confirmed", "unambiguous"]
     assert entries[1]["actual"] == "      2+2\n4\n"
+
+
+@needs_dyalog
+def test_run_page_does_not_write_into_the_callers_cwd(cb, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _run(cb, (None, ["(⊂'x') ⎕NPUT 'litter.txt'"]))
+    assert list(tmp_path.iterdir()) == []

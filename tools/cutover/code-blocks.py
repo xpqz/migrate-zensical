@@ -302,7 +302,9 @@ def find_dyalogscript() -> str | None:
     return os.environ.get("DYALOGSCRIPT") or shutil.which("dyalogscript")
 
 
-def _launch(argv: list[str], timeout: float) -> tuple[str, bool]:
+def _launch(
+    argv: list[str], timeout: float, cwd: str | None = None
+) -> tuple[str, bool]:
     """Run argv in its own process group; kill the group on timeout and on exit.
 
     Returns (stdout with CR/CRLF turned into LF, timed_out).
@@ -313,6 +315,7 @@ def _launch(argv: list[str], timeout: float) -> tuple[str, bool]:
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
         start_new_session=True,
+        cwd=cwd,
     )
     timed_out = False
     try:
@@ -363,7 +366,9 @@ def run_page(
         req = Path(tmp, "request.json")
         req.write_text(json.dumps(request, ensure_ascii=False), encoding="utf-8")
         out, timed_out = _launch(
-            [dyalogscript, "DYALOG_INITSESSION=1", str(HARNESS), str(req)], timeout
+            [dyalogscript, "DYALOG_INITSESSION=1", str(HARNESS), str(req)],
+            timeout,
+            cwd=tmp,  # examples that write files must not litter the caller's cwd
         )
     results, done = _parse_output(out, token)
     expected = sum(len(b.lines) for b in blocks)
