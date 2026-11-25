@@ -948,7 +948,7 @@ def _lres(cb, out):
 
 
 def test_main_side_effect_block_is_not_sent(cb, tmp_path, monkeypatch):
-    md = "```apl\n      ⎕NDELETE 'x'\n```\n\n```apl\n      1+1\n2\n```\n"
+    md = "```apl\n      ⎕SE.UCMD 'x'\n```\n\n```apl\n      1+1\n2\n```\n"
     _docs(tmp_path, {"a.md": md})
     calls = _fake_run(cb, monkeypatch, lambda bs: {b.id: [_lres(cb, ["2"])] for b in bs})
     _, log = _main(cb, tmp_path)
@@ -1006,22 +1006,22 @@ def test_run_page_harness_leaves_no_names_in_the_workspace(cb):
 
 def test_has_side_effect(cb):
     for line in [
-        "⎕NDELETE 'x'", "⎕ndelete'x'", "]Foo bar", "]", "x←⎕CSV 'a'",
-        "⍎'⎕NDELETE ''x'''", "⍎'⎕SH ''rm x'''", "85⌶'⎕SH ''x'''",
-        "⎕FX 'f' '⎕NDELETE ''x'''", "'⎕NDELETE'", "⎕SE.UCMD 'x'",
-        "⎕se.SALT.Load 'x'", "⎕ED 'x'", "⎕EXPORT 'x'", "⎕NEW ⍬", "⎕FIO.x",
+        "]Foo bar", "]", "⍎'⎕SE.UCMD ''x'''", "85⌶'⎕CLEAR'",
+        "⎕FX 'f' '⎕CLEAR'", "'⎕CLEAR'", "⎕SE.UCMD 'x'",
+        "⎕se.SALT.Load 'x'", "⎕ED 'x'", "⎕FIO.x",
         "⎕HTTPCMD 'x'", "⌶", "x⌶1", "1 ⋄ )load x",
         ")load x", "1 ⋄ 2 ⋄  )off", "2⌶1", "8⌶1 ⋄ 85⌶x",
-        "]display ⎕SH 'rm x'", "]rows ⎕NDELETE 'x'", "]box on ⍎')load x'",
-        "]disp ⍎'⎕NDELETE ''x'''", "⍎'⎕',⎕UCS 83 72", "⍎⎕AV[5]", "¯8⌶1",
+        "]display ⎕SE.x", "]rows ⎕CLEAR", "]box on ⍎')load x'",
+        "]disp ⍎'⎕CLEAR'", "⍎'⎕',⎕UCS 83 69", "⍎⎕AV[5]", "¯8⌶1",
         "(¯8 ⌶)1",
     ]:
         assert cb.has_side_effect(line), line
     for line in [
         "]box on", "]Boxing", "]DISPLAY ⍳3", "]disp 1", "]rows 5",
-        "1 ⍝ ⎕NDELETE ⎕SH", "1+1", "'a)b'", "1 ⋄ 2)",
+        "1 ⍝ ⎕CLEAR ⎕SE", "1+1", "'a)b'", "1 ⋄ 2)",
         "8⌶1", "(181⌶)1", "(201 ⌶)1", "219⌶4", "1200⌶1", "16808⌶1",
         "(7162 ⌶)'x'", "]box on", "]display 2 2⍴⍳4", "⎕UCS 83 72",
+        "]display ⎕NGET 'x'",
     ]:
         assert not cb.has_side_effect(line), line
 
@@ -1029,28 +1029,32 @@ def test_has_side_effect(cb):
 @pytest.mark.parametrize(
     "line",
     [
-        # Evidence from the full run: these ran or were sent.
-        "⎕XT'V'", "'V' ⎕XT 'file'", "9 ⎕ARBOUT 49 50 51", "⎕CLEAR",
+        # Still blocked in the jail: these break or escape the run.
+        "9 ⎕ARBOUT 49 50 51", "⎕CLEAR", "⎕LOAD 'x'", "⎕OFF", "⎕SAVE 'x'",
         "'DDE:X'⎕SVO'X'", "⎕SVC 'X'", "⎕SVS 'X'", "⎕SVR 'X'", "⎕SVQ 'X'",
-        "⎕USING←'System.IO' ⋄ File.Delete⊂'x'",
-        "⍎'⎕','SH ''ls'''",
-        # Allowlist: unknown or writing system names.
-        "⎕NDELETEX", "⎕SEX", "⎕U234E 'x'", "⎕NINFO 'x'", "⎕OFF", "⎕WG 'x'",
-        "⎕TKILL 0", "⎕TGET 1", "⎕PFKEY 1", "⎕NXLATE 0", "⎕SM",
+        "⎕WC 'Form'", "'.' ⎕WS 'x' 1", "⎕WG 'x'", "⎕WN 'x'", "⎕NQ 'x'",
+        "⎕DQ 'x'", "⎕SE", "x←⎕SE.UCMD 'x'",
+        "⍎'⎕','SE'",
+        # Allowlist: unknown names and names left out on purpose.
+        "⎕NDELETEX", "⎕SEX", "⎕U234E 'x'", "⎕TKILL 0", "⎕TGET 1",
+        "⎕PFKEY 1", "⎕SM", "⎕ARBIN 1", "⎕WX",
+        # Removed from the allowlist: they change or reach other namespaces.
+        "⎕CS ⎕SE", "⎕CS 'x'", "⎕PATH←'⎕SE'", "x←⎕PATH",
         # Refs or names that lead back into the harness in ⎕SE.
         "⎕RSI", "⊃⎕NSI", "⊃⎕XSI", "⎕STACK",
         # Evaluated input.
         "x←⎕", "⎕", "1+⎕",
-        # .NET names.
-        "System.IO.File.Delete⊂'x'", "Microsoft.Win32.Registry", "x←'System.IO'",
         # Execute, ⎕FX and 85⌶ with an argument that is not a literal.
         "⍎x", "⍎¨'a' 'b'", "⍎&'1'", "⍎'1',x", "⍎'1' x", "{⍎⍵}'1'",
         "⎕FX f", "⎕FX ↑'a' 'b'", "⎕FX¨('a' 'b')", "⎕FX 'f' x",
         "85⌶x", "1(85⌶)x", "(85⌶)'1',x",
+        # Dyadic ⍎ whose left argument is not a name, # or a literal string.
+        "(⎕NS'')⍎'1'", "ns.sub⍎'1'", "#.x⍎'1'", "⎕THIS⍎'1'", "x[1]⍎'1'",
+        "⍺⍎'1'", "⍵⍎'1'", "##⍎'1'", "x∘⍎'1'", "1⍎'1'", "(f x)⍎'1'",
         # A literal is checked by the same rules.
-        "⍎'⍎x'", "⎕FX 'r←f' 'r←⍎⍵'", "⍎'⎕XT''V'''", "1(85⌶)'⎕CLEAR'",
+        "⍎'⍎x'", "⎕FX 'r←f' 'r←⍎⍵'", "⍎'⎕CLEAR'", "1(85⌶)'⎕CLEAR'",
         # ⎕TRAP actions built at run time.
-        "⎕TRAP←0 'E' x", "⎕TRAP←0 'E' (⎕UCS 41)", "⎕TRAP←0 'E' '⎕SH''x'''",
+        "⎕TRAP←0 'E' x", "⎕TRAP←0 'E' (⎕UCS 41)", "⎕TRAP←0 'E' '⎕CLEAR'",
     ],
 )
 def test_has_side_effect_allowlist_flags(cb, line):
@@ -1067,45 +1071,57 @@ def test_has_side_effect_allowlist_flags(cb, line):
         "⎕FX'r←foo' 'r←10'", "F←⎕OR ⎕FX'R←FOO' 'R←10'", "1(85⌶)'2+2'",
         "85⌶'1'", "(85⌶)'1'", "⎕TRAP⍴⍨←0", "≡⎕TRAP←0'C' '''Eh?'''",
         "'it''s'", "'a',⍕1",
+        # Dyadic ⍎ with a plain name, # or a literal string on the left.
+        "space⍎'nums←⍳6'", "space ⍎ 'nums'", "#⍎'1+1'", "'#'⍎'1'",
+        "x←ns⍎'a'", "{⍎'1'}0", "+/⍎'1 2'",
+        # Allowed inside the jail: files, workspaces, .NET, shell, ⎕NA.
+        "⎕NDELETE 'x'", "⎕ndelete'x'", "x←⎕CSV 'a'", "(⊂'x') ⎕NPUT 'f'",
+        "'f' ⎕NCREATE 0", "⎕NINFO 'x'", "⎕NXLATE 0", "⎕MKDIR 'd'",
+        "'t' ⎕FCREATE 1", "x ⎕FAPPEND 1", "⎕FREAD 1 1", "⎕FERASE 't'",
+        "⎕XT'V'", "'V' ⎕XT 'file'", "⎕FIX 'file://x.apln'", "⎕CY 'dfns'",
+        "⎕EXPORT 'x'", "⎕MAP 'f'",
+        "⎕USING←'System.IO' ⋄ File.Delete⊂'x'", "System.IO.File.Delete⊂'x'",
+        "Microsoft.Win32.Registry", "x←'System.IO'", "⎕NEW DateTime", "⎕EXCEPTION",
+        "⎕SH 'ls'", "⎕CMD 'dir'", "⎕SHELL 'ls'", "⎕NA 'I4 libc.so.6|getpid'",
+        "⍎'⎕SH ''ls'''", "⍎'⎕NDELETE ''x'''",
     ],
 )
 def test_has_side_effect_allowlist_passes(cb, line):
     assert not cb.has_side_effect(line), line
 
 
-def test_safe_quads_exclude_writers_and_harness_refs(cb):
+def test_safe_quads_exclude_what_breaks_or_escapes_the_run(cb):
     for name in (
-        "⎕XT", "⎕ARBOUT", "⎕ARBIN", "⎕CLEAR", "⎕SVO", "⎕USING", "⎕SE", "⎕NA",
-        "⎕NINFO", "⎕CSV", "⎕RSI", "⎕NSI", "⎕XSI", "⎕STACK", "⎕EXCEPTION",
-        "⎕OFF", "⎕SAVE", "⎕LOAD", "⎕FIX", "⎕CY", "⎕WX",
+        "⎕ARBOUT", "⎕ARBIN", "⎕CLEAR", "⎕LOAD", "⎕OFF", "⎕SVO", "⎕SVC", "⎕SVQ",
+        "⎕SVR", "⎕SVS", "⎕SE", "⎕WC", "⎕WS", "⎕WG", "⎕WN", "⎕WX", "⎕NQ", "⎕DQ",
+        "⎕RSI", "⎕NSI", "⎕XSI", "⎕STACK", "⎕CS", "⎕PATH", "⎕ED", "⎕TKILL",
+        "⎕SAVE",
     ):
         assert name not in cb.SAFE_QUADS, name
-    # Side effect wins over volatile and environment: a name may be in both.
-    for name in ("⎕TS", "⎕AI", "⎕DL", "⎕WSID", "⎕AN", "⎕FLIB"):
+    for name in (
+        "⎕TS", "⎕AI", "⎕DL", "⎕WSID", "⎕AN", "⎕FLIB", "⎕NPUT", "⎕FCREATE",
+        "⎕XT", "⎕FIX", "⎕CY", "⎕USING", "⎕NEW", "⎕SH", "⎕NA",
+    ):
         assert name in cb.SAFE_QUADS, name
 
 
-def test_main_using_taints_the_block_and_later_blocks(cb, tmp_path, monkeypatch):
+def test_main_using_no_longer_taints_later_blocks(cb, tmp_path, monkeypatch):
     md = (
         "```apl\n      1+1\n2\n```\n\n"
         "```apl\n      ⎕USING←'System.IO'\n```\n\n"
-        "```apl\n      File.Delete⊂'x'\n```\n\n"
+        "```apl\n      File.Exists⊂'x'\n0\n```\n\n"
         "```apl\n      2+2\n4\n```\n"
     )
     _docs(tmp_path, {"a.md": md})
-    calls = _fake_run(
-        cb, monkeypatch, lambda bs: {b.id: [_lres(cb, ["2"])] for b in bs}
-    )
-    _, log = _main(cb, tmp_path)
-    assert [[b.id for b in c] for c in calls] == [[0]]
-    _, entries = cb.read_log(log)
-    assert [e["reason"] for e in entries[1:]] == ["side-effect"] * 3
+    calls = _fake_run(cb, monkeypatch, lambda bs: {})
+    _main(cb, tmp_path)
+    assert [[b.id for b in c] for c in calls] == [[0, 1, 2, 3]]
 
 
 def test_main_evidence_forms_are_never_sent(cb, tmp_path, monkeypatch):
     lines = [
-        "⎕XT'V'", "9 ⎕ARBOUT 49 50 51", "⎕CLEAR", "'DDE:X'⎕SVO'X'",
-        "⍎'⎕','SH ''ls'''", "System.IO.File.Delete⊂'x'",
+        "9 ⎕ARBOUT 49 50 51", "⎕CLEAR", "'DDE:X'⎕SVO'X'",
+        "⍎'⎕','SE'", "⎕CS ⎕SE", "(⎕NS'')⍎'1'",
     ]
     md = "".join(f"```apl\n      {ln}\n```\n\n" for ln in lines)
     _docs(tmp_path, {"a.md": md + "```apl\n      2+2\n4\n```\n"})
@@ -1136,8 +1152,8 @@ def test_judge_value_error_suspect_only_if_name_not_used_elsewhere(cb):
 
 def test_main_side_effect_forms_are_never_sent(cb, tmp_path, monkeypatch):
     blocks = [
-        "      1+1\n2\n      ⎕NDELETE 'x'",
-        "      ⍎'⎕SH ''rm x'''",
+        "      1+1\n2\n      ⎕CLEAR",
+        "      ⍎'⎕SE.UCMD ''x'''",
         "      1 ⋄ )load x",
         "      ⎕SE.UCMD 'x'",
         "      85⌶x",  # a literal argument would be checked and allowed
@@ -1194,11 +1210,18 @@ def test_volatile_harness_artefacts(cb, name):
 
 
 @pytest.mark.parametrize(
-    "line", ["⎕FLIB '.'", "⎕TCNUMS 0", "⎕WSID", "⎕AN", "⎕SD", "⎕NGET 'x'", "⎕NEXISTS 'x'"]
+    "line", ["⎕FLIB '.'", "⎕TCNUMS 0", "⎕WSID", "⎕AN", "⎕SD"]
 )
 def test_judge_environment_is_not_run(cb, line):
     v = _judge(cb, ["      " + line, "x"], [_lr(cb, ["y"])])
     assert v == ("not-run", "environment", None)
+
+
+@pytest.mark.parametrize("line", ["⎕NGET 'x'", "⎕NEXISTS 'x'"])
+def test_judge_file_reads_are_judged_in_the_jail(cb, line):
+    # The jail starts empty, so what a page reads it wrote itself.
+    v = _judge(cb, ["      " + line, "x"], [_lr(cb, ["y"])])
+    assert v[0] == "differs"
 
 
 def test_judge_annotation_lines_are_not_compared(cb):
@@ -1504,3 +1527,23 @@ def test_run_page_exception_leaves_no_container(cb, monkeypatch):
         _run(cb, (None, ["⎕DL 1000"]))
     monkeypatch.setattr(cb.subprocess, "Popen", real)
     assert _containers("cb-0ddba11c0ffee000") == []
+
+
+@needs_docker
+def test_run_page_save_breaks_later_lines(cb):
+    # Why ⎕SAVE stays blocked: after it, every line's execute fails with
+    # error 85 (taken as "no result"), so nothing more shows, errors included.
+    res, stop = _run(cb, (None, ["1+1", "⎕SAVE 'ws'", "1+1", "1÷0"]))
+    assert stop is None
+    assert _out(res) == [["2"], [], [], []]
+    assert not res[1][3].error
+
+
+@needs_docker
+def test_run_page_workspace_script_and_native_code_examples(cb):
+    res, _ = _run(cb, (None, [
+        "⎕CY 'dfns'", "⎕NC 'cmpx'",
+        "⎕FIX ':Namespace N' 'f←{⍵+1}' ':EndNamespace'", "N.f 1",
+        "⎕NA 'I4 libc.so.6|getpid'", "0<getpid",
+    ]))
+    assert _out(res) == [[], ["3"], [], ["2"], [], ["1"]]

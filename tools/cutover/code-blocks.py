@@ -668,33 +668,46 @@ VOLATILE = frozenset(
         "⎕DM", "⎕EM", "⎕EN", "⎕STACK", "⎕XSI", "⎕NSI", "⎕RSI",
     }
 )
-# Results that depend on the machine: its user, files and screen.
-ENVIRONMENT = frozenset(
-    {"⎕FLIB", "⎕TCNUMS", "⎕WSID", "⎕AN", "⎕SD", "⎕NGET", "⎕NEXISTS"}
-)
+# Results that depend on the machine: its user and screen. (File reads are
+# judged: the container starts empty, so a page reads what it wrote.)
+ENVIRONMENT = frozenset({"⎕FLIB", "⎕TCNUMS", "⎕WSID", "⎕AN", "⎕SD"})
 
-# System names known to be free of side effects outside the interpreter's
-# own workspace (Dyalog 21.0). Any other ⎕ name is a side effect, so a name
-# this list does not know (a new system function, a typo, a Classic ⎕U name)
-# is never run. Left out on purpose: anything that writes files or devices
-# (⎕N*, ⎕F* writers, ⎕MKDIR, ⎕CSV, ⎕NINFO, which can set properties, ⎕ARBOUT,
-# ⎕ARBIN, ⎕MAP, ⎕XT), runs processes or native code (⎕SH ⎕CMD ⎕SHELL ⎕NA),
-# talks to shared variables (⎕SV*), .NET or COM (⎕USING ⎕NEW ⎕EXCEPTION ⎕WX),
-# the GUI or the session (⎕W* ⎕NQ ⎕DQ ⎕SE ⎕ED ⎕SM ⎕SR ⎕PFKEY ⎕NXLATE), clears,
-# loads, saves or fixes code (⎕CLEAR ⎕LOAD ⎕SAVE ⎕CY ⎕FIX ⎕OFF ⎕EXPORT), and
-# ⎕RSI ⎕NSI ⎕XSI ⎕STACK, which hand user code a way back into the harness in
-# ⎕SE. Read-only file functions (⎕NGET ⎕NEXISTS ⎕FLIB) are allowed.
+# System names allowed to run in the Docker jail (Dyalog 21.0). The jail has
+# no network and no writable place outside /work, /tmp and the home
+# directory, and vanishes with the page, so files, workspaces, .NET, shell
+# commands and ⎕NA may run. Any other ⎕ name is blocked, so a name this list
+# does not know (a new system function, a typo, a Classic ⎕U name) never
+# runs. Left out on purpose, because they break or escape the run rather
+# than touch the host: ⎕SE and the session (⎕ED ⎕SM ⎕SR ⎕PFKEY), shared
+# variables (⎕SV*), the GUI (⎕W* ⎕NQ ⎕DQ), ⎕CLEAR ⎕LOAD ⎕OFF, ⎕ARBIN and
+# ⎕ARBOUT, ⎕CS and ⎕PATH (they move or widen name lookup, towards ⎕SE),
+# ⎕TGET ⎕TKILL (they can hang or kill the harness thread), and ⎕RSI ⎕NSI
+# ⎕XSI ⎕STACK, which hand user code a way back into the harness in ⎕SE.
+# ⎕SAVE is left out too: after it, every later line's execute (85⌶) fails
+# with error 85, so nothing more on the page would show.
 # Volatile and environment names stay here: those blocks run, and judging
 # then reports them as not run.
 SAFE_QUADS = frozenset(
     "⎕" + n
     for n in (
-        "A AI AN AT ATX AV AVU BASE C CLASS CR CS CT D DCT DF DIV DL DM DMX DR "
-        "DT EM EN EX FAVAIL FLIB FMT FNAMES FNUMS FR FX INSTANCES IO JSON KL LC "
-        "LOCK LX ML MONITOR NC NEXISTS NGET NL NNAMES NNUMS NPARTS NR NS NULL OPT "
-        "OR PATH PP PROFILE PW R REFS RL RTL S SD SHADOW SI SIGNAL SIZE SRC STATE "
+        "A AI AN AT ATX AV AVU BASE C CLASS CR CT D DCT DF DIV DL DM DMX DR "
+        "DT EM EN EX FMT FR FX INSTANCES IO JSON KL LC "
+        "LOCK LX ML MONITOR NC NL NR NS NULL OPT "
+        "OR PP PROFILE PW R REFS RL RTL S SD SHADOW SI SIGNAL SIZE SRC STATE "
         "STOP TALLOC TC TCNUMS THIS TID TNAME TNUMS TPOOL TRACE TRAP TREQ TS "
-        "TSYNC UCS VFI VGET VR VSET WA WSID XML"
+        "TSYNC UCS VFI VGET VR VSET WA WSID XML "
+        # Native files.
+        "NAPPEND NCOPY NCREATE NDELETE NERASE NEXISTS NGET NINFO NLOCK NMOVE "
+        "NNAMES NNUMS NPARTS NPUT NREAD NRENAME NREPLACE NRESIZE NSIZE NTIE "
+        "NUNTIE NXLATE MKDIR CSV MAP "
+        # Component files.
+        "FAPPEND FAVAIL FCHK FCOPY FCREATE FDROP FERASE FHIST FHOLD FLIB "
+        "FNAMES FNUMS FPROPS FRDAC FRDCI FREAD FRENAME FREPLACE FRESIZE FSIZE "
+        "FSTAC FSTIE FTIE FUNTIE "
+        # Workspaces and scripts, external variables.
+        "FIX CY EXPORT XT "
+        # .NET, shell commands and native code.
+        "USING NEW EXCEPTION SH CMD SHELL NA"
     ).split()
 )
 # I-beams known to be pure (no files, processes or workspace changes). 85⌶
@@ -704,7 +717,6 @@ _IBEAM_NUM_RE = re.compile(r"(?<![\w∆⍙_.¯])(\d+)\s*$")
 _SAFE_COMMANDS = frozenset({"box", "boxing", "display", "disp", "rows"})
 
 _QUAD_NAME_RE = re.compile(r"⎕[A-Za-z0-9_]*")
-_DOTNET_RE = re.compile(r"(?<![\w∆⍙_.])(System|Microsoft)\.")
 _NAME_CHAR_RE = re.compile(r"[A-Za-z_∆⍙⍺⍵⎕#]")
 # What may follow the literal argument of ⍎, ⎕FX or 85⌶: the end of the
 # statement or a closing bracket. Anything else (`,`, a name, `¨`) means the
@@ -807,10 +819,39 @@ def _literal_arg(text: str, i: int, strand: bool) -> bool:
     return n > 0 and (i == len(text) or text[i] in _ARG_END)
 
 
+# Before ⍎, these mean ⍎ is monadic: the start of a statement or an
+# expression, a function or a monadic operator.
+_MONADIC_BEFORE = frozenset(
+    "←⋄{([;:"
+    "+-×÷*⍟⌹○!?|⌈⌊⊥⊤⊣⊢=≠≤<>≥≡≢∨∧⍲⍱↑↓⊂⊃⊆⌷⍋⍒⍳⍸∊⍷∪∩~,⍪⍴⌽⊖⍉⍎⍕⊇"
+    "¨⍨/⌿\\⍀&⌸}"
+)
+_PLAIN_NAME_END_RE = re.compile(r"(?<![\w∆⍙_.⎕¯#])[A-Za-z_∆⍙][\w∆⍙¯]*$")
+
+
+def _plain_left(text: str, code: str, i: int) -> bool:
+    """True unless ⍎ at code[i] is dyadic with a computed left argument.
+
+    A dyadic ⍎ may take a plain name, # or a literal string on its left;
+    anything else (a parenthesised expression, a dotted or system name, ⍺,
+    a dyadic operator binding a left argument) could be a ref into ⎕SE.
+    """
+    if text[:i].rstrip(" ").endswith("'"):
+        return True  # a literal string (its content is checked as code)
+    before = code[:i].rstrip(" ")
+    if not before or before[-1] in _MONADIC_BEFORE:
+        return True
+    if before.endswith("#"):
+        return not re.search(r"[#.\w∆⍙]#$", before)
+    return bool(_PLAIN_NAME_END_RE.search(before)) and not before[-1].isdigit()
+
+
 def _executes_computed(text: str, code: str) -> bool:
     """True if ⍎, ⎕FX or 85⌶ in code (outside strings) gets a computed argument."""
     for m in re.finditer("⍎", code):
         if not _literal_arg(text, m.end(), strand=False):
+            return True
+        if not _plain_left(text, code, m.start()):
             return True
     for m in re.finditer(r"⎕FX(?![A-Za-z0-9_])", code, re.I):
         if not _literal_arg(text, m.end(), strand=True):
@@ -880,7 +921,8 @@ def has_side_effect(line: str, nested: bool = False) -> bool:
 
     Allowlist-based: every ⎕ name must be in SAFE_QUADS, every I-beam in
     PURE_IBEAMS (or 85⌶ with a literal argument), ⍎ and ⎕FX may only take
-    literal strings, and .NET names (`System.…`, `Microsoft.…`) are refused.
+    literal strings, and dyadic ⍎ only a plain name, # or a literal string
+    on its left.
     Every string on the line is checked by the same rules as if it were code
     (it may be executed by ⍎, ⎕FX, 85⌶ or a ⎕TRAP action), so a string that
     merely mentions a facility is an accepted false positive. `nested` marks
@@ -908,8 +950,6 @@ def has_side_effect(line: str, nested: bool = False) -> bool:
                 return True
         elif name not in SAFE_QUADS:
             return True
-    if _DOTNET_RE.search(code):
-        return True
     for m in re.finditer("⌶", code):
         num = _IBEAM_NUM_RE.search(code[: m.start()])
         if not num or int(num.group(1)) not in PURE_IBEAMS | {85}:
@@ -1228,7 +1268,6 @@ def carry_decisions(
 # --- Command line -----------------------------------------------------------
 
 _BOX_RE = re.compile(r"\]box(ing)?\b", re.I)
-_USING_RE = re.compile(r"⎕USING(?![A-Za-z0-9_])", re.I)
 
 
 def _process_page(
@@ -1245,18 +1284,15 @@ def _process_page(
     sent: dict[int, int] = {}  # block index -> number of lines sent
     if image:
         boxed = False
-        dotnet = False
         to_run: list[RunBlock] = []
         for i, b in enumerate(blocks):
             cls = classes.get(i)
             if cls is None or cls.kind == "listing":
                 continue
-            lines = _input_texts(b, cls)
-            # .NET reaches anything; after ⎕USING on a page nothing more runs.
-            dotnet = dotnet or any(_USING_RE.search(_strip_comment(t)) for t in lines)
             if not cls.runnable:
                 continue
-            if dotnet or any(has_side_effect(t) for t in lines):
+            lines = _input_texts(b, cls)
+            if any(has_side_effect(t) for t in lines):
                 side.add(i)
                 continue
             boxed = boxed or any(_BOX_RE.match(t) for t in lines)
