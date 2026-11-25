@@ -95,6 +95,8 @@ class Classification:
     nbsp: bool
     runnable: bool
     style: Literal["max", "min", "off"]
+    # An output line starts with ⍝ at column 0: a note, not session output.
+    annotation: bool = False
 
 
 def strip_indent(line: str) -> str:
@@ -138,6 +140,9 @@ def classify(block: Block) -> Classification:
     nbsp = any("\u00a0" in lines[i][:6] for i in inputs)
     if not inputs:
         return Classification("listing", None, roles, nbsp, False, style)
+    annotation = any(
+        r == "output" and ln.startswith("⍝") for ln, r in zip(lines, roles)
+    )
 
     reason = None
     runnable = True
@@ -163,7 +168,7 @@ def classify(block: Block) -> Classification:
     ):
         reason = "indented-output"
     kind = "session" if reason is None else "ambiguous"
-    return Classification(kind, reason, roles, nbsp, runnable, style)
+    return Classification(kind, reason, roles, nbsp, runnable, style, annotation)
 
 
 class SplitError(ValueError):
@@ -177,7 +182,7 @@ def split_kind(
         return "none"
     if cls.kind == "ambiguous" and not cls.runnable:
         return "ambiguous"
-    if verdict == "not-run" and reason == "suspect-input":
+    if reason == "suspect-input" or cls.annotation:
         return "ambiguous"
     if cls.reason == "indented-output" and verdict != "match":
         return "ambiguous"
@@ -442,7 +447,13 @@ VOLATILE = frozenset(
     {
         "?", "⎕AI", "⎕TS", "⎕DL", "⎕WA", "⎕RL", "⎕SI", "⎕LC", "⎕TID", "⎕TNUMS",
         "⎕DMX", "⎕PROFILE", "120⌶",
+        # Harness artefacts: errors and the stack show the harness.
+        "⎕DM", "⎕EM", "⎕EN", "⎕STACK", "⎕XSI", "⎕NSI", "⎕RSI",
     }
+)
+# Results that depend on the machine: its user, files and screen.
+ENVIRONMENT = frozenset(
+    {"⎕FLIB", "⎕TCNUMS", "⎕WSID", "⎕AN", "⎕SD", "⎕NGET", "⎕NEXISTS"}
 )
 
 # System names known to be free of side effects outside the interpreter's
@@ -612,6 +623,24 @@ def _is_volatile(line: str) -> bool:
     return "⎕DT" in found and "'Z'" in _strip_comment(line)
 
 
+def _is_environment(line: str) -> bool:
+    found = {m.upper() for m in _QUAD_NAME_RE.findall(_code_only(line))}
+    return bool(found & ENVIRONMENT)
+
+
+def _top_level_diamond(line: str) -> bool:
+    """True if ⋄ separates statements (outside strings, comments, brackets)."""
+    depth = 0
+    for ch in _code_only(line):
+        if ch in "{[(":
+            depth += 1
+        elif ch in "}])":
+            depth = max(0, depth - 1)
+        elif ch == "⋄" and depth == 0:
+            return True
+    return False
+
+
 def _statements(text: str) -> list[str]:
     """Split a comment-free line at ⋄ outside strings."""
     parts: list[str] = []
@@ -685,7 +714,7 @@ def expected_outputs(block: Block, cls: Classification) -> list[list[str]]:
     for raw, role in zip(block.body, cls.roles):
         if role == "input":
             groups.append([])
-        elif groups:
+        elif groups and not raw.startswith("⍝"):  # annotations are not output
             groups[-1].append(raw)
     return groups
 
@@ -734,12 +763,17 @@ def judge(
        (no results and not timed out: not-run/not-run);
        fewer results than input lines without timeout: not-run/incomplete;
     3. any skipped line: not-run with the skipped value as reason;
-    4. a volatile facility in an input line: not-run/volatile;
+    4. a volatile facility in an input line: not-run/volatile; a
+       machine-dependent one: not-run/environment;
     5. an error the printed output does not show: not-run/suspect-input
        (SYNTAX/VALUE ERROR, no prior unrun block), dependency (prior
        unrun block) or error;
-    6. every line's output equal after normalisation: match;
-    7. otherwise: differs.
+    6. every line's output equal after normalisation: match (reason
+       annotation if the block has column-0 ⍝ lines, which are not compared);
+    7. otherwise: differs, with the first reason that applies:
+       suspect-input (a line with no printed output printed something),
+       after-unrun (an earlier block on the page did not run), diamond (an
+       input line has statements the harness runs one by one), annotation.
 
     `actual` is the session-style actual output (each input at six-space
     indent, then its output, newline-terminated) for differs and for the
@@ -757,6 +791,8 @@ def judge(
             return "not-run", res.skipped, None
     if any(_is_volatile(t) for t in inputs):
         return "not-run", "volatile", None
+    if any(_is_environment(t) for t in inputs):
+        return "not-run", "environment", None
 
     expected = expected_outputs(block, cls)
     actual = "".join(ln + "\n" for ln in _session(inputs, results))
@@ -781,8 +817,18 @@ def judge(
     if len(results) == len(expected) and all(
         _normalise(e) == _normalise(r.output) for e, r in zip(expected, results)
     ):
-        return "match", None, None
-    return "differs", None, actual
+        return "match", ("annotation" if cls.annotation else None), None
+    if any(not _normalise(e) and _normalise(r.output) for e, r in zip(expected, results)):
+        reason = "suspect-input"  # printed output read as input, perhaps
+    elif prior_unrun:
+        reason = "after-unrun"
+    elif any(_top_level_diamond(t) for t in inputs):
+        reason = "diamond"
+    elif cls.annotation:
+        reason = "annotation"
+    else:
+        reason = None
+    return "differs", reason, actual
 
 
 class LogError(Exception):

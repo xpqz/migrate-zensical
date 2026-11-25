@@ -1149,3 +1149,80 @@ def test_main_page_with_existing_log_keeps_other_pages(cb, tmp_path):
     ] + [("g/sub/b.md", 3), ("g/sub/b.md", 12)]
     assert after[:2] == entries[:2]
     assert [e["decision"] for e in after[2:]] == ["apply", "pending"]
+
+
+# --- differs triage: after-unrun, diamond, annotation, environment, suspect --
+
+
+def test_judge_differs_after_unrun_block(cb):
+    v, r, actual = _judge(cb, ["      1+1", "3"], [_lr(cb, ["2"])], prior_unrun=True)
+    assert (v, r, actual) == ("differs", "after-unrun", "      1+1\n2\n")
+
+
+def test_judge_differs_with_top_level_diamond(cb):
+    res = [_lr(cb, ["1", "2"])]
+    assert _judge(cb, ["      1 ⋄ 2", "3"], res)[:2] == ("differs", "diamond")
+    for line in ("      {1 ⋄ 2}0", "      '1⋄2'", "      1 ⍝ ⋄", "      x[1⋄2]"):
+        assert _judge(cb, [line, "3"], res)[:2] == ("differs", None), line
+
+
+@pytest.mark.parametrize("name", ["⎕DM", "⎕EM 11", "⎕EN", "⎕STACK", "⎕XSI", "⎕NSI", "⎕RSI"])
+def test_volatile_harness_artefacts(cb, name):
+    assert cb._is_volatile(name)
+
+
+@pytest.mark.parametrize(
+    "line", ["⎕FLIB '.'", "⎕TCNUMS 0", "⎕WSID", "⎕AN", "⎕SD", "⎕NGET 'x'", "⎕NEXISTS 'x'"]
+)
+def test_judge_environment_is_not_run(cb, line):
+    v = _judge(cb, ["      " + line, "x"], [_lr(cb, ["y"])])
+    assert v == ("not-run", "environment", None)
+
+
+def test_judge_annotation_lines_are_not_compared(cb):
+    lines = ["      x←1", "⍝ x is now 1", "      x", "1", "⍝ see above"]
+    b, c = _block(cb, *lines)
+    assert c.annotation is True
+    v, r, _ = cb.judge(b, c, [_lr(cb, []), _lr(cb, ["1"])], False, False)
+    assert (v, r) == ("match", "annotation")
+    assert cb.split_kind(c, v, r) == "ambiguous"
+    # an indented ⍝ line is not an annotation
+    assert _block(cb, "      x", " ⍝ 1")[1].annotation is False
+
+
+def test_judge_suspect_input_for_wrapped_output_row(cb):
+    # pw.md: a folded output row at six spaces reads as input.
+    lines = [
+        "      ⎕PW←42",
+        "",
+        "      ⎕←3⍴÷3",
+        "0.3333333333 0.3333333333 0.3333333333",
+        "      0.3333333333",
+    ]
+    results = [
+        _lr(cb, []),
+        _lr(cb, ["0.3333333333 0.3333333333", "      0.3333333333"]),
+        _lr(cb, ["0.3333333333"]),
+    ]
+    b, c = _block(cb, *lines)
+    v, r, actual = cb.judge(b, c, results, False, False)
+    assert (v, r) == ("differs", "suspect-input") and actual
+    assert cb.split_kind(c, v, r) == "ambiguous"
+
+
+def test_judge_differs_reason_precedence(cb):
+    # suspect-input wins over after-unrun, which wins over diamond.
+    two = ["      1 ⋄ 2", "1", "      9"]
+    res = [_lr(cb, ["1", "2"]), _lr(cb, ["9"])]
+    assert _judge(cb, two, res, prior_unrun=True)[:2] == ("differs", "suspect-input")
+    one = ["      1 ⋄ 2", "1"]
+    res = [_lr(cb, ["1", "2"])]
+    assert _judge(cb, one, res, prior_unrun=True)[:2] == ("differs", "after-unrun")
+    lines = ["      1 ⋄ 2", "⍝ note", "1"]
+    assert _judge(cb, lines, res)[:2] == ("differs", "diamond")
+
+
+def test_split_kind_suspect_input_is_ambiguous_for_any_verdict(cb):
+    _, c = _block(cb, "      x", "1")
+    for verdict in ("differs", "not-run", "match"):
+        assert cb.split_kind(c, verdict, "suspect-input") == "ambiguous"
