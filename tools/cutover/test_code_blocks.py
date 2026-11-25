@@ -1800,7 +1800,9 @@ def test_run_page_multi_line_unit_skips_system_commands_and_quote_quad(cb):
          ["V←¯1.5 2E10 3J¯4 1.5E¯7 ¯2J0.5"]),
         (["10 20 30 40", "50 60 70 80"], "V←[10 20 30 40 ⋄ 50 60 70 80]",
          ["V←[10 20 30 40", "   50 60 70 80]"]),
-        ([" 1  2", "¯3 40"], "V←[1 2 ⋄ ¯3 40]", ["V←[1 2", "   ¯3 40]"]),
+        ([" 1  2", "¯3 40"], "V←[ 1  2 ⋄ ¯3 40]", ["V←[ 1  2", "   ¯3 40]"]),
+        (["1 2  3  4", "5 6  7  8", "9 10 11 12"], "V←[1 2  3  4 ⋄ 5 6  7  8 ⋄ 9 10 11 12]",
+         ["V←[1 2  3  4", "   5 6  7  8", "   9 10 11 12]"]),
         (["It's here"], "V←'It''s here'", ["V←'It''s here'"]),
         (["abc", "de   ", "f"], "V←['abc' ⋄ 'de' ⋄ 'f']", ["V←['abc'", "   'de'", "   'f']"]),
         (["123", "ab"], "V←['123' ⋄ 'ab']", ["V←['123'", "   'ab']"]),
@@ -1968,3 +1970,131 @@ def test_shown_candidates_annotation_in_the_output_is_unsupported(cb):
     _, found = _cands(cb, md, {0: [_ve(cb, "M"), _ve(cb, "M")]})
     (s,) = found[0]
     assert s.unsupported and "annotation" in s.unsupported
+
+
+# --- review fixes -------------------------------------------------------------
+
+
+@needs_docker
+def test_run_page_multi_line_unit_displays_only_explicit_output(cb):
+    # A unit runs as a function body: values it does not assign or send to ⎕
+    # are not displayed.
+    res, stop = _run(cb, (None, [["X←1", "2+2", "⎕←X+4"], "X"]))
+    assert stop is None
+    assert _out(res) == [["5"], ["1"]]
+
+
+@needs_docker
+def test_run_page_trap_assignment_does_not_end_the_run(cb):
+    lines = ["⎕TRAP←11 'E' '⎕←''trapped'''", "1+1", "÷0", "⎕TRAP←0 'S'", "2+2"]
+    res, stop = _run(cb, (None, lines))
+    assert stop is None
+    assert len(res[1]) == 5
+    assert _out(res)[1] == ["2"] and _out(res)[4] == ["4"]
+    # The harness's own trapping still shows the error.
+    assert res[1][2].error and res[1][2].output[0].startswith("DOMAIN ERROR")
+
+
+def test_shown_candidates_output_mentioning_the_name_is_unsupported(cb):
+    # symbols/down-shoe.md: an input line at five spaces reads as output.
+    md = (
+        "```apl\n      mat\nflywheel\nshyster \nflywheel\n     ∪mat\n"
+        "flywheel\nshyster \n```\n"
+    )
+    _, found = _cands(cb, md, {0: [_ve(cb, "mat")]})
+    (s,) = found[0]
+    assert s.unsupported and "mentions" in s.unsupported
+
+
+def test_shown_candidates_ambiguous_block_is_unsupported(cb):
+    md = "```apl\n      M\n1 2\n       x\n      M+1\n2 3\n```\n"
+    blocks, found = _cands(cb, md, {0: [_ve(cb, "M"), _ve(cb, "M")]})
+    assert cb.classify(blocks[0]).kind == "ambiguous"
+    (s,) = found[0]
+    assert s.unsupported and "ambiguous" in s.unsupported
+
+
+def _shown_run(cb, monkeypatch, value, uses):
+    """Fake runs where `v` is undefined until a unit assigns it; `value`
+    is its display, `uses` maps other lines to their results."""
+
+    def results(bs):
+        defined = False
+        out = {}
+        for b in bs:
+            res = []
+            for u in b.lines:
+                if not isinstance(u, str) or u.startswith("v←"):
+                    defined = True
+                    res.append(_lres(cb, []))
+                elif u == "v":
+                    res.append(_lres(cb, value) if defined else _ve(cb, "v"))
+                elif defined:
+                    res.append(uses[u])
+                else:
+                    res.append(_ve(cb, "v"))
+            out[b.id] = res
+        return out
+
+    return _fake_run(cb, monkeypatch, results)
+
+
+_UNRUN = "```apl\n      ⎕SE.UCMD 'x'\n```\n\n"  # a block that is never run
+
+
+def test_define_shown_suspect_input_block_is_unsupported(cb, tmp_path, monkeypatch):
+    md = "```apl\n      v\n1 2\n```\n\n```apl\n      v+1\n2 3\n```\n"
+    _docs(tmp_path, {"a.md": md})
+    calls = _shown_run(cb, monkeypatch, ["1 2"], {"v+1": _lres(cb, ["2 3"])})
+    _, log = _main(cb, tmp_path, "--define-shown")
+    _, entries = cb.read_log(log)
+    why = entries[0]["rewrite_rejected"]["v"]
+    assert why.startswith("define-shown: unsupported") and "suspect-input" in why
+    assert len(calls) == 1
+
+
+def test_define_shown_later_use_that_errs_rejects(cb, tmp_path, monkeypatch):
+    # system-functions/r.md: the value reads as a character matrix, but the
+    # page uses it as a vector of strings; later uses fail.
+    md = _UNRUN + (
+        "```apl\n      v\nTo be\nOr not\n```\n\n"
+        "```apl\n      ('[aeiou]' ⎕R 'X') v\nTX bX\nXr nXt\n```\n"
+    )
+    _docs(tmp_path, {"a.md": md})
+    err = cb.LineResult(["DOMAIN ERROR", "      x", "      ∧"], True, None)
+    _shown_run(cb, monkeypatch, ["To be", "Or not"], {"('[aeiou]' ⎕R 'X') v": err})
+    _, log = _main(cb, tmp_path, "--define-shown")
+    _, entries = cb.read_log(log)
+    e = entries[1]
+    assert e.get("rewrite") is None
+    assert "later use" in e["rewrite_rejected"]["v"]
+    assert "DOMAIN ERROR" in e["rewrite_rejected"]["v"]
+
+
+def test_define_shown_later_use_with_shown_error_is_fine(cb, tmp_path, monkeypatch):
+    md = _UNRUN + (
+        "```apl\n      v\n1 2\n```\n\n"
+        "```apl\n      v[3]\nINDEX ERROR\n      v[3]\n       ∧\n```\n"
+    )
+    _docs(tmp_path, {"a.md": md})
+    err = cb.LineResult(["INDEX ERROR", "      v[3]", "       ∧"], True, None)
+    _shown_run(cb, monkeypatch, ["1 2"], {"v[3]": err})
+    _, log = _main(cb, tmp_path, "--define-shown")
+    _, entries = cb.read_log(log)
+    assert entries[1]["rewrite"] == "aplan" and entries[2]["verdict"] == "match"
+
+
+def test_define_shown_unused_value_is_rejected(cb, tmp_path, monkeypatch):
+    md = _UNRUN + "```apl\n      v\n1 2\n```\n"
+    _docs(tmp_path, {"a.md": md})
+    _shown_run(cb, monkeypatch, ["1 2"], {})
+    _, log = _main(cb, tmp_path, "--define-shown")
+    _, entries = cb.read_log(log)
+    assert entries[1].get("rewrite") is None
+    assert "nothing" in entries[1]["rewrite_rejected"]["v"]
+
+
+def test_define_shown_without_docker_says_so(cb, tmp_path, capsys):
+    _docs(tmp_path, {"a.md": _PAGE})
+    _main(cb, tmp_path, "--no-run", "--define-shown")
+    assert "--define-shown" in capsys.readouterr().err

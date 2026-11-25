@@ -130,20 +130,24 @@ name N, where no earlier line of an `apl` block on the page assigns N (N←,
 or a ∇ line naming it), N is not an earlier candidate on the page, the run
 gives `VALUE ERROR: Undefined name: N` for it and its printed output is not
 an error. The printed output becomes array notation: one row of numbers
-(¯, decimals, E exponents, J complex) `N←1 2 3` (a scalar for one number);
-several such rows a matrix `N←[1 2 ⋄ 3 4]`; one row of other text
+(¯, decimals, E exponents, J complex) `N←1 2 3`, single-spaced (a scalar
+for one number); several such rows a matrix `N←[1 2 ⋄ 3 4]`, each row
+spaced as printed; one row of other text
 `N←'text'` (quotes doubled); several rows, not all numeric, a character
 matrix `N←['abc' ⋄ 'de']` (trailing spaces removed; array notation pads
 rows). A matrix is proposed on several lines, rows aligned under the first
 element after `[`. Anything else (no output, box drawing, a blank line
 inside, numbers and text in one row, a column-0 ⍝ note among the output
-lines) is unsupported. The definition
+lines, an output row that mentions N, an ambiguous block, a block whose
+plain run is suspect-input) is unsupported. The definition
 replaces the line and its output; with no output, it joins the following
 input in the same `apl` block. Proof: the page runs again with every
 definition, exactly as proposed (a multi-line definition as one input unit,
 run as source), each followed by a hidden check, the bare name, which is not
 judged or proposed. A definition is accepted only if the check displays the
-printed output and the rewritten block's verdict is match; the failures are
+printed output, the rewritten block's verdict is match, at least one later
+input line on the page that uses N ran, and none of them raised an error
+the page does not show; the failures are
 dropped and the rest proved once more (if that fails too, none is applied).
 Later blocks are judged in the run with the accepted definitions. Extra
 fields, only with the option:
@@ -1430,7 +1434,8 @@ def aplan(name: str, rows: list[str]) -> tuple[str, list[str]]:
 
     Returns (one line, with ⋄ between rows; the proposal's lines, rows
     aligned under the first element after `[`). One row of numbers: a
-    numeric vector (a scalar for one number); several: a numeric matrix.
+    numeric vector, single-spaced (a scalar for one number); several: a
+    numeric matrix, each row spaced as printed.
     One row of other text: a character vector; several rows, not all
     numeric: a character matrix (rows without trailing spaces; array
     notation pads them). Raises Unsupported for anything else.
@@ -1448,8 +1453,10 @@ def aplan(name: str, rows: list[str]) -> tuple[str, list[str]]:
         if len(kinds) > 1:
             raise Unsupported(f"numbers and text in one row: {r.strip()}")
         numeric.append(kinds == {True})
-    if all(numeric):
-        items = [" ".join(r.split()) for r in rows]
+    if all(numeric) and len(rows) == 1:
+        items = [" ".join(rows[0].split())]
+    elif all(numeric):
+        items = rows  # each row's spacing as printed
     else:
         items = ["'" + r.replace("'", "''") + "'" for r in rows]
     head = f"{name}←"
@@ -1484,6 +1491,7 @@ def shown_candidates(
     blocks: list[Block],
     classes: dict[int, Classification],
     results: dict[int, list[LineResult]],
+    suspect: frozenset[int] = frozenset(),
 ) -> dict[int, list[Shown]]:
     """The page's shown-but-undefined names, by block index.
 
@@ -1491,8 +1499,11 @@ def shown_candidates(
     whitespace aside), no earlier line of an `apl` block on the page assigns
     N (N←, or a ∇ line naming it), N is not an earlier candidate, the run
     (`results`) gave `VALUE ERROR: Undefined name: N` for it, and its printed
-    output is not an error. A candidate whose printed output aplan cannot
-    write is returned with `unsupported` set.
+    output is not an error. A candidate is returned with `unsupported` set
+    when aplan cannot write its printed output, an output row mentions N (an
+    input line read as output, say), a column-0 ⍝ note is among its output,
+    the block is ambiguous, or the block's plain run was suspect-input (its
+    index is in `suspect`).
     """
     found: dict[int, list[Shown]] = {}
     seen: set[str] = set()
@@ -1527,9 +1538,15 @@ def shown_candidates(
                 ):
                     seen.add(name)
                     try:
+                        if cls.kind == "ambiguous":
+                            raise Unsupported(f"ambiguous block: {cls.reason}")
+                        if i in suspect:
+                            raise Unsupported("the block's run was suspect-input")
                         if any(ln.startswith("⍝") for ln in spans[k]):
                             # The rewrite drops the output: a note would go too.
                             raise Unsupported("annotation in the output")
+                        if any(_uses_name(ln, name) for ln in printed[k]):
+                            raise Unsupported(f"the output mentions {name}")
                         oneline, lines = aplan(name, printed[k])
                         shown = Shown(i, k, name, oneline, tuple(lines), None)
                     except Unsupported as e:
@@ -1682,6 +1699,7 @@ def _judge_page(
     listings = 0
     prior_unrun = False
     hung_seen = False
+    ran: dict[int, list[LineResult]] = {}  # judged results, hidden checks removed
     for i, b in enumerate(blocks):
         cls = classes.get(i)
         if cls is None:
@@ -1699,6 +1717,8 @@ def _judge_page(
             jcls = classify(jb)
             if res is not None:
                 res, hidden = _unhide(res, shown)
+        if res is not None:
+            ran[i] = res
         if i in side:
             verdict, reason, actual = "not-run", "side-effect", None
         elif stop and i in sent and len(results.get(i, [])) < sent[i] and hung_seen:
@@ -1730,7 +1750,42 @@ def _judge_page(
             entry["rewrite"] = "aplan"
             entry["defines"] = [s.name for s in shown]
         entries.append(entry)
+    for i, shown in applied.items():
+        for s in shown:
+            if (i, s.name) not in failed and (why := _later_uses(blocks, classes, ran, s)):
+                failed[(i, s.name)] = why
     return entries, listings, failed
+
+
+def _later_uses(
+    blocks: list[Block],
+    classes: dict[int, Classification],
+    ran: dict[int, list[LineResult]],
+    s: Shown,
+) -> str | None:
+    """Why the page's later input lines do not back the definition, or None.
+
+    Every later input line that uses the name and ran must not raise an
+    error the page does not show, and at least one must have run.
+    """
+    used = False
+    for j in range(s.block, len(blocks)):
+        res = ran.get(j)
+        if res is None:
+            continue
+        b, cls = blocks[j], classes[j]
+        printed = expected_outputs(b, cls)
+        for k, text in enumerate(_input_texts(b, cls)):
+            if (j == s.block and k <= s.line) or k >= len(res):
+                continue
+            if not _uses_name(text, s.name):
+                continue
+            used = True
+            shows_error = any(_ERROR_RE.match(ln.rstrip()) for ln in printed[k])
+            if res[k].error and not shows_error:
+                head = res[k].output[0] if res[k].output else "error"
+                return f"a later use fails: line {b.line}: {text.strip()}: {head}"
+    return None if used else f"nothing on the page uses {s.name}"
 
 
 def _process_page(
@@ -1755,7 +1810,12 @@ def _process_page(
     applied: dict[int, list[Shown]] = {}
     rejected: dict[int, dict[str, str]] = {}
     if define_shown and image:
-        for i, found in shown_candidates(blocks, classes, run[0]).items():
+        plain = _judge_page(blocks, classes, image, run, {})[0]
+        at = {b.line: i for i, b in enumerate(blocks)}
+        suspect = frozenset(
+            at[e["line"]] for e in plain if e["reason"] == "suspect-input"
+        )
+        for i, found in shown_candidates(blocks, classes, run[0], suspect).items():
             for s in found:
                 if s.unsupported:
                     rejected.setdefault(i, {})[s.name] = s.unsupported
@@ -1897,6 +1957,11 @@ def _exit_on_signal(signum: int, frame: object) -> None:
 def _main(args: argparse.Namespace) -> int:
 
     image = None if args.no_run else prepare_image(args.image)
+    if args.define_shown and not image:
+        print(
+            "note: --define-shown needs a run in Docker; no definitions proposed",
+            file=sys.stderr,
+        )
 
     docs = Path(args.docs)
     root = docs / args.guide

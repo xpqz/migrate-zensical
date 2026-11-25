@@ -57,8 +57,8 @@ src←⊃⎕NGET(⊃⌽args/⍨'.apls'∘≡¨¯5↑¨args)1
 ⍝|    ⍝ Run several lines as literal source: fixed as the body of a niladic function in # and
 ⍝|    ⍝ called there, so names they assign are #'s. Result as for Line; an error displays its
 ⍝|    ⍝ message only (a definition that does not fix: DEFN ERROR). A line that is a system
-⍝|    ⍝ command or uses ⎕OFF skips the unit (2), as does ⍞ (3). Values the lines do not
-⍝|    ⍝ assign are displayed as a function's lines display them (without ]box).
+⍝|    ⍝ command or uses ⎕OFF skips the unit (2), as does ⍞ (3). Only output the lines send
+⍝|    ⍝ to ⎕ (or ⍞) is displayed: other values, as in a function called by ⍎, are not.
 ⍝|    ∇ state←Unit src;t;r;sc
 ⍝|      sc←Scan¨src
 ⍝|      t←{(∨\⍵≠' ')/⍵}¨src
@@ -176,7 +176,14 @@ src←⊃⎕NGET(⊃⌽args/⍨'.apls'∘≡¨¯5↑¨args)1
 ⍝|          :EndIf
 ⍝|          cur←stmt
 ⍝|          :Trap 0
-⍝|              Show #.⍎'1(85⌶)⎕SE.CB.cur'
+⍝|              :If 0<≢('⎕TRAP\s*←'⎕S 0⍠'IC' 1)stmt
+⍝|                  ⍝ Assigning ⎕TRAP under 85⌶ ends the interpreter (Dyalog 21.0):
+⍝|                  ⍝ run it plainly. The assignment does not outlive the statement,
+⍝|                  ⍝ so the harness's :Trap still catches later errors.
+⍝|                  #.⍎cur
+⍝|              :Else
+⍝|                  Show #.⍎'1(85⌶)⎕SE.CB.cur'
+⍝|              :EndIf
 ⍝|          :Else
 ⍝|              :If 85≠⎕DMX.EN
 ⍝|                  state←1

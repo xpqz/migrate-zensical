@@ -323,14 +323,18 @@ is not an error.
 
 - One row, all numbers (`¯`, decimals, `E` exponents, `J` complex):
   `N←1 2 3`, the numbers single-spaced; a scalar for one number.
-- Several rows, all numbers: a matrix, `N←[1 2 ⋄ 3 4]`.
+- Several rows, all numbers: a matrix, `N←[1 2 ⋄ 3 4]`, each row spaced
+  as printed, so the proposal reads like the docs.
 - One row, not numbers: a character vector, `N←'text'`, quotes doubled.
 - Several rows, not all numbers: a character matrix, `N←['abc' ⋄ 'de']`,
   each row without its trailing spaces (array notation pads short rows).
 - Anything else is unsupported and logged as `define-shown: unsupported
   (why)`: no output (`⍬`, say), box drawing (nested or boxed), a blank
   line inside (rank 3 or more), numbers and text in one row, a column-0
-  `⍝` note among the output lines (the rewrite would drop it).
+  `⍝` note among the output lines (the rewrite would drop it), an output
+  row that mentions N as a name (an input line at an odd indent read as
+  output, as in `symbols/down-shoe.md`), an ambiguous block, or a block
+  whose plain run is `suspect-input`.
 
 A matrix is proposed on several lines, the continuation rows aligned
 under the first element after `[`.
@@ -340,7 +344,11 @@ of its line, sent exactly as proposed: the harness takes a multi-line
 input unit and runs it as literal source (below). A hidden check, the bare
 name, follows each definition; it is not judged and not proposed. A
 definition is accepted only if the check displays the printed output (after
-the usual normalisation) and the rewritten block's verdict is `match`.
+the usual normalisation), the rewritten block's verdict is `match`, and
+the rest of the page backs it: at least one later input line that uses N
+(as a whole name) ran, and none raised an error the page does not show.
+(`system-functions/r.md` shows a vector of strings that displays exactly
+as a character matrix; only the later `⎕R` lines tell them apart.)
 Failures are dropped and the rest proved in one more run; if that fails
 too, no definition on the page is applied and the first run stands. Pages
 without candidates run once. Later blocks are judged in the run with the
@@ -356,9 +364,15 @@ system command, `⎕OFF` or `⍞` on any line skips the unit as for single
 lines. Only `--define-shown` sends such units now. The same mechanism
 could later run multi-line dfns, traditional functions in session-editor
 notation and other multi-line inputs; that would need a rule for which
-following indented lines continue a unit, session-style display of values
-the lines do not assign (a function's lines print without `]box`), and
-error display in session form.
+following indented lines continue a unit, display of the values the lines
+neither assign nor send to `⎕` (today, as in a function called by `⍎`,
+they are not displayed at all), and error display in session form.
+
+**`⎕TRAP`.** In Dyalog 21.0, assigning `⎕TRAP` in a statement run under
+`85⌶` ends the interpreter. The harness runs a statement that assigns
+`⎕TRAP` with plain `⍎` instead; the assignment does not outlive the
+statement, so the harness's own trapping stays in charge and the page keeps
+running (examples that rely on a trap firing then show the error instead).
 
 **Log.** The entry gains `rewrite: aplan` and `defines: [N, …]`;
 `proposed` is the rewritten split, `actual` follows the usual rules.
