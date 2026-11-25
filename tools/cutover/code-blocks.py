@@ -80,7 +80,7 @@ Role = Literal["input", "output", "blank"]
 _WS = " \u00a0"
 _SESSION_INDENT_RE = re.compile(r"^[ \u00a0]{6}(?=\S)")
 _ERROR_RE = re.compile(r"^(?=\S)[A-Z ]*ERROR\b")
-_CARET_RE = re.compile(r"^ {6,}[∧^ ]*[∧^][∧^ ]*$")
+_CARET_RE = re.compile(r"^ +[∧^ ]*[∧^][∧^ ]*$")
 _DEL_LINE_RE = re.compile(r"^\[\d+\]")
 _SCRIPT_RE = re.compile(r"^:(Class|Namespace|Interface)")
 _MAX_RE = re.compile(r"┌→|┌↓|^(└∊|↓)", re.M)
@@ -413,8 +413,23 @@ def _parse_output(text: str, token: str) -> tuple[dict[int, list[LineResult]], i
 # --- Judging ----------------------------------------------------------------
 
 VOLATILE = frozenset(
-    {"?", "⎕AI", "⎕TS", "⎕DL", "⎕WA", "⎕RL", "⎕SI", "⎕LC", "⎕TID", "⎕TNUMS", "⎕DMX"}
+    {
+        "?", "⎕AI", "⎕TS", "⎕DL", "⎕WA", "⎕RL", "⎕SI", "⎕LC", "⎕TID", "⎕TNUMS",
+        "⎕DMX", "⎕PROFILE", "120⌶",
+    }
 )
+
+# Facilities with side effects on files, processes, the workspace or the GUI.
+SIDE_EFFECTS = frozenset(
+    "⎕" + n
+    for n in (
+        "SH CMD SHELL NA MKDIR NCREATE NERASE NDELETE NMOVE NCOPY NPUT NAPPEND "
+        "NREPLACE NRENAME NRESIZE NTIE NSHARE NLOCK FCREATE FTIE FSTIE FERASE "
+        "FAPPEND FREPLACE FRENAME FRESIZE FDROP FHOLD FUNTIE NUNTIE FCOPY FPACK "
+        "FSTAC FCHK SAVE LOAD CY FIX WC WS NQ DQ TGET TPUT CSV MAP"
+    ).split()
+)
+_SAFE_COMMANDS = frozenset({"box", "boxing", "display", "disp", "rows"})
 
 _QUAD_NAME_RE = re.compile(r"⎕[A-Za-z0-9_]*")
 
@@ -439,6 +454,17 @@ def _code_only(line: str) -> str:
     return "".join(out)
 
 
+def _strip_comment(line: str) -> str:
+    """Cut at a ⍝ comment outside strings, keeping the strings."""
+    in_str = False
+    for i, ch in enumerate(line):
+        if ch == "'":
+            in_str = not in_str
+        elif ch == "⍝" and not in_str:
+            return line[:i]
+    return line
+
+
 def _is_volatile(line: str) -> bool:
     code = _code_only(line)
     # Non-quad entries (`?`) match anywhere in code; ⎕ names match whole
@@ -446,7 +472,22 @@ def _is_volatile(line: str) -> bool:
     if any(v in code for v in VOLATILE if not v.startswith("⎕")):
         return True
     names = {v.upper() for v in VOLATILE if v.startswith("⎕")}
-    return any(m.upper() in names for m in _QUAD_NAME_RE.findall(code))
+    found = {m.upper() for m in _QUAD_NAME_RE.findall(code)}
+    if found & names:
+        return True
+    # ⎕DT is volatile only when it converts the current time ('Z').
+    return "⎕DT" in found and "'Z'" in _strip_comment(line)
+
+
+def has_side_effect(line: str) -> bool:
+    """True if an input line uses a side-effecting facility or user command."""
+    text = line.lstrip()
+    if text.startswith("]"):
+        parts = text[1:].split()
+        return not parts or parts[0].lower() not in _SAFE_COMMANDS
+    code = _code_only(line)
+    names = {m.upper() for m in _QUAD_NAME_RE.findall(code)}
+    return bool(names & SIDE_EFFECTS)
 
 
 def expected_outputs(block: Block, cls: Classification) -> list[list[str]]:
@@ -686,6 +727,8 @@ def _process_page(
     }
     results: dict[int, list[LineResult]] = {}
     early_exit = False
+    side: set[int] = set()
+    sent: dict[int, int] = {}  # block index -> number of lines sent
     if dyalogscript:
         boxed = False
         to_run: list[RunBlock] = []
@@ -694,14 +737,19 @@ def _process_page(
             if cls is None or not cls.runnable:
                 continue
             lines = _input_texts(b, cls)
-            to_run.append(RunBlock(i, None if boxed else cls.style, lines))
+            if any(has_side_effect(t) for t in lines):
+                side.add(i)
+                continue
             boxed = boxed or any(_BOX_RE.match(t) for t in lines)
+            to_run.append(RunBlock(i, None if boxed else cls.style, lines))
+            sent[i] = len(lines)
         if to_run:
             results, early_exit = run_page(to_run, dyalogscript, timeout)
 
     entries: list[dict] = []
     listings = 0
     prior_unrun = False
+    hung_seen = False
     for i, b in enumerate(blocks):
         cls = classes.get(i)
         if cls is None:
@@ -711,7 +759,13 @@ def _process_page(
         if cls.kind == "listing":
             listings += 1
             continue
-        if dyalogscript:
+        if i in side:
+            verdict, reason, actual = "not-run", "side-effect", None
+        elif early_exit and i in sent and len(results.get(i, [])) < sent[i] and hung_seen:
+            verdict, reason, actual = "not-run", "unreached", None
+        elif dyalogscript:
+            if early_exit and i in sent and len(results.get(i, [])) < sent[i]:
+                hung_seen = True  # the first block with a missing line
             verdict, reason, actual = judge(
                 b, cls, results.get(i), prior_unrun, early_exit
             )

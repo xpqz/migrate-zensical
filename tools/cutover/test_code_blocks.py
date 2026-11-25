@@ -873,3 +873,89 @@ def test_run_page_does_not_write_into_the_callers_cwd(cb, tmp_path, monkeypatch)
     monkeypatch.chdir(tmp_path)
     _run(cb, (None, ["(⊂'x') ⎕NPUT 'litter.txt'"]))
     assert list(tmp_path.iterdir()) == []
+
+
+# --- side effects, box pre-set, volatile, unreached, carets -------------------
+
+
+def test_has_side_effect(cb):
+    for line in ["⎕NDELETE 'x'", "⎕ndelete'x'", "]Foo bar", "]", "x←⎕CSV 'a'"]:
+        assert cb.has_side_effect(line), line
+    for line in ["]box on", "]Boxing", "]DISPLAY ⍳3", "]disp 1", "]rows 5",
+                 "'⎕NDELETE' ⍝ ⎕SH", "⎕NDELETEX", "1+1"]:
+        assert not cb.has_side_effect(line), line
+
+
+def test_volatile_additions(cb):
+    v = cb._is_volatile
+    assert v("⎕PROFILE 'stop'") and v("120⌶4")
+    assert v("⎕DT 'Z'") and v("¯1 ⎕DT 'Z' ⍝ x")
+    assert not v("0 ⎕DT 2020 1 1") and not v("⎕DT ⍝ 'Z'")
+
+
+def _fake_run(cb, monkeypatch, results_fn, early=False):
+    calls = []
+
+    def fake(blocks, dyalogscript, timeout):
+        calls.append(blocks)
+        return results_fn(blocks), early
+
+    monkeypatch.setattr(cb, "run_page", fake)
+    monkeypatch.setattr(cb, "find_dyalogscript", lambda: "/fake")
+    monkeypatch.setattr(cb, "dyalog_version", lambda d: "v")
+    return calls
+
+
+def _lres(cb, out):
+    return cb.LineResult(out, False, None)
+
+
+def test_main_side_effect_block_is_not_sent(cb, tmp_path, monkeypatch):
+    md = "```apl\n      ⎕NDELETE 'x'\n```\n\n```apl\n      1+1\n2\n```\n"
+    _docs(tmp_path, {"a.md": md})
+    calls = _fake_run(cb, monkeypatch, lambda bs: {b.id: [_lres(cb, ["2"])] for b in bs})
+    _, log = _main(cb, tmp_path)
+    assert [[b.id for b in c] for c in calls] == [[1]]
+    _, entries = cb.read_log(log)
+    assert (entries[0]["verdict"], entries[0]["reason"]) == ("not-run", "side-effect")
+    assert entries[1]["verdict"] == "match"
+
+
+def test_main_box_style_is_none_when_block_or_earlier_block_uses_box(
+    cb, tmp_path, monkeypatch
+):
+    box = "┌→┐\n│1│\n└─┘"
+    md = (
+        f"```apl\n      ]Boxing ON\n      ⍳1\n{box}\n```\n\n"
+        f"```apl\n      ⍳1\n{box}\n```\n"
+    )
+    _docs(tmp_path, {"a.md": md})
+    calls = _fake_run(cb, monkeypatch, lambda bs: {})
+    _main(cb, tmp_path)
+    assert [b.style for b in calls[0]] == [None, None]
+
+
+def test_main_unreached_blocks_after_the_first_missing_line(
+    cb, tmp_path, monkeypatch
+):
+    md = "".join(f"```apl\n      {i}+0\n{i}\n```\n\n" for i in (1, 2, 3, 4))
+    _docs(tmp_path, {"a.md": md})
+    _fake_run(
+        cb, monkeypatch, lambda bs: {bs[0].id: [_lres(cb, ["1"])]}, early=True
+    )
+    _, log = _main(cb, tmp_path)
+    _, entries = cb.read_log(log)
+    assert [(e["verdict"], e["reason"]) for e in entries] == [
+        ("match", None),
+        ("timeout", None),
+        ("not-run", "unreached"),
+        ("not-run", "unreached"),
+    ]
+
+
+def test_classify_accepts_short_caret_in_error_triple(cb):
+    body = ["      ÷0", "DOMAIN ERROR: Divide by zero", "      ÷0", "     ∧", "      1"]
+    md = "```apl\n" + "\n".join(body) + "\n```\n"
+    cls = cb.classify(cb.find_blocks("a.md", md)[0])
+    assert cls.roles == ["input", "output", "output", "output", "input"]
+    assert cls.kind == "session"
