@@ -1547,3 +1547,29 @@ def test_run_page_workspace_script_and_native_code_examples(cb):
         "⎕NA 'I4 libc.so.6|getpid'", "0<getpid",
     ]))
     assert _out(res) == [[], ["3"], [], ["2"], [], ["1"]]
+
+
+def test_carry_decisions_counts_carried_decisions_that_now_differ(cb):
+    def e(verdict, decision):
+        return {"page": "p", "sha256": "s", "proposed": "x\n", "split": "unambiguous",
+                "verdict": verdict, "decision": decision}
+    stats = cb.Counter()
+    old = [e("match", "apply"), e("match", "pending"), e("differs", "skip")]
+    new = [e("differs", "pending"), e("not-run", "pending"), e("differs", "pending")]
+    out = cb.carry_decisions(old, new, stats)
+    assert [x["decision"] for x in out] == ["apply", "pending", "skip"]
+    assert stats["now_differs"] == 1
+
+
+def test_main_reports_carried_decisions_that_now_differ(cb, tmp_path, monkeypatch, capsys):
+    _docs(tmp_path, {"a.md": _PAGE})
+    _fake_run(cb, monkeypatch, lambda bs: {b.id: [_lres(cb, ["9"])] for b in bs})
+    _, log = _main(cb, tmp_path, "--no-run")
+    meta, entries = cb.read_log(log)
+    for x in entries:
+        x["verdict"], x["decision"] = "match", "apply"
+    cb.write_log(log, meta, entries)
+    capsys.readouterr()
+    _main(cb, tmp_path)
+    out = capsys.readouterr().out
+    assert "carried, now differs: 2" in out

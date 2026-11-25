@@ -105,7 +105,9 @@ Decisions are carried to the new log by page and sha256 (duplicate blocks
 in order): an entry keeps its decision while `proposed` is unchanged and
 its split is unchanged or both splits are confirmed or unambiguous;
 otherwise it is reset to pending. The tool prints how many decisions were
-reset and how many were dropped because their block changed or went away.
+reset, how many were dropped because their block changed or went away, and
+how many were carried onto a block that matched before and does not now
+("carried, now differs"), which deserve a second look.
 """
 
 import argparse
@@ -1236,7 +1238,8 @@ def carry_decisions(
     confirmed into unambiguous without changing the proposal). `stats`, if
     given, counts the decisions other than pending that were `reset` (the
     block is unchanged but its proposal changed) or `dropped` (the block
-    changed or is gone).
+    changed or is gone), and those carried onto a block that matched before
+    and does not now (`now_differs`).
     """
     prior: dict[tuple, list[dict]] = {}
     for e in old:
@@ -1253,6 +1256,13 @@ def carry_decisions(
             or {before["split"], entry["split"]} <= _SPLITS
         ):
             entry["decision"] = before["decision"]
+            if (
+                stats is not None
+                and before["decision"] != "pending"
+                and before.get("verdict") == "match"
+                and entry.get("verdict") != "match"
+            ):
+                stats["now_differs"] += 1
         else:
             entry["decision"] = "pending"
             if stats is not None and before["decision"] != "pending":
@@ -1486,7 +1496,8 @@ def main(argv: list[str] | None = None) -> int:
     if had_log:
         print(
             f"Decisions: {stats['reset']} reset to pending, "
-            f"{stats['dropped']} dropped (previous log in {log.name}.bak)"
+            f"{stats['dropped']} dropped; carried, now differs: "
+            f"{stats['now_differs']} (previous log in {log.name}.bak)"
         )
     for key in ("verdict", "split"):
         counts = Counter(e[key] for e in entries)
