@@ -148,3 +148,89 @@ def classify(block: Block) -> Classification:
         reason = "indented-output"
     kind = "session" if reason is None else "ambiguous"
     return Classification(kind, reason, roles, nbsp, runnable, style)
+
+
+class SplitError(ValueError):
+    pass
+
+
+def split_kind(
+    cls: Classification, verdict: str | None, reason: str | None = None
+) -> Literal["confirmed", "unambiguous", "ambiguous", "none"]:
+    if cls.kind == "listing":
+        return "none"
+    if cls.kind == "ambiguous" and not cls.runnable:
+        return "ambiguous"
+    if verdict == "not-run" and reason == "suspect-input":
+        return "ambiguous"
+    if cls.reason == "indented-output" and verdict != "match":
+        return "ambiguous"
+    if verdict == "match":
+        return "confirmed"
+    return "unambiguous"
+
+
+def _fence(tag: str, lines: list[str]) -> str:
+    return f"```{tag}\n" + "".join(ln + "\n" for ln in lines) + "```\n"
+
+
+def split_block(block: Block, cls: Classification) -> str:
+    """Propose an apl block of input followed by a text block of output."""
+    if cls.kind == "listing" or (cls.kind == "ambiguous" and not cls.runnable):
+        raise ValueError(f"cannot split a {cls.kind} block ({cls.reason})")
+    # Each group: [input lines, output lines]
+    groups: list[list[list[str]]] = []
+    pending_blank = 0
+    for raw, role in zip(block.body, cls.roles):
+        line = raw.rstrip("\r")
+        if role == "blank":
+            pending_blank += 1
+            continue
+        if role == "input":
+            if not groups or groups[-1][1]:
+                groups.append([[], []])
+            groups[-1][0].append(strip_indent(line))
+        else:
+            if not groups:
+                groups.append([[], []])
+            out = groups[-1][1]
+            if out:
+                out.extend([""] * pending_blank)
+            out.append(line)
+        pending_blank = 0
+    parts = []
+    for inputs, outputs in groups:
+        text = _fence("apl", inputs) if inputs else ""
+        if outputs:
+            text += ("\n" if inputs else "") + _fence("text", outputs)
+        parts.append(text)
+    result = "\n".join(parts)
+    check_no_lost_lines(block, result)
+    return result
+
+
+def _fenced_lines(text: str) -> list[str]:
+    lines, inside = [], False
+    for ln in text.split("\n"):
+        if ln.startswith("```"):
+            inside = not inside
+        elif inside:
+            lines.append(ln.rstrip("\r"))
+    return lines
+
+
+def check_no_lost_lines(original: Block, proposed: str) -> None:
+    from collections import Counter
+
+    cls = classify(original)
+    before: Counter[str] = Counter()
+    for raw, role in zip(original.body, cls.roles):
+        ln = raw.rstrip("\r")
+        if role == "input":
+            ln = strip_indent(ln)
+        if ln.strip():
+            before[ln] += 1
+    after = Counter(ln for ln in _fenced_lines(proposed) if ln.strip())
+    if before != after:
+        diff = (before - after) + (after - before)
+        raise SplitError(f"{original.page}:{original.line}: lines differ: {dict(diff)}")

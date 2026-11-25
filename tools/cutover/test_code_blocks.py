@@ -183,3 +183,88 @@ def test_classify_indented_error_message_is_not_a_triple(cb):
 def test_classify_bare_error_message_is_a_triple(cb):
     c = _classify(cb, "      x", "ERROR", "      x", "      ∧")
     assert c.roles == ["input", "output", "output", "output"]
+
+
+def _block(cb, *lines):
+    md = "```apl\n" + "\n".join(lines) + "\n```\n"
+    (b,) = cb.find_blocks("a.md", md)
+    return b, cb.classify(b)
+
+
+def test_split_simple_example(cb):
+    b, c = _block(cb, "      ⍳5", "1 2 3 4 5")
+    assert cb.split_block(b, c) == "```apl\n⍳5\n```\n\n```text\n1 2 3 4 5\n```\n"
+
+
+def test_split_groups_consecutive_inputs(cb):
+    b, c = _block(cb, "      a←1", "", "      a+1", "2", "      a+2", "3")
+    assert cb.split_block(b, c) == (
+        "```apl\na←1\na+1\n```\n\n```text\n2\n```\n"
+        "\n```apl\na+2\n```\n\n```text\n3\n```\n"
+    )
+
+
+def test_split_keeps_error_triple_in_text_block(cb):
+    b, c = _block(cb, "      1÷0", "DOMAIN ERROR", "      1÷0", "       ∧")
+    assert cb.split_block(b, c) == (
+        "```apl\n1÷0\n```\n\n```text\nDOMAIN ERROR\n      1÷0\n       ∧\n```\n"
+    )
+
+
+def test_split_strips_nbsp_indent(cb):
+    b, c = _block(cb, "      ⍳2", "1 2")
+    assert cb.split_block(b, c).startswith("```apl\n⍳2\n```\n")
+
+
+def test_split_drops_trailing_blank_output_lines(cb):
+    b, c = _block(cb, "      ⍳2", "1 2", "", "3", "", "")
+    assert cb.split_block(b, c) == "```apl\n⍳2\n```\n\n```text\n1 2\n\n3\n```\n"
+
+
+def test_split_keeps_trailing_whitespace_and_drops_cr(cb):
+    b, c = _block(cb, "      ⍳2\r", "1 2 \r")
+    assert cb.split_block(b, c) == "```apl\n⍳2\n```\n\n```text\n1 2 \n```\n"
+
+
+def test_split_input_only_has_no_text_block(cb):
+    b, c = _block(cb, "      a←1", "      a+1")
+    assert cb.split_block(b, c) == "```apl\na←1\na+1\n```\n"
+
+
+def test_split_rejects_listing_and_unrunnable(cb):
+    b, c = _block(cb, "R←⍳Y")
+    with pytest.raises(ValueError):
+        cb.split_block(b, c)
+    b, c = _block(cb, "      ∇ foo", "      x")
+    assert not c.runnable
+    with pytest.raises(ValueError):
+        cb.split_block(b, c)
+
+
+def test_check_no_lost_lines_rejects_dropped_line(cb):
+    b, _ = _block(cb, "      ⍳2", "1 2", "3")
+    cb.check_no_lost_lines(b, "```apl\n⍳2\n```\n\n```text\n1 2\n3\n```\n")
+    with pytest.raises(cb.SplitError):
+        cb.check_no_lost_lines(b, "```apl\n⍳2\n```\n\n```text\n1 2\n```\n")
+
+
+@pytest.mark.parametrize(
+    "lines, verdict, reason, expected",
+    [
+        (("R←⍳Y",), None, None, "none"),
+        (("      x", "1"), None, None, "unambiguous"),
+        (("      x", "1"), "match", None, "confirmed"),
+        (("      x", "1"), "mismatch", None, "unambiguous"),
+        (("      x", "1"), "not-run", "suspect-input", "ambiguous"),
+        (("      x", "1"), "not-run", "other", "unambiguous"),
+        (("      ∇ foo", "      x"), None, None, "ambiguous"),
+        (("   x", "      y", "1"), "match", None, "ambiguous"),
+        (("      x", "        a", "      y", "      b"), None, None, "ambiguous"),
+        (("      1÷0", "   VALUE ERROR", "      1÷0", "       ∧"), "match", None, "confirmed"),
+        (("      1÷0", "   VALUE ERROR", "      1÷0", "       ∧"), "mismatch", None, "ambiguous"),
+        (("      1÷0", "   VALUE ERROR", "      1÷0", "       ∧"), None, None, "ambiguous"),
+    ],
+)
+def test_split_kind_table(cb, lines, verdict, reason, expected):
+    _, c = _block(cb, *lines)
+    assert cb.split_kind(c, verdict, reason) == expected
