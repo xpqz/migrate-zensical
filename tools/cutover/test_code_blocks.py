@@ -369,6 +369,16 @@ def test_run_page_user_command(cb):
 
 
 @needs_dyalog
+def test_run_page_display_command_sees_user_names_and_has_no_result(cb):
+    res, _ = _run(cb, (None, ["Q1←2 2⍴⍳4", "]Display Q1", "]disp 2 2⍴⍳4", "1+1"]))
+    r = res[1]
+    assert [x.error for x in r] == [False] * 4
+    assert r[1].output == ["┌→──┐", "↓1 2│", "│3 4│", "└~──┘"]
+    assert r[2].output and not any("ERROR" in ln for ln in r[2].output)
+    assert r[3].output == ["2"]
+
+
+@needs_dyalog
 def test_run_page_skips_off(cb):
     res, _ = _run(cb, (None, ["⎕OFF", ")off", "1+1"]))
     assert [(r.skipped, r.output) for r in res[1]] == [

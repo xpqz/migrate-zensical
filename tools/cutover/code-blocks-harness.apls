@@ -92,7 +92,7 @@ src←⊃⎕NGET(⊃⌽args/⍨'.apls'∘≡¨¯5↑¨args)1
 ⍝|
 ⍝|    ⍝ Run one input line; result 0 = ran, 1 = error displayed, 2 = skipped (system command),
 ⍝|    ⍝ 3 = skipped (uses ⍞). The line is split into statements at top-level ⋄.
-⍝|    ∇ state←Line text;t;seps;qq;off;res;starts;ends;k;stmt;s;lead
+⍝|    ∇ state←Line text;t;seps;qq;off;starts;ends;k;stmt;s;lead;q
 ⍝|      cur←text ⋄ state←0
 ⍝|      t←(∨\text≠' ')/text
 ⍝|      :If 0=≢t
@@ -106,14 +106,16 @@ src←⊃⎕NGET(⊃⌽args/⍨'.apls'∘≡¨¯5↑¨args)1
 ⍝|          state←3 ⋄ :Return
 ⍝|      :EndIf
 ⍝|      :If ']'=⊃t
+⍝|          ⍝ Run from # so the command's argument sees user names; a command
+⍝|          ⍝ such as ]Display prints and has no result (error 85).
+⍝|          cur←'⎕SE.UCMD ',q,((1+q=s)/s←1↓t),q←''''
 ⍝|          :Trap 0
-⍝|              res←⎕SE.UCMD 1↓t
-⍝|              :If 0<≢res
-⍝|                  Show res
-⍝|              :EndIf
+⍝|              Show #.⍎'1(85⌶)⎕SE.CB.cur'
 ⍝|          :Else
-⍝|              state←1
-⍝|              {⎕←⍵}¨Err text 0 text
+⍝|              :If 85≠⎕DMX.EN
+⍝|                  state←1
+⍝|                  {⎕←⍵}¨Err text 0 text
+⍝|              :EndIf
 ⍝|          :EndTrap
 ⍝|          :Return
 ⍝|      :EndIf
