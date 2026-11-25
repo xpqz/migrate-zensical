@@ -4,6 +4,8 @@
 ⍝ Protocol (stdout, lines end in CR), <t> being the request's random token:
 ⍝ "⍝CB-<t>-BEGIN <id> <index>" before each input line, then "⍝CB-<t>-END" (plain),
 ⍝ "⍝CB-<t>-END ERROR", "⍝CB-<t>-END SKIP" (system command) or "⍝CB-<t>-END SKIP QQ" (⍞).
+⍝ A request line is an input unit: a string (one session line) or a list of strings
+⍝ (several lines run as source, see Unit); each unit gets one BEGIN/END pair.
 ⍝ The harness code is the ⍝| lines below, fixed into ⎕SE.CB (out of reach of user code);
 ⍝ user lines execute in #.
 args←2⎕NQ'.' 'GetCommandLineArgs'
@@ -14,10 +16,11 @@ src←⊃⎕NGET(⊃⌽args/⍨'.apls'∘≡¨¯5↑¨args)1
 ⍝|:Namespace CB
 ⍝|    ⎕IO←1 ⋄ ⎕ML←1
 ⍝|
-⍝|    ∇ Main file;req;blk;i;lines;tok
+⍝|    ∇ Main file;req;blk;i;lines;tok;unitfn
 ⍝|      req←⎕JSON⊃⎕NGET file
 ⍝|      {}#.⎕EX'args' 'src'  ⍝ the bootstrap's names must not reach user code
 ⍝|      tok←'⍝CB-',req.token,'-'
+⍝|      unitfn←'⍙CB',req.token  ⍝ Unit's temporary function in #
 ⍝|      #.⎕IO←1 ⋄ #.⎕ML←1 ⋄ ⎕PW←req.pw
 ⍝|      :For blk :In ,req.blocks
 ⍝|          :If ⎕NULL≢blk.style
@@ -26,7 +29,7 @@ src←⊃⎕NGET(⊃⌽args/⍨'.apls'∘≡¨¯5↑¨args)1
 ⍝|          lines←,¨⊆blk.lines
 ⍝|          :For i :In ⍳≢lines
 ⍝|              ⎕←tok,'BEGIN ',(⍕blk.id),' ',⍕i-1
-⍝|              ⎕←tok,'END',(1+Line i⊃lines)⊃'' ' ERROR' ' SKIP' ' SKIP QQ'
+⍝|              ⎕←tok,'END',(1+Run i⊃lines)⊃'' ' ERROR' ' SKIP' ' SKIP QQ'
 ⍝|          :EndFor
 ⍝|      :EndFor
 ⍝|    ∇
@@ -39,6 +42,48 @@ src←⊃⎕NGET(⊃⌽args/⍨'.apls'∘≡¨¯5↑¨args)1
 ⍝|          :Case 'off' ⋄ _←⎕SE.UCMD'box off'
 ⍝|          :EndSelect
 ⍝|      :EndTrap
+⍝|    ∇
+⍝|
+⍝|    ⍝ An input unit is one line (a string), run as a session line, or several lines (a
+⍝|    ⍝ vector of strings), run as source.
+⍝|    ∇ state←Run unit
+⍝|      :If 1≥|≡unit
+⍝|          state←Line unit
+⍝|      :Else
+⍝|          state←Unit unit
+⍝|      :EndIf
+⍝|    ∇
+⍝|
+⍝|    ⍝ Run several lines as literal source: fixed as the body of a niladic function in # and
+⍝|    ⍝ called there, so names they assign are #'s. Result as for Line; an error displays its
+⍝|    ⍝ message only (a definition that does not fix: DEFN ERROR). A line that is a system
+⍝|    ⍝ command or uses ⎕OFF skips the unit (2), as does ⍞ (3). Values the lines do not
+⍝|    ⍝ assign are displayed as a function's lines display them (without ]box).
+⍝|    ∇ state←Unit src;t;r;sc
+⍝|      sc←Scan¨src
+⍝|      t←{(∨\⍵≠' ')/⍵}¨src
+⍝|      :If ∨/(')'=⊃¨t,¨' ')∨3⊃¨sc
+⍝|          state←2 ⋄ :Return
+⍝|      :EndIf
+⍝|      :If ∨/2⊃¨sc
+⍝|          state←3 ⋄ :Return
+⍝|      :EndIf
+⍝|      state←0
+⍝|      :Trap 0
+⍝|          r←#.⎕FX(⊂unitfn),src
+⍝|      :Else
+⍝|          r←⍬
+⍝|      :EndTrap
+⍝|      :If ~unitfn≡r
+⍝|          ⎕←'DEFN ERROR' ⋄ state←1 ⋄ :Return
+⍝|      :EndIf
+⍝|      :Trap 0
+⍝|          #.⍎unitfn
+⍝|      :Else
+⍝|          state←1
+⍝|          ⎕←⎕DMX.EM,(0<≢⎕DMX.Message)/': ',⎕DMX.Message
+⍝|      :EndTrap
+⍝|      {}#.⎕EX unitfn
 ⍝|    ∇
 ⍝|
 ⍝|    ⍝ Scan a line outside quoted strings and comments. Result: seps qq off, where seps are

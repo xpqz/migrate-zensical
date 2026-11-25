@@ -426,7 +426,9 @@ class LineResult:
 class RunBlock:
     id: int
     style: str | None  # "max" | "min" | "off" | None (leave the box setting)
-    lines: list[str]
+    # Input units: a string is one session line; a list of strings is several
+    # lines the harness runs as source (one result for the unit).
+    lines: list[str | list[str]]
 
 
 DOCKER = shutil.which("docker") or "docker"
@@ -1377,43 +1379,262 @@ def carry_decisions(
     return out
 
 
+# --- Defining shown values (--define-shown) --------------------------------
+
+_SHOWN_NAME_RE = re.compile(r"[A-Za-z_∆⍙][A-Za-z0-9_∆⍙¯]*")
+_NUM = r"¯?(?:\d+(?:\.\d*)?|\.\d+)(?:E¯?\d+)?"
+_NUMBER_RE = re.compile(rf"{_NUM}(?:J{_NUM})?")
+_BOX_DRAWING_RE = re.compile("[\u2500-\u257f]")
+
+
+class Unsupported(ValueError):
+    """A shown value that --define-shown does not write in array notation."""
+
+
+def aplan(name: str, rows: list[str]) -> tuple[str, list[str]]:
+    """Array notation defining `name` as the value printed as `rows`.
+
+    Returns (one line, with ⋄ between rows; the proposal's lines, rows
+    aligned under the first element after `[`). One row of numbers: a
+    numeric vector (a scalar for one number); several: a numeric matrix.
+    One row of other text: a character vector; several rows, not all
+    numeric: a character matrix (rows without trailing spaces; array
+    notation pads them). Raises Unsupported for anything else.
+    """
+    rows = _normalise(rows)
+    if not rows:
+        raise Unsupported("no output")
+    if any(_BOX_DRAWING_RE.search(r) for r in rows):
+        raise Unsupported("box drawing")
+    if any(not r.strip() for r in rows):
+        raise Unsupported("blank line inside")
+    numeric = []
+    for r in rows:
+        kinds = {bool(_NUMBER_RE.fullmatch(t)) for t in r.split()}
+        if len(kinds) > 1:
+            raise Unsupported(f"numbers and text in one row: {r.strip()}")
+        numeric.append(kinds == {True})
+    if all(numeric):
+        items = [" ".join(r.split()) for r in rows]
+    else:
+        items = ["'" + r.replace("'", "''") + "'" for r in rows]
+    head = f"{name}←"
+    if len(items) == 1:
+        return head + items[0], [head + items[0]]
+    pad = " " * (len(head) + 1)
+    lines = [f"{head}[{items[0]}"] + [pad + it for it in items[1:]]
+    lines[-1] += "]"
+    return f"{head}[{' ⋄ '.join(items)}]", lines
+
+
+@dataclass(frozen=True)
+class Shown:
+    """A bare name whose value a block shows but the page never defines."""
+
+    block: int  # index of the block on the page
+    line: int  # index among the block's input lines
+    name: str
+    oneline: str | None  # the definition on one line (⋄ between rows)
+    lines: tuple[str, ...]  # the definition as proposed; () if unsupported
+    unsupported: str | None  # why there is no definition
+
+
+def _assigns(line: str, name: str) -> bool:
+    """The line assigns `name` (`name←`) or is a ∇ line naming it."""
+    if re.search(rf"(?<![\w∆⍙_.⎕]){re.escape(name)}\s*←", _code_only(line)):
+        return True
+    return line.strip().startswith("∇") and _uses_name(line.strip(), name)
+
+
+def shown_candidates(
+    blocks: list[Block],
+    classes: dict[int, Classification],
+    results: dict[int, list[LineResult]],
+) -> dict[int, list[Shown]]:
+    """The page's shown-but-undefined names, by block index.
+
+    An input line is a candidate when it is exactly a name N (trailing
+    whitespace aside), no earlier line of an `apl` block on the page assigns
+    N (N←, or a ∇ line naming it), N is not an earlier candidate, the run
+    (`results`) gave `VALUE ERROR: Undefined name: N` for it, and its printed
+    output is not an error. A candidate whose printed output aplan cannot
+    write is returned with `unsupported` set.
+    """
+    found: dict[int, list[Shown]] = {}
+    seen: set[str] = set()
+    earlier: list[str] = []
+    for i, b in enumerate(blocks):
+        cls = classes.get(i)
+        res = results.get(i)
+        if cls is None or cls.kind == "listing" or not cls.runnable or res is None:
+            earlier.extend(b.body)
+            continue
+        printed = expected_outputs(b, cls)
+        k = -1
+        for raw, role in zip(b.body, cls.roles):
+            if role == "input":
+                k += 1
+                name = strip_indent(raw).rstrip()
+                if (
+                    _SHOWN_NAME_RE.fullmatch(name)
+                    and name not in seen
+                    and k < len(res)
+                    and res[k].error
+                    and res[k].output[:1] == [f"VALUE ERROR: Undefined name: {name}"]
+                    and not any(_ERROR_RE.match(ln.rstrip()) for ln in printed[k])
+                    and not any(_assigns(ln, name) for ln in earlier)
+                ):
+                    seen.add(name)
+                    try:
+                        oneline, lines = aplan(name, printed[k])
+                        shown = Shown(i, k, name, oneline, tuple(lines), None)
+                    except Unsupported as e:
+                        shown = Shown(
+                            i, k, name, None, (), f"define-shown: unsupported ({e})"
+                        )
+                    found.setdefault(i, []).append(shown)
+            earlier.append(raw)
+    return found
+
+
+def _units(inputs: list[str], shown: list[Shown]) -> list[str | list[str]]:
+    """Input units to send: each shown name's line becomes its definition as
+    proposed (a multi-line unit if it spans lines), followed by a hidden
+    check, the bare name."""
+    at = {s.line: s for s in shown}
+    units: list[str | list[str]] = []
+    for k, text in enumerate(inputs):
+        s = at.get(k)
+        if s is None:
+            units.append(text)
+        else:
+            units.append(s.lines[0] if len(s.lines) == 1 else list(s.lines))
+            units.append(s.name)
+    return units
+
+
+def _unhide(
+    results: list[LineResult], shown: list[Shown]
+) -> tuple[list[LineResult], dict[str, LineResult]]:
+    """Split a rewritten block's results into the judged ones and the
+    hidden checks, by name."""
+    checks = {
+        s.line + n + 1: s.name
+        for n, s in enumerate(sorted(shown, key=lambda s: s.line))
+    }
+    judged: list[LineResult] = []
+    hidden: dict[str, LineResult] = {}
+    for pos, r in enumerate(results):
+        if pos in checks:
+            hidden[checks[pos]] = r
+        else:
+            judged.append(r)
+    return judged, hidden
+
+
+def _rewritten(b: Block, cls: Classification, shown: list[Shown]) -> Block:
+    """The block with each shown name's line replaced by its one-line
+    definition and the name's printed output removed. It stands in for the
+    rewrite when judging and splitting (_proposal restores the line breaks)."""
+    at = {s.line: s for s in shown}
+    body: list[str] = []
+    k = -1
+    drop = False
+    for raw, role in zip(b.body, cls.roles):
+        if role == "input":
+            k += 1
+            drop = k in at
+            body.append("      " + at[k].oneline if drop else raw)
+        elif not drop:
+            body.append(raw)
+    text = "```apl\n" + "".join(ln + "\n" for ln in body) + "```\n"
+    return Block(b.page, b.line, b.sha256, text, body, b.nested)
+
+
+def _proposal(b: Block, cls: Classification, shown: list[Shown]) -> str:
+    """split_block, with each one-line definition in its proposed form."""
+    text = split_block(b, cls)
+    for s in shown:
+        if len(s.lines) > 1:
+            one = f"\n{s.oneline}\n"
+            if text.count(one) != 1:
+                raise SplitError(f"{b.page}:{b.line}: cannot place {s.name}")
+            text = text.replace(one, "\n" + "\n".join(s.lines) + "\n")
+    return text
+
+
+def _disproof(
+    s: Shown,
+    check: LineResult | None,
+    printed: list[str],
+    verdict: str,
+    reason: str | None,
+) -> str | None:
+    """Why the definition is not proved, or None: the hidden check must
+    display the printed output and the rewritten block must match."""
+    if check is None:
+        return "the check did not run"
+    if check.error or _normalise(check.output) != _normalise(printed):
+        return f"{s.name} displays otherwise: " + " / ".join(_normalise(check.output))
+    if verdict != "match":
+        return f"rewritten block: {verdict}" + (f" ({reason})" if reason else "")
+    return None
+
+
 # --- Command line -----------------------------------------------------------
 
 _BOX_RE = re.compile(r"\]box(ing)?\b", re.I)
 
 
-def _process_page(
-    page: str, markdown: str, image: str | None, timeout: float
-) -> tuple[list[dict], int, int]:
-    """Entries for one page, plus (block count, listing count)."""
-    blocks = find_blocks(page, markdown)
-    classes = {
-        i: classify(b) for i, b in enumerate(blocks) if not b.nested
-    }
+def _run_plan(
+    blocks: list[Block],
+    classes: dict[int, Classification],
+    image: str | None,
+    timeout: float,
+    applied: dict[int, list["Shown"]],
+) -> tuple[dict[int, list[LineResult]], str | None, set[int], dict[int, int]]:
+    """Run a page: (results, stop, side-effect blocks, units sent per block).
+
+    `applied` maps a block index to the shown names whose definitions replace
+    their bare-name lines (see _units). Without an image nothing runs.
+    """
     results: dict[int, list[LineResult]] = {}
     stop: str | None = None
     side: set[int] = set()
-    sent: dict[int, int] = {}  # block index -> number of lines sent
-    if image:
-        boxed = False
-        to_run: list[RunBlock] = []
-        for i, b in enumerate(blocks):
-            cls = classes.get(i)
-            if cls is None or cls.kind == "listing":
-                continue
-            if not cls.runnable:
-                continue
-            lines = _input_texts(b, cls)
-            if any(has_side_effect(t) for t in lines):
-                side.add(i)
-                continue
-            boxed = boxed or any(_BOX_RE.match(t) for t in lines)
-            to_run.append(RunBlock(i, None if boxed else cls.style, lines))
-            sent[i] = len(lines)
-        if to_run:
-            results, stop = run_page(to_run, image, timeout)
+    sent: dict[int, int] = {}  # block index -> number of units sent
+    if not image:
+        return results, stop, side, sent
+    boxed = False
+    to_run: list[RunBlock] = []
+    for i, b in enumerate(blocks):
+        cls = classes.get(i)
+        if cls is None or cls.kind == "listing" or not cls.runnable:
+            continue
+        units = _units(_input_texts(b, cls), applied.get(i, []))
+        flat = [ln for u in units for ln in ([u] if isinstance(u, str) else u)]
+        if any(has_side_effect(t) for t in flat):
+            side.add(i)
+            continue
+        boxed = boxed or any(_BOX_RE.match(t) for t in flat)
+        to_run.append(RunBlock(i, None if boxed else cls.style, units))
+        sent[i] = len(units)
+    if to_run:
+        results, stop = run_page(to_run, image, timeout)
+    return results, stop, side, sent
 
+
+def _judge_page(
+    blocks: list[Block],
+    classes: dict[int, Classification],
+    image: str | None,
+    run: tuple[dict[int, list[LineResult]], str | None, set[int], dict[int, int]],
+    applied: dict[int, list["Shown"]],
+) -> tuple[list[dict], int, dict[tuple[int, str], str]]:
+    """Entries for a page's run, the listing count, and the applied
+    definitions that failed their proof, as {(block index, name): why}."""
+    results, stop, side, sent = run
     entries: list[dict] = []
+    failed: dict[tuple[int, str], str] = {}
     listings = 0
     prior_unrun = False
     hung_seen = False
@@ -1426,6 +1647,14 @@ def _process_page(
         if cls.kind == "listing":
             listings += 1
             continue
+        shown = applied.get(i, [])
+        jb, jcls, res = b, cls, results.get(i)
+        hidden: dict[str, LineResult] = {}
+        if shown:
+            jb = _rewritten(b, cls, shown)
+            jcls = classify(jb)
+            if res is not None:
+                res, hidden = _unhide(res, shown)
         if i in side:
             verdict, reason, actual = "not-run", "side-effect", None
         elif stop and i in sent and len(results.get(i, [])) < sent[i] and hung_seen:
@@ -1433,23 +1662,98 @@ def _process_page(
         elif image:
             if stop and i in sent and len(results.get(i, [])) < sent[i]:
                 hung_seen = True  # the first block with a missing line
-            verdict, reason, actual = judge(
-                b, cls, results.get(i), prior_unrun, stop
-            )
+            verdict, reason, actual = judge(jb, jcls, res, prior_unrun, stop)
         else:
-            verdict, reason, actual = judge(b, cls, None, prior_unrun, None)
-        if reason is None and cls.kind == "ambiguous":
-            reason = cls.reason
-        split = split_kind(cls, verdict, reason)
+            verdict, reason, actual = judge(jb, jcls, None, prior_unrun, None)
+        if reason is None and jcls.kind == "ambiguous":
+            reason = jcls.reason
+        printed = expected_outputs(b, cls)
+        for s in shown:
+            why = _disproof(s, hidden.get(s.name), printed[s.line], verdict, reason)
+            if why:
+                failed[(i, s.name)] = why
+        split = split_kind(jcls, verdict, reason)
         proposed = None
         if split in ("confirmed", "unambiguous"):
             try:
-                proposed = split_block(b, cls)
+                proposed = _proposal(jb, jcls, shown)
             except SplitError:
                 split, reason, proposed = "ambiguous", "split-check", None
         if (cls.kind == "ambiguous" and not cls.runnable) or verdict == "not-run":
             prior_unrun = True
-        entries.append(_entry(b, verdict, reason, split, cls.nbsp, proposed, actual))
+        entry = _entry(b, verdict, reason, split, cls.nbsp, proposed, actual)
+        if shown:
+            entry["rewrite"] = "aplan"
+            entry["defines"] = [s.name for s in shown]
+        entries.append(entry)
+    return entries, listings, failed
+
+
+def _process_page(
+    page: str,
+    markdown: str,
+    image: str | None,
+    timeout: float,
+    define_shown: bool = False,
+    stats: Counter | None = None,
+) -> tuple[list[dict], int, int]:
+    """Entries for one page, plus (block count, listing count).
+
+    With `define_shown` (and an image), shown-but-undefined names get their
+    definitions proved by further runs (see "Defining shown values" in the
+    design); `stats`, if given, counts accepted, rejected and unsupported.
+    """
+    blocks = find_blocks(page, markdown)
+    classes = {
+        i: classify(b) for i, b in enumerate(blocks) if not b.nested
+    }
+    run = _run_plan(blocks, classes, image, timeout, {})
+    applied: dict[int, list[Shown]] = {}
+    rejected: dict[int, dict[str, str]] = {}
+    if define_shown and image:
+        for i, found in shown_candidates(blocks, classes, run[0]).items():
+            for s in found:
+                if s.unsupported:
+                    rejected.setdefault(i, {})[s.name] = s.unsupported
+                else:
+                    applied.setdefault(i, []).append(s)
+        # Prove the definitions in a run with all of them applied; drop the
+        # failures and prove the rest once more. If that still fails, none
+        # is applied and the first run stands.
+        for _ in range(2):
+            if not applied:
+                break
+            trial = _run_plan(blocks, classes, image, timeout, applied)
+            failed = _judge_page(blocks, classes, image, trial, applied)[2]
+            if not failed:
+                run = trial
+                break
+            for (i, name), why in failed.items():
+                rejected.setdefault(i, {})[name] = why
+            applied = {
+                i: kept
+                for i, found in applied.items()
+                if (kept := [s for s in found if (i, s.name) not in failed])
+            }
+        else:
+            for i, found in applied.items():
+                for s in found:
+                    rejected.setdefault(i, {})[s.name] = (
+                        "not proved: another definition on the page failed"
+                    )
+            applied = {}
+    entries, listings, _ = _judge_page(blocks, classes, image, run, applied)
+    lines = {b.line: i for i, b in enumerate(blocks)}
+    for e in entries:
+        why = rejected.get(lines[e["line"]])
+        if why:
+            e["rewrite_rejected"] = why
+    if stats is not None:
+        stats["accepted"] += sum(len(found) for found in applied.values())
+        for why in rejected.values():
+            for text in why.values():
+                unsupported = text.startswith("define-shown: unsupported")
+                stats["unsupported" if unsupported else "rejected"] += 1
     return entries, len(blocks), listings
 
 
@@ -1522,6 +1826,12 @@ def main(argv: list[str] | None = None) -> int:
         help="the documentation root; log paths are relative to it "
         "(default: %(default)s)",
     )
+    ap.add_argument(
+        "--define-shown",
+        action="store_true",
+        help="propose array-notation definitions for names a block shows "
+        "but the page never defines, when a run proves them",
+    )
     args = ap.parse_args(argv)
     # SIGTERM and SIGHUP would end Python without running `finally`, leaving
     # a page's container running: turn them into SystemExit instead.
@@ -1565,12 +1875,15 @@ def _main(args: argparse.Namespace) -> int:
 
     entries: list[dict] = []
     total = listings = 0
+    shown: Counter = Counter()
     for p in pages:
         found, n, lst = _process_page(
             p.relative_to(docs).as_posix(),
             p.read_text(encoding="utf-8"),
             image,
             args.timeout,
+            args.define_shown,
+            shown,
         )
         entries += found
         total += n
@@ -1622,6 +1935,11 @@ def _main(args: argparse.Namespace) -> int:
     for key in ("verdict", "split"):
         counts = Counter(e[key] for e in entries)
         print(f"By {key}: " + ", ".join(f"{k} {v}" for k, v in sorted(counts.items())))
+    if args.define_shown:
+        print(
+            f"define-shown: {shown['accepted']} rewrites accepted, "
+            f"{shown['rejected']} rejected, {shown['unsupported']} unsupported"
+        )
     return 0
 
 

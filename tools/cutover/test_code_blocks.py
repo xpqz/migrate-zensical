@@ -1748,3 +1748,215 @@ def test_dockerfile_pins_dotnet_and_checks_the_installer(cb):
     assert "--version 10.0.15" in text and "--channel" not in text
     assert re.search(r"DOTNET_INSTALL_SHA256=[0-9a-f]{64}\b", text)
     assert "sha256sum -c" in text
+
+
+# --- multi-line units in the harness ---------------------------------------
+
+
+@needs_docker
+def test_run_page_multi_line_unit_runs_as_source(cb):
+    unit = ["M←[10 20 30 40", "   50 60 70 80]"]
+    res, stop = _run(cb, (None, ["s←5", unit, "M", "⍴M", "s"]))
+    assert stop is None
+    assert _out(res) == [[], [], ["10 20 30 40", "50 60 70 80"], ["2 4"], ["5"]]
+    assert [r.error for r in res[1]] == [False] * 5
+
+
+@needs_docker
+def test_run_page_multi_line_unit_error_does_not_abort(cb):
+    res, stop = _run(
+        cb,
+        (None, [["X←[1 2", "   3 4"], "1+1", ["Y←{", "⍵+1"], "2+2", ["Z←1", "÷0"], "Z"]),
+    )
+    assert stop is None
+    assert [r.error for r in res[1]] == [True, False, True, False, True, False]
+    assert res[1][0].output[0].startswith("SYNTAX ERROR")
+    assert res[1][4].output[0].startswith("DOMAIN ERROR")
+    assert _out(res)[1] == ["2"] and _out(res)[3] == ["4"] and _out(res)[5] == ["1"]
+
+
+@needs_docker
+def test_run_page_multi_line_unit_leaves_no_names_and_keeps_diamonds_in_strings(cb):
+    unit = ["C←['a⋄b'", "   'cd']"]
+    res, _ = _run(cb, (None, [unit, "C", "⍴C", "≢⎕NL ¯2 ¯3 ¯4 ¯9"]))
+    assert _out(res) == [[], ["a⋄b", "cd "], ["2 3"], ["1"]]
+
+
+@needs_docker
+def test_run_page_multi_line_unit_skips_system_commands_and_quote_quad(cb):
+    res, _ = _run(cb, (None, [["A←1", ")CLEAR"], ["B←⍞", "B"], "1"]))
+    assert [r.skipped for r in res[1]] == ["system-command", "quote-quad", None]
+
+
+# --- --define-shown: candidates and array notation ---------------------------
+
+
+@pytest.mark.parametrize(
+    "rows, oneline, lines",
+    [
+        (["1 2  3"], "V←1 2 3", ["V←1 2 3"]),
+        (["42"], "V←42", ["V←42"]),
+        (["¯1.5 2E10 3J¯4 1.5E¯7 ¯2J0.5"], "V←¯1.5 2E10 3J¯4 1.5E¯7 ¯2J0.5",
+         ["V←¯1.5 2E10 3J¯4 1.5E¯7 ¯2J0.5"]),
+        (["10 20 30 40", "50 60 70 80"], "V←[10 20 30 40 ⋄ 50 60 70 80]",
+         ["V←[10 20 30 40", "   50 60 70 80]"]),
+        ([" 1  2", "¯3 40"], "V←[1 2 ⋄ ¯3 40]", ["V←[1 2", "   ¯3 40]"]),
+        (["It's here"], "V←'It''s here'", ["V←'It''s here'"]),
+        (["abc", "de   ", "f"], "V←['abc' ⋄ 'de' ⋄ 'f']", ["V←['abc'", "   'de'", "   'f']"]),
+        (["123", "ab"], "V←['123' ⋄ 'ab']", ["V←['123'", "   'ab']"]),
+    ],
+)
+def test_aplan(cb, rows, oneline, lines):
+    assert cb.aplan("V", rows) == (oneline, lines)
+
+
+def test_aplan_aligns_under_the_first_element_for_long_names(cb):
+    assert cb.aplan("mat", ["1 2", "3 4"])[1] == ["mat←[1 2", "     3 4]"]
+
+
+@pytest.mark.parametrize(
+    "rows",
+    [
+        [],
+        [""],
+        ["┌→──┐", "│abc│", "└───┘"],
+        ["1 2", "", "3 4"],
+        ["abc 1 2"],
+        ["1 2", "x 3"],
+    ],
+)
+def test_aplan_unsupported(cb, rows):
+    with pytest.raises(cb.Unsupported):
+        cb.aplan("V", rows)
+
+
+def _ve(cb, name):
+    return cb.LineResult(
+        [f"VALUE ERROR: Undefined name: {name}", f"      {name}", "      ∧"], True, None
+    )
+
+
+def _cands(cb, md, results):
+    blocks = cb.find_blocks("a.md", md)
+    classes = {i: cb.classify(b) for i, b in enumerate(blocks) if not b.nested}
+    return blocks, cb.shown_candidates(blocks, classes, results)
+
+
+def test_shown_candidates_bare_name_with_value_error(cb):
+    md = "```apl\n      M \n1 2\n3 4\n      M[1;1]\n1\n```\n"
+    _, found = _cands(cb, md, {0: [_ve(cb, "M"), _ve(cb, "M")]})
+    (s,) = found[0]
+    assert (s.block, s.line, s.name) == (0, 0, "M")
+    assert s.oneline == "M←[1 2 ⋄ 3 4]" and s.lines == ("M←[1 2", "   3 4]")
+    assert s.unsupported is None
+
+
+def test_shown_candidates_needs_value_error_for_that_name(cb):
+    md = "```apl\n      M\n1 2\n```\n"
+    assert _cands(cb, md, {0: [_lres(cb, ["1 2"])]})[1] == {}
+    assert _cands(cb, md, {0: [_ve(cb, "N")]})[1] == {}
+    assert _cands(cb, md, {})[1] == {}
+
+
+def test_shown_candidates_not_if_assigned_earlier_on_the_page(cb):
+    for first in ("      M←⍳3\n", "      ∇R←M\n", "      M ← 1\n", "M←1\n"):
+        md = f"```apl\n{first}```\n\n```apl\n      M\n1 2\n```\n"
+        _, found = _cands(cb, md, {1: [_ve(cb, "M")]})
+        assert found == {}, first
+
+
+def test_shown_candidates_only_the_first_bare_occurrence(cb):
+    md = "```apl\n      M\n1 2\n      M\n1 2\n```\n"
+    _, found = _cands(cb, md, {0: [_ve(cb, "M"), _ve(cb, "M")]})
+    assert [s.line for s in found[0]] == [0]
+
+
+def test_shown_candidates_not_for_expressions_or_shown_errors(cb):
+    md = "```apl\n      M+1\n2\n      M\nVALUE ERROR: Undefined name: M\n      M\n      ∧\n```\n"
+    _, found = _cands(cb, md, {0: [_ve(cb, "M"), _ve(cb, "M")]})
+    assert found == {}
+
+
+def test_shown_candidates_boxed_output_is_unsupported(cb):
+    md = "```apl\n      M\n┌─┬─┐\n│1│2│\n└─┴─┘\n```\n"
+    _, found = _cands(cb, md, {0: [_ve(cb, "M")]})
+    (s,) = found[0]
+    assert s.unsupported and s.lines == () and s.oneline is None
+
+
+def test_main_define_shown_logs_unsupported_only_with_the_option(cb, tmp_path, monkeypatch):
+    md = "```apl\n      M\n┌─┬─┐\n│1│2│\n└─┴─┘\n```\n"
+    _docs(tmp_path, {"a.md": md})
+    calls = _fake_run(cb, monkeypatch, lambda bs: {b.id: [_ve(cb, "M")] for b in bs})
+    _, log = _main(cb, tmp_path)
+    _, (e,) = cb.read_log(log)
+    assert "rewrite" not in e and "rewrite_rejected" not in e
+    _, log = _main(cb, tmp_path, "--define-shown")
+    _, (e,) = cb.read_log(log)
+    assert e["rewrite_rejected"]["M"].startswith("define-shown: unsupported")
+    assert e.get("rewrite") is None
+    assert len(calls) == 2  # one run each: nothing to prove
+
+
+# --- --define-shown in Docker -------------------------------------------------
+
+_INDEXING = (
+    "```apl\n"
+    "      M\n10 20 30 40\n50 60 70 80\n \n"
+    "      M[⊂1 2]\n20\n \n"
+    "      M[2 2⍴⊂2 4]\n80 80\n80 80\n \n"
+    "      M[(2 1)(1 2)]\n50 20\n"
+    "```\n"
+)
+
+
+@needs_docker
+def test_define_shown_indexing_example(cb, tmp_path, capsys):
+    _docs(tmp_path, {"a.md": _INDEXING + "\n```apl\n      M[1;]\n10 20 30 40\n```\n"})
+    _, log = _main(cb, tmp_path, "--define-shown")
+    _, (e, later) = cb.read_log(log)
+    assert (e["verdict"], e["split"], e["rewrite"], e["defines"]) == (
+        "match", "confirmed", "aplan", ["M"])
+    assert e["original"] == _INDEXING
+    assert e["proposed"] == (
+        "```apl\nM←[10 20 30 40\n   50 60 70 80]\nM[⊂1 2]\n```\n\n"
+        "```text\n20\n```\n\n"
+        "```apl\nM[2 2⍴⊂2 4]\n```\n\n```text\n80 80\n80 80\n```\n\n"
+        "```apl\nM[(2 1)(1 2)]\n```\n\n```text\n50 20\n```\n"
+    )
+    assert later["verdict"] == "match"  # runs because M is now defined
+    assert "define-shown: 1 rewrites accepted, 0 rejected" in capsys.readouterr().out
+    assert _containers() == []
+
+
+@needs_docker
+def test_define_shown_without_the_option_leaves_entries_alone(cb, tmp_path):
+    _docs(tmp_path, {"a.md": _INDEXING})
+    _, log = _main(cb, tmp_path)
+    _, (e,) = cb.read_log(log)
+    assert e["verdict"] == "not-run" and "rewrite" not in e
+
+
+@needs_docker
+def test_define_shown_wrong_guess_is_rejected(cb, tmp_path, capsys):
+    # Printed like a number, but ⍴ shows it is a character vector.
+    md = "```apl\n      M\n123\n      ⍴M\n3\n```\n"
+    _docs(tmp_path, {"a.md": md})
+    _, log = _main(cb, tmp_path, "--define-shown")
+    _, (e,) = cb.read_log(log)
+    assert e.get("rewrite") is None
+    assert "differs" in e["rewrite_rejected"]["M"]
+    assert e["verdict"] == "not-run" and e["original"] == md
+    assert e["proposed"] == cb.split_block(*(lambda b: (b, cb.classify(b)))(
+        cb.find_blocks("a.md", md)[0]))
+    assert "define-shown: 0 rewrites accepted, 1 rejected" in capsys.readouterr().out
+
+
+@needs_docker
+def test_define_shown_char_matrix_with_short_rows_and_diamonds(cb, tmp_path):
+    md = "```apl\n      C\na⋄b\ncd\n      ⍴C\n2 3\n```\n"
+    _docs(tmp_path, {"a.md": md})
+    _, log = _main(cb, tmp_path, "--define-shown")
+    _, (e,) = cb.read_log(log)
+    assert e["rewrite"] == "aplan" and e["verdict"] == "match"
+    assert e["proposed"].startswith("```apl\nC←['a⋄b'\n   'cd']\n⍴C\n```\n")
