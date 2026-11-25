@@ -612,3 +612,91 @@ def test_expected_outputs_leading_output_and_error_triple(cb):
         ["VALUE ERROR", "      a", "      ∧"],
         ["2"],
     ]
+
+
+def _entry(**kw):
+    e = {
+        "page": "a.md",
+        "line": 3,
+        "sha256": "abc",
+        "verdict": "differs",
+        "reason": None,
+        "split": "confirmed",
+        "nbsp": False,
+        "decision": "pending",
+        "original": "```apl\n      ⍳3\n1 2 3\n```\n",
+        "proposed": "```apl\n      ⍳3\n```\n\n```text\n1 2 3\n```\n",
+        "actual": "      ⍳3\n1 2 3\n",
+    }
+    e.update(kw)
+    return e
+
+
+META = {"guide": "g", "dyalog": "21.0", "platform": "mac", "generated": "now"}
+
+
+def test_log_round_trips_multiline_text(cb, tmp_path):
+    entries = [_entry(), _entry(line=9, proposed=None, actual=None)]
+    path = tmp_path / "log.yaml"
+    cb.write_log(path, META, entries)
+    meta, back = cb.read_log(path)
+    assert meta == META
+    assert back == entries
+    assert "⍳" in path.read_text(encoding="utf-8")
+    assert list(back[0]) == list(entries[0])
+
+
+def test_log_round_trips_trailing_spaces_and_blank_lines(cb, tmp_path):
+    tricky = [
+        "   \n1 2  \n\n",
+        " lead\nx\n",
+        "a b\n \n",
+        "crlf\r\nline\r\n",
+        "`a` ∇ ⍝ ┌→┐\n",
+        "no newline",
+    ]
+    entries = [_entry(original=t, proposed=t, actual=t) for t in tricky]
+    path = tmp_path / "log.yaml"
+    cb.write_log(path, META, entries)
+    _, back = cb.read_log(path)
+    assert [(e["original"], e["proposed"], e["actual"]) for e in back] == [
+        (t, t, t) for t in tricky
+    ]
+
+
+def test_log_uses_literal_blocks_for_plain_text(cb, tmp_path):
+    path = tmp_path / "log.yaml"
+    cb.write_log(path, META, [_entry()])
+    text = path.read_text(encoding="utf-8")
+    assert "original: |" in text
+    assert text.startswith("#")
+
+
+def test_write_log_names_page_and_line_on_mismatch(cb, tmp_path, monkeypatch):
+    monkeypatch.setattr(cb.yaml, "safe_load", lambda s: {"meta": META, "entries": [_entry(original="x")]})
+    with pytest.raises(cb.LogError, match=r"a\.md.*line"):
+        cb.write_log(tmp_path / "log.yaml", META, [_entry()])
+
+
+def test_carry_decisions_keeps_matching(cb):
+    old = [_entry(decision="apply")]
+    new = [_entry(decision="pending", line=7)]
+    out = cb.carry_decisions(old, new)
+    assert out[0]["decision"] == "apply"
+    assert out[0]["line"] == 7
+    assert new[0]["decision"] == "pending" and old[0]["decision"] == "apply"
+
+
+def test_carry_decisions_resets_when_proposal_changed(cb):
+    old = [_entry(decision="apply"), _entry(sha256="s2", decision="skip")]
+    new = [_entry(proposed="other\n"), _entry(sha256="s2", split="ambiguous")]
+    out = cb.carry_decisions(old, new)
+    assert [e["decision"] for e in out] == ["pending", "pending"]
+
+
+def test_carry_decisions_drops_vanished_blocks(cb):
+    old = [_entry(sha256="gone", decision="apply"), _entry(decision="skip")]
+    new = [_entry(sha256="new"), _entry()]
+    out = cb.carry_decisions(old, new)
+    assert [e["sha256"] for e in out] == ["new", "abc"]
+    assert [e["decision"] for e in out] == ["pending", "skip"]

@@ -19,6 +19,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+import yaml
+
 OPEN_RE = re.compile(r"^(\s*)(`{3,}|~{3,})(.*)$")
 
 
@@ -529,3 +531,82 @@ def judge(
     ):
         return "match", None, None
     return "differs", None, actual
+
+
+class LogError(Exception):
+    """The log could not be written faithfully."""
+
+
+_HEADER = (
+    "# Code-blocks review log. Review each entry and set `decision` to\n"
+    "# `apply` or `skip` (it starts as `pending`); only `apply` entries are\n"
+    "# applied. Text fields are exact; do not re-indent or strip them.\n"
+)
+_TEXT_KEYS = ("original", "proposed", "actual")
+
+
+class _LogDumper(yaml.SafeDumper):
+    pass
+
+
+def _represent_str(dumper: yaml.SafeDumper, value: str) -> yaml.ScalarNode:
+    # PyYAML itself falls back to double quotes when a literal block cannot
+    # hold the text (trailing spaces, CR, whitespace-only lines, ...).
+    style = "|" if "\n" in value else None
+    return dumper.represent_scalar("tag:yaml.org,2002:str", value, style=style)
+
+
+_LogDumper.add_representer(str, _represent_str)
+
+
+def write_log(path: Path, meta: dict, entries: list[dict]) -> None:
+    """Write the review log, then read it back and check the text is exact."""
+    body = yaml.dump(
+        {"meta": meta, "entries": entries},
+        Dumper=_LogDumper,
+        allow_unicode=True,
+        sort_keys=False,
+        width=10**9,
+    )
+    text = _HEADER + body
+    path.write_text(text, encoding="utf-8", newline="\n")
+
+    back = yaml.safe_load(path.read_text(encoding="utf-8"))
+    root = yaml.compose(text)
+    nodes = next(
+        (v.value for k, v in root.value if k.value == "entries"), []
+    )
+    got = back.get("entries", []) if isinstance(back, dict) else []
+    if len(got) != len(entries):
+        raise LogError(f"{path}: wrote {len(entries)} entries, read back {len(got)}")
+    for i, (want, have) in enumerate(zip(entries, got)):
+        for key in _TEXT_KEYS:
+            if have.get(key) != want.get(key):
+                line = nodes[i].start_mark.line + 1 if i < len(nodes) else "?"
+                raise LogError(
+                    f"{path}: {want.get('page')} (block at page line "
+                    f"{want.get('line')}, log line {line}): {key} did not "
+                    "survive the round trip"
+                )
+
+
+def read_log(path: Path) -> tuple[dict, list[dict]]:
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    return data["meta"], data["entries"]
+
+
+def carry_decisions(old: list[dict], new: list[dict]) -> list[dict]:
+    """Keep earlier decisions for blocks whose proposal is unchanged."""
+    prior = {(e["page"], e["sha256"]): e for e in old}
+    out = []
+    for entry in new:
+        entry = dict(entry)
+        before = prior.get((entry["page"], entry["sha256"]))
+        same = (
+            before is not None
+            and before["proposed"] == entry["proposed"]
+            and before["split"] == entry["split"]
+        )
+        entry["decision"] = before["decision"] if same else "pending"
+        out.append(entry)
+    return out
