@@ -484,3 +484,93 @@ def test_parse_output_accepts_sentinel_after_partial_line(cb):
     res, done = cb._parse_output(text, "t")
     assert done == 1
     assert res[1][0].output == ["abc"]
+
+
+# --- judge -------------------------------------------------------------------
+
+
+def _lr(cb, output, error=False, skipped=None):
+    return cb.LineResult(output, error, skipped)
+
+
+def _judge(cb, lines, results, prior_unrun=False, timed_out=False):
+    b, c = _block(cb, *lines)
+    return cb.judge(b, c, results, prior_unrun, timed_out)
+
+
+def test_judge_match(cb):
+    assert _judge(cb, ["      1+1", "2"], [_lr(cb, ["2"])]) == ("match", None, None)
+
+
+def test_judge_differs(cb):
+    v, r, actual = _judge(cb, ["      1+1", "3"], [_lr(cb, ["2"])])
+    assert (v, r, actual) == ("differs", None, "      1+1\n2\n")
+
+
+def test_judge_trailing_whitespace_is_not_a_difference(cb):
+    res = [_lr(cb, ["2  ", ""])]
+    assert _judge(cb, ["      1+1", "2\r", ""], res)[0] == "match"
+
+
+def test_judge_leading_whitespace_is_a_difference(cb):
+    assert _judge(cb, ["      1+1", "2"], [_lr(cb, [" 2"])])[0] == "differs"
+
+
+def test_judge_unexpected_error_is_not_run(cb):
+    err = ["VALUE ERROR: Undefined name: ab", "      ab", "      ∧"]
+    v, r, actual = _judge(cb, ["      1+1", "2", "      ab", "3"],
+                          [_lr(cb, ["2"]), _lr(cb, err, True)])
+    assert (v, r) == ("not-run", "suspect-input")
+    assert actual.startswith("      1+1\n2\n      ab\nVALUE ERROR")
+    err = ["DOMAIN ERROR", "      1÷'a'", "      ∧"]
+    assert _judge(cb, ["      1÷'a'", "3"], [_lr(cb, err, True)])[:2] == (
+        "not-run", "error")
+
+
+def test_judge_unexpected_error_after_unrun_block_is_dependency(cb):
+    err = ["VALUE ERROR: Undefined name: ab", "      ab", "      ∧"]
+    v, r, actual = _judge(cb, ["      ab", "3"], [_lr(cb, err, True)], prior_unrun=True)
+    assert (v, r) == ("not-run", "dependency") and actual
+
+
+def test_judge_expected_error_matching_is_match(cb):
+    err = ["VALUE ERROR: Undefined name: ab", "      ab", "      ∧"]
+    lines = ["      ab", *err]
+    assert _judge(cb, lines, [_lr(cb, err, True)]) == ("match", None, None)
+
+
+def test_judge_volatile_is_not_run(cb):
+    for line in ("      ?6", "      ⎕ts", "      1+⎕TS"):
+        assert _judge(cb, [line, "1"], [_lr(cb, ["1"])])[:2] == ("not-run", "volatile")
+    for line in ("      '?'", "      1 ⍝ ?", "      ⎕TSX", "      'it''s ?'"):
+        assert _judge(cb, [line, "1"], [_lr(cb, ["1"])])[0] == "match"
+
+
+def test_judge_skipped_reason(cb):
+    for s in ("system-command", "quote-quad"):
+        assert _judge(cb, ["      1", "1"], [_lr(cb, [], skipped=s)]) == (
+            "not-run", s, None)
+
+
+def test_judge_unrunnable_and_not_run(cb):
+    assert _judge(cb, ["      ∇ f", "x"], None, timed_out=True)[:2] == (
+        "not-run", "del-definition")
+    assert _judge(cb, ["      1", "1"], None) == ("not-run", "not-run", None)
+
+
+def test_judge_timeout(cb):
+    assert _judge(cb, ["      1", "1"], None, timed_out=True) == ("timeout", None, None)
+    two = ["      1", "1", "      2", "2"]
+    assert _judge(cb, two, [_lr(cb, ["1"])], timed_out=True)[0] == "timeout"
+
+
+def test_judge_indented_output_confirmed_by_match(cb):
+    lines = ["      ↑'       ab' 'cd'", "       ab", "cd"]
+    b, c = _block(cb, *lines)
+    v, r, _ = cb.judge(b, c, [_lr(cb, ["       ab", "cd"])], False, False)
+    assert v == "match" and cb.split_kind(c, v, r) == "confirmed"
+
+
+def test_expected_outputs(cb):
+    b, c = _block(cb, "      a", "1", "", "      b", "2")
+    assert cb.expected_outputs(b, c) == [["1", ""], ["2"]]

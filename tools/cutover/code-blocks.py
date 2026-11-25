@@ -396,3 +396,133 @@ def _parse_output(text: str, token: str) -> tuple[dict[int, list[LineResult]], i
         current = None
         done += 1
     return results, done
+
+
+# --- Judging ----------------------------------------------------------------
+
+VOLATILE = frozenset(
+    {"?", "⎕AI", "⎕TS", "⎕DL", "⎕WA", "⎕RL", "⎕SI", "⎕LC", "⎕TID", "⎕TNUMS", "⎕DMX"}
+)
+
+_QUAD_NAME_RE = re.compile(r"⎕[A-Za-z0-9_]*")
+
+
+def _code_only(line: str) -> str:
+    """Blank out '…' strings (with '' doubling) and cut at a ⍝ comment."""
+    out: list[str] = []
+    in_str = False
+    for ch in line:
+        if in_str:
+            if ch == "'":
+                in_str = False
+            out.append(" ")
+        elif ch == "'":
+            in_str = True
+            out.append(" ")
+        elif ch == "⍝":
+            break
+        else:
+            out.append(ch)
+    # A doubled quote closes and reopens the string, so '' is handled.
+    return "".join(out)
+
+
+def _is_volatile(line: str) -> bool:
+    code = _code_only(line)
+    if "?" in code and "?" in VOLATILE:
+        return True
+    upper = {v.upper() for v in VOLATILE if v.startswith("⎕")}
+    return any(m.upper() in upper for m in _QUAD_NAME_RE.findall(code))
+
+
+def expected_outputs(block: Block, cls: Classification) -> list[list[str]]:
+    """Printed output lines (verbatim) after each input line."""
+    groups: list[list[str]] = []
+    for raw, role in zip(block.body, cls.roles):
+        if role == "input":
+            groups.append([])
+        elif groups:
+            groups[-1].append(raw)
+    return groups
+
+
+def _input_texts(block: Block, cls: Classification) -> list[str]:
+    return [
+        strip_indent(raw.rstrip("\r"))
+        for raw, role in zip(block.body, cls.roles)
+        if role == "input"
+    ]
+
+
+def _normalise(lines: list[str]) -> list[str]:
+    out = [ln.rstrip() for ln in lines]
+    while out and not out[-1]:
+        out.pop()
+    return out
+
+
+def _session(inputs: list[str], results: list[LineResult]) -> list[str]:
+    out: list[str] = []
+    for text, res in zip(inputs, results):
+        out.append("      " + text)
+        out.extend(res.output)
+    return out
+
+
+def judge(
+    block: Block,
+    cls: Classification,
+    results: list[LineResult] | None,
+    prior_unrun: bool,
+    timed_out: bool,
+) -> tuple[str, str | None, str | None]:
+    """Decide `(verdict, reason, actual)` for a block.
+
+    Rules, in order:
+    1. block not runnable: not-run with the classification's reason;
+    2. no results, or fewer than input lines, and timed out: timeout
+       (no results and not timed out: not-run/not-run);
+    3. any skipped line: not-run with the skipped value as reason;
+    4. a volatile facility in an input line: not-run/volatile;
+    5. an error the printed output does not show: not-run/suspect-input
+       (SYNTAX/VALUE ERROR, no prior unrun block), dependency (prior
+       unrun block) or error;
+    6. every line's output equal after normalisation: match;
+    7. otherwise: differs.
+
+    `actual` is the session-style actual output (each input at six-space
+    indent, then its output, newline-terminated) for differs and for the
+    not-run reasons error, dependency and suspect-input; else None.
+    """
+    if not cls.runnable:
+        return "not-run", cls.reason, None
+    inputs = _input_texts(block, cls)
+    if results is None:
+        return ("timeout", None, None) if timed_out else ("not-run", "not-run", None)
+    if len(results) < len(inputs) and timed_out:
+        return "timeout", None, None
+    for res in results:
+        if res.skipped:
+            return "not-run", res.skipped, None
+    if any(_is_volatile(t) for t in inputs):
+        return "not-run", "volatile", None
+
+    expected = expected_outputs(block, cls)
+    actual = "".join(ln + "\n" for ln in _session(inputs, results))
+    for exp, res in zip(expected, results):
+        if not res.error:
+            continue
+        if any(_ERROR_RE.match(ln.rstrip()) for ln in exp):
+            continue
+        head = next((ln for ln in res.output if _ERROR_RE.match(ln)), "")
+        if prior_unrun:
+            return "not-run", "dependency", actual
+        if head.startswith(("SYNTAX ERROR", "VALUE ERROR")):
+            return "not-run", "suspect-input", actual
+        return "not-run", "error", actual
+
+    if len(results) == len(expected) and all(
+        _normalise(e) == _normalise(r.output) for e, r in zip(expected, results)
+    ):
+        return "match", None, None
+    return "differs", None, actual
