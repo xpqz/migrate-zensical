@@ -1573,3 +1573,34 @@ def test_main_reports_carried_decisions_that_now_differ(cb, tmp_path, monkeypatc
     _main(cb, tmp_path)
     out = capsys.readouterr().out
     assert "carried, now differs: 2" in out
+
+
+@needs_docker
+def test_run_page_container_name_carries_the_run_token(cb, monkeypatch):
+    tokens = iter(["1111111111111111", "2222222222222222"])
+    monkeypatch.setattr(cb.secrets, "token_hex", lambda n: next(tokens))
+    names = []
+    real = cb._container_argv
+
+    def spy(image, name, mount, args):
+        names.append(name)
+        return real(image, name, mount, args)
+
+    monkeypatch.setattr(cb, "_container_argv", spy)
+    res, _ = _run(cb, (None, ["1+1"]))
+    assert _out(res) == [["2"]]  # the sentinels carry the first token
+    assert names == ["cb-1111111111111111"]
+
+
+@needs_docker
+def test_main_end_to_end_dotnet_file_and_shell_blocks_match(cb, tmp_path):
+    md = (
+        "```apl\n      ⎕USING←'System'\n      (⎕NEW DateTime (2020 1 2)).Year\n2020\n```\n\n"
+        "```apl\n      (⊂'hi') ⎕NPUT 'f.txt'\n      ⊃⊃⎕NGET 'f.txt' 1\nhi\n```\n\n"
+        "```apl\n      ⎕SH 'id -u'\n1000\n```\n"
+    )
+    _docs(tmp_path, {"a.md": md})
+    rc, log = _main(cb, tmp_path)
+    assert rc == 0
+    _, entries = cb.read_log(log)
+    assert [(e["verdict"], e["reason"]) for e in entries] == [("match", None)] * 3

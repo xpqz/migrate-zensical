@@ -549,16 +549,18 @@ def _remove_container(name: str, force: bool) -> None:
 
 
 def _in_container(
-    image: str, files: dict[str, str], args: list[str], timeout: float
+    image: str, token: str, files: dict[str, str], args: list[str], timeout: float
 ) -> tuple[str, bool]:
     """Run dyalogscript `args` in a fresh container, `files` mounted at /cb.
+
+    The container is named cb-<token>.
 
     Returns (stdout with CR/CRLF turned into LF, timed_out). On a time-out or
     any exception the container is killed and removed and the local docker
     client's process group is killed; either way the container is gone when
     this returns.
     """
-    name = f"cb-{secrets.token_hex(8)}"
+    name = f"cb-{token}"
     with tempfile.TemporaryDirectory() as tmp:
         tmp = os.path.realpath(tmp)
         os.chmod(tmp, 0o755)  # the container's user is uid 1000
@@ -600,6 +602,7 @@ def dyalog_version(image: str) -> str:
     """The container interpreter's version field, e.g. "21.0.54424.0"."""
     out, _ = _in_container(
         image,
+        secrets.token_hex(8),
         {"version.apls": "⎕←2⊃#⎕WG'APLVersion'\n⎕OFF\n"},
         ["/cb/version.apls"],
         timeout=60,
@@ -626,6 +629,7 @@ def run_page(
     }
     out, timed_out = _in_container(
         image,
+        token,
         {
             HARNESS.name: HARNESS.read_text(encoding="utf-8"),
             "request.json": json.dumps(request, ensure_ascii=False),
