@@ -429,10 +429,12 @@ def _code_only(line: str) -> str:
 
 def _is_volatile(line: str) -> bool:
     code = _code_only(line)
-    if "?" in code and "?" in VOLATILE:
+    # Non-quad entries (`?`) match anywhere in code; ⎕ names match whole
+    # tokens, case-insensitively.
+    if any(v in code for v in VOLATILE if not v.startswith("⎕")):
         return True
-    upper = {v.upper() for v in VOLATILE if v.startswith("⎕")}
-    return any(m.upper() in upper for m in _QUAD_NAME_RE.findall(code))
+    names = {v.upper() for v in VOLATILE if v.startswith("⎕")}
+    return any(m.upper() in names for m in _QUAD_NAME_RE.findall(code))
 
 
 def expected_outputs(block: Block, cls: Classification) -> list[list[str]]:
@@ -482,6 +484,7 @@ def judge(
     1. block not runnable: not-run with the classification's reason;
     2. no results, or fewer than input lines, and timed out: timeout
        (no results and not timed out: not-run/not-run);
+       fewer results than input lines without timeout: not-run/incomplete;
     3. any skipped line: not-run with the skipped value as reason;
     4. a volatile facility in an input line: not-run/volatile;
     5. an error the printed output does not show: not-run/suspect-input
@@ -499,8 +502,8 @@ def judge(
     inputs = _input_texts(block, cls)
     if results is None:
         return ("timeout", None, None) if timed_out else ("not-run", "not-run", None)
-    if len(results) < len(inputs) and timed_out:
-        return "timeout", None, None
+    if len(results) < len(inputs):
+        return ("timeout", None, None) if timed_out else ("not-run", "incomplete", None)
     for res in results:
         if res.skipped:
             return "not-run", res.skipped, None

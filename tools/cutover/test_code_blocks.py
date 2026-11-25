@@ -574,3 +574,41 @@ def test_judge_indented_output_confirmed_by_match(cb):
 def test_expected_outputs(cb):
     b, c = _block(cb, "      a", "1", "", "      b", "2")
     assert cb.expected_outputs(b, c) == [["1", ""], ["2"]]
+
+
+def test_judge_normalisation_trailing_blanks_are_asymmetric(cb):
+    assert _judge(cb, ["      1+1", "2", ""], [_lr(cb, ["2"])])[0] == "match"
+    assert _judge(cb, ["      1+1", "2"], [_lr(cb, ["2", "", ""])])[0] == "match"
+
+
+def test_judge_rule_order(cb):
+    two = ["      1", "1", "      ?2", "2"]
+    # timeout before skipped
+    r = [_lr(cb, [], skipped="system-command")]
+    assert _judge(cb, two, r, timed_out=True)[0] == "timeout"
+    # skipped before volatile
+    r = [_lr(cb, [], skipped="quote-quad"), _lr(cb, ["2"])]
+    assert _judge(cb, two, r)[:2] == ("not-run", "quote-quad")
+    # volatile before unexpected error
+    err = ["DOMAIN ERROR", "      ?2", "      ∧"]
+    r = [_lr(cb, ["1"]), _lr(cb, err, True)]
+    assert _judge(cb, two, r)[:2] == ("not-run", "volatile")
+    # unexpected error before differs
+    plain = ["      1", "1", "      2÷0", "2"]
+    r = [_lr(cb, ["9"]), _lr(cb, err, True)]
+    assert _judge(cb, plain, r)[:2] == ("not-run", "error")
+
+
+def test_judge_incomplete_results_without_timeout(cb):
+    two = ["      1", "1", "      2", "2"]
+    assert _judge(cb, two, [_lr(cb, ["1"])]) == ("not-run", "incomplete", None)
+
+
+def test_expected_outputs_leading_output_and_error_triple(cb):
+    b, c = _block(
+        cb, "stray", "      a", "VALUE ERROR", "      a", "      ∧", "      b", "2"
+    )
+    assert cb.expected_outputs(b, c) == [
+        ["VALUE ERROR", "      a", "      ∧"],
+        ["2"],
+    ]
