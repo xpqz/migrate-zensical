@@ -25,7 +25,7 @@ jobs:
           # The house style is a submodule under the project's docs/.
           submodules: recursive
 
-      - uses: astral-sh/setup-uv@v10.3.3
+      - uses: astral-sh/setup-uv@v10.4.0
 
       - name: Install all dependency groups
         # The Python version comes from .python-version, the pins from uv.lock.
@@ -50,7 +50,7 @@ jobs:
         with:
           submodules: recursive
 
-      - uses: astral-sh/setup-uv@v10.3.3
+      - uses: astral-sh/setup-uv@v10.4.0
 
       - name: Install all dependency groups
         run: uv sync --all-groups --locked

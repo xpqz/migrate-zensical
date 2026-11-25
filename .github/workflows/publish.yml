@@ -56,7 +56,7 @@ jobs:
           # under the project's docs/; the build reads its CSS/fonts from there.
           submodules: recursive
 
-      - uses: astral-sh/setup-uv@v10.3.3
+      - uses: astral-sh/setup-uv@v10.4.0
 
       - name: Install build and deploy dependencies
         # The Python version comes from .python-version, the pins from uv.lock.
