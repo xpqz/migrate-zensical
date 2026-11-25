@@ -27,11 +27,13 @@ page matches.
 Docker: Docker must be running; without it the tool says so on stderr and
 runs as --no-run. The default image is built from docker/Dockerfile next to
 this file (Dyalog 21.0, pinned by digest, plus the .NET runtime) and tagged
-code-blocks-dyalog:<first 12 hex of the Dockerfile's sha256>; it is built
-when missing, the only time the network is used. An --image is pulled when
-missing. Each page runs in a fresh container with no network, no
+code-blocks-dyalog:<first 12 hex of the Dockerfile's sha256> and built when
+missing; an --image is pulled when missing. Building or pulling an image is
+the only time the network is used. Each page runs in a fresh container with no network, no
 capabilities, no new privileges, a read-only root, at most 64 processes,
-512 MB and one CPU; only /work (the working directory), /tmp and the home
+512 MB and one CPU, as uid 1000, under its own deadline (the page's
+time-out plus CONTAINER_GRACE seconds, so it ends even if the tool is
+killed); only /work (the working directory), /tmp and the home
 directory are writable, as small tmpfs mounts, and the harness and request
 are mounted read-only. Files a page writes persist across its blocks and
 vanish with the container. A timed-out or interrupted container is killed
@@ -83,7 +85,7 @@ Reasons:
     script          not run: a :Class, :Namespace or :Interface script
     indent          not run: input at an odd indent
     nested          not run: the fence is indented (in a list, say)
-    side-effect     not run: a side effect, or after ⎕USING (above)
+    side-effect     not run: it may break or escape the run (above)
     not-run         not run: --no-run, or no Docker
     system-command  not run: the harness skipped a system command or
                     ⎕OFF (these are normally side-effect already)
@@ -100,6 +102,10 @@ Reasons:
     unreached       not-run: after the block where the interpreter stopped
     exited          timeout: the interpreter exited early (no time-out)
     after-unrun     differs: an earlier block on the page did not run
+    platform        differs: a line uses ⎕SH, ⎕CMD, ⎕SHELL, ⎕NA, ⎕USING,
+                    ⎕NEW, ⎕NL on a .NET class, ⎕NINFO, ⎕NPUT, ⎕NAPPEND,
+                    ⎕NREPLACE or a Windows path; the difference may be
+                    Linux's, not the guide's
     diamond         differs: a line has ⋄-separated statements, which the
                     harness runs one at a time
     annotation      match or differs: column-0 ⍝ lines in the output, not
@@ -130,6 +136,7 @@ import datetime
 import fnmatch
 import hashlib
 import json
+import math
 import os
 import re
 import secrets
@@ -494,14 +501,25 @@ def image_meta(image: str) -> dict:
     return {"image": image, "image_id": image_id, "platform": plat}
 
 
-def _container_argv(image: str, name: str, mount: str, args: list[str]) -> list[str]:
+# Seconds the container may outlive the page's time-out. The container's own
+# deadline (coreutils timeout inside it) ends it even if this process dies
+# without cleaning up.
+CONTAINER_GRACE = 15
+
+
+def _container_argv(
+    image: str, name: str, mount: str, args: list[str], timeout: float
+) -> list[str]:
     """docker run argv: one locked-down, throw-away container.
 
     No network, no capabilities, a read-only root; only /work (the working
     directory), /tmp and the home directory are writable, as small tmpfs
     mounts that vanish with the container. `mount` (the harness and the
-    request) is read-only at /cb.
+    request) is read-only at /cb. dyalogscript runs as uid 1000 under
+    `timeout --signal=KILL`, so the container ends by itself after the
+    page's time-out plus CONTAINER_GRACE seconds.
     """
+    deadline = math.ceil(timeout) + CONTAINER_GRACE
     return [
         DOCKER, "run", "--rm", "-i", "--name", name,
         "--network", "none", "--read-only", "--cap-drop", "ALL",
@@ -510,8 +528,9 @@ def _container_argv(image: str, name: str, mount: str, args: list[str]) -> list[
         "--tmpfs", "/work:rw,size=16m,mode=1777",
         "--tmpfs", "/tmp:rw,size=64m",  # the .NET runtime needs room here
         "--tmpfs", "/home/dyalog:rw,size=16m,uid=1000,gid=1000",
-        "-w", "/work", "-v", f"{mount}:/cb:ro",
-        "--entrypoint", "dyalogscript", image, *args,
+        "--user", "1000:1000", "-w", "/work", "-v", f"{mount}:/cb:ro",
+        "--entrypoint", "timeout", image,
+        "--signal=KILL", f"{deadline}s", "dyalogscript", *args,
     ]
 
 
@@ -527,8 +546,24 @@ def _kill_group(pgid: int) -> None:
 
 
 def _left(name: str) -> bool:
-    out = _docker("ps", "-a", "-q", "--filter", f"name=^/{name}$", timeout=30)
-    return bool(out.stdout.strip())
+    """True if the container may still exist (also when docker cannot say)."""
+    try:
+        out = _docker("ps", "-a", "-q", "--filter", f"name=^/{name}$", timeout=30)
+    except (OSError, subprocess.TimeoutExpired):
+        return True
+    return out.returncode != 0 or bool(out.stdout.strip())
+
+
+def _steps(*steps) -> None:
+    """Run every step, even after one fails; then raise the first error."""
+    errors: list[Exception] = []
+    for step in steps:
+        try:
+            step()
+        except Exception as e:  # noqa: BLE001 - re-raised below
+            errors.append(e)
+    if errors:
+        raise errors[0]
 
 
 def _remove_container(name: str, force: bool) -> None:
@@ -537,15 +572,37 @@ def _remove_container(name: str, force: bool) -> None:
     --rm removes a container asynchronously, so poll for a while.
     """
     if force:
-        _docker("kill", name, timeout=30)
-        _docker("rm", "-f", name, timeout=30)
+        try:
+            _steps(
+                lambda: _docker("kill", name, timeout=30),
+                lambda: _docker("rm", "-f", name, timeout=30),
+            )
+        except Exception:  # noqa: BLE001 - the polling below decides
+            pass
     for _ in range(50):
         if not _left(name):
             return
         time.sleep(0.2)
-    _docker("rm", "-f", name, timeout=30)
+    try:
+        _docker("rm", "-f", name, timeout=30)
+    except (OSError, subprocess.TimeoutExpired):
+        pass
     if _left(name):
         raise ContainerError(f"container {name} is still there")
+
+
+def _cleanup(proc: subprocess.Popen, name: str, clean: bool) -> None:
+    """Stop the docker client and make sure the container is gone.
+
+    Every step runs even if an earlier one fails.
+    """
+    running = proc.poll() is None
+    _steps(
+        lambda: _docker("kill", name, timeout=30) if running else None,
+        lambda: _kill_group(proc.pid),
+        lambda: proc.wait(timeout=30),
+        lambda: _remove_container(name, force=not clean or running),
+    )
 
 
 def _in_container(
@@ -568,7 +625,7 @@ def _in_container(
             Path(tmp, fname).write_text(text, encoding="utf-8")
             os.chmod(Path(tmp, fname), 0o644)
         proc = subprocess.Popen(
-            _container_argv(image, name, tmp, args),
+            _container_argv(image, name, tmp, args, timeout),
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
@@ -589,11 +646,7 @@ def _in_container(
                     out, _ = proc.communicate()
             clean = not timed_out
         finally:
-            if proc.poll() is None:
-                _docker("kill", name, timeout=30)
-            _kill_group(proc.pid)
-            proc.wait()
-            _remove_container(name, force=not clean)
+            _cleanup(proc, name, clean)
     text = out.decode("utf-8", errors="replace")
     return text.replace("\r\n", "\n").replace("\r", "\n"), timed_out
 
@@ -898,8 +951,34 @@ def _is_volatile(line: str) -> bool:
     found = {m.upper() for m in _QUAD_NAME_RE.findall(code)}
     if found & names or re.search(r"16808\s*⌶", code):
         return True
+    # A unique native file name is random.
+    if "⎕NCREATE" in found and re.search(r"⍠.*'unique'", _strip_comment(line), re.I):
+        return True
     # ⎕DT is volatile only when it converts the current time ('Z').
     return "⎕DT" in found and "'Z'" in _strip_comment(line)
+
+
+# Differences these cause come from the platform (Linux in the container,
+# not the Windows or macOS of the guide's examples): shell and native code,
+# .NET, file metadata and line endings, and Windows paths.
+_PLATFORM_QUADS = frozenset(
+    {"⎕SH", "⎕CMD", "⎕SHELL", "⎕NA", "⎕USING", "⎕NEW", "⎕NINFO", "⎕NPUT",
+     "⎕NAPPEND", "⎕NREPLACE"}
+)
+_DOTNET_NL_RE = re.compile(r"[\w∆⍙]\.(?:\(.*)?⎕NL(?![A-Za-z0-9_])", re.I)
+_WINDOWS_PATH_RE = re.compile(r"[A-Za-z]:\\|\\\\")
+
+
+def _is_platform(line: str) -> bool:
+    """True if what the line prints may depend on the platform."""
+    text = _strip_comment(line)
+    code = _code_only(text)
+    found = {m.upper() for m in _QUAD_NAME_RE.findall(code)}
+    return bool(
+        found & _PLATFORM_QUADS
+        or _DOTNET_NL_RE.search(code)
+        or _WINDOWS_PATH_RE.search(text)
+    )
 
 
 def _is_environment(line: str) -> bool:
@@ -1051,7 +1130,9 @@ def judge(
        annotation if the block has column-0 ⍝ lines, which are not compared);
     7. otherwise: differs, with the first reason that applies:
        suspect-input (a line with no printed output printed something),
-       after-unrun (an earlier block on the page did not run), diamond (an
+       after-unrun (an earlier block on the page did not run), platform (a
+       line uses shell, native code, .NET, file metadata or writes, or a
+       Windows path), diamond (an
        input line has statements the harness runs one by one), annotation.
 
     `actual` is the session-style actual output (each input at six-space
@@ -1111,6 +1192,8 @@ def judge(
         reason = "suspect-input"
     elif prior_unrun:
         reason = "after-unrun"
+    elif any(_is_platform(t) for t in inputs):
+        reason = "platform"
     elif any(_top_level_diamond(t) for t in inputs):
         reason = "diamond"
     elif cls.annotation:
@@ -1440,6 +1523,24 @@ def main(argv: list[str] | None = None) -> int:
         "(default: %(default)s)",
     )
     args = ap.parse_args(argv)
+    # SIGTERM and SIGHUP would end Python without running `finally`, leaving
+    # a page's container running: turn them into SystemExit instead.
+    old = {
+        sig: signal.signal(sig, _exit_on_signal)
+        for sig in (signal.SIGTERM, signal.SIGHUP)
+    }
+    try:
+        return _main(args)
+    finally:
+        for sig, handler in old.items():
+            signal.signal(sig, handler)
+
+
+def _exit_on_signal(signum: int, frame: object) -> None:
+    raise SystemExit(128 + signum)
+
+
+def _main(args: argparse.Namespace) -> int:
 
     image = None if args.no_run else prepare_image(args.image)
 

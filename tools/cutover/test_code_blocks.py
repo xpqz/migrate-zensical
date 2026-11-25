@@ -5,6 +5,8 @@ import importlib.util
 import re
 import subprocess
 import sys
+import os
+import signal
 import time
 from pathlib import Path
 
@@ -1496,18 +1498,22 @@ def test_default_image_is_tagged_by_the_dockerfile(cb):
 
 
 def test_container_argv_is_locked_down(cb):
-    argv = cb._container_argv("img", "cb-x", "/host/dir", ["a", "b"])
+    argv = cb._container_argv("img", "cb-x", "/host/dir", ["a", "b"], timeout=60)
     assert argv[:2] == [cb.DOCKER, "run"]
     for flag in (
         "--rm", "-i", "--read-only", "--network none", "--cap-drop ALL",
         "--security-opt no-new-privileges", "--pids-limit 64", "--memory 512m",
-        "--cpus 1", "--name cb-x", "-w /work", "--entrypoint dyalogscript",
+        "--cpus 1", "--name cb-x", "-w /work", "--user 1000:1000",
+        "--entrypoint timeout",
         "--tmpfs /work:rw,size=16m,mode=1777", "--tmpfs /tmp:rw,size=64m",
         "--tmpfs /home/dyalog:rw,size=16m,uid=1000,gid=1000",
         "-v /host/dir:/cb:ro",
     ):
         assert f" {flag} " in " " + " ".join(argv) + " ", flag
-    assert argv[-3:] == ["img", "a", "b"]
+    # The container's own deadline: the page's time-out plus a grace period.
+    assert argv[-6:] == ["img", "--signal=KILL", "75s", "dyalogscript", "a", "b"]
+    assert cb._container_argv("i", "n", "/m", [], timeout=2.5)[-3:] == [
+        "--signal=KILL", "18s", "dyalogscript"]
 
 
 @needs_docker
@@ -1582,9 +1588,9 @@ def test_run_page_container_name_carries_the_run_token(cb, monkeypatch):
     names = []
     real = cb._container_argv
 
-    def spy(image, name, mount, args):
+    def spy(image, name, mount, args, timeout):
         names.append(name)
-        return real(image, name, mount, args)
+        return real(image, name, mount, args, timeout)
 
     monkeypatch.setattr(cb, "_container_argv", spy)
     res, _ = _run(cb, (None, ["1+1"]))
@@ -1604,3 +1610,141 @@ def test_main_end_to_end_dotnet_file_and_shell_blocks_match(cb, tmp_path):
     assert rc == 0
     _, entries = cb.read_log(log)
     assert [(e["verdict"], e["reason"]) for e in entries] == [("match", None)] * 3
+
+
+# --- review fixes: signals, own deadline, cleanup, platform ------------------
+
+
+@needs_docker
+def test_container_dies_at_its_own_deadline_without_the_client(cb, tmp_path, monkeypatch):
+    monkeypatch.setattr(cb, "CONTAINER_GRACE", 2)
+    name = "cb-deadline0000000"
+    (tmp_path / "hang.apls").write_text("⎕DL 1000\n", encoding="utf-8")
+    os.chmod(tmp_path, 0o755)
+    os.chmod(tmp_path / "hang.apls", 0o644)
+    argv = cb._container_argv(IMAGE, name, str(tmp_path), ["/cb/hang.apls"], timeout=1)
+    proc = subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL, start_new_session=True)
+    try:
+        deadline = time.monotonic() + 20
+        while not _containers(name) and time.monotonic() < deadline:
+            time.sleep(0.2)
+        assert _containers(name)
+        os.killpg(proc.pid, signal.SIGKILL)  # the client is gone; Python cannot clean up
+        proc.wait()
+        deadline = time.monotonic() + 20
+        while _containers(name) and time.monotonic() < deadline:
+            time.sleep(0.5)
+        assert _containers(name) == []
+    finally:
+        subprocess.run(["docker", "rm", "-f", name], capture_output=True)
+
+
+@needs_docker
+@pytest.mark.parametrize("sig", [signal.SIGTERM, signal.SIGHUP])
+def test_signal_to_the_tool_leaves_no_container(cb, tmp_path, sig):
+    _docs(tmp_path, {"a.md": "```apl\n      ⎕DL 1000\n```\n"})
+    before = set(_containers())
+    proc = subprocess.Popen(
+        [sys.executable, str(Path(cb.__file__)), "--docs", str(tmp_path / "docs"),
+         "--guide", "g", "--log", str(tmp_path / "log.yml"), "--timeout", "300"],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
+    try:
+        deadline = time.monotonic() + 60
+        while not (set(_containers()) - before) and time.monotonic() < deadline:
+            time.sleep(0.2)
+        started = set(_containers()) - before
+        assert started
+        time.sleep(1)
+        proc.send_signal(sig)
+        proc.wait(timeout=60)
+        left = set(_containers()) & started
+        assert left == set()
+    finally:
+        proc.kill()
+        for c in set(_containers()) - before:
+            subprocess.run(["docker", "rm", "-f", c], capture_output=True)
+
+
+def test_left_counts_a_failing_docker_ps_as_still_there(cb, monkeypatch):
+    fail = subprocess.CompletedProcess([], 1, "", "daemon gone")
+    monkeypatch.setattr(cb, "_docker", lambda *a, **k: fail)
+    monkeypatch.setattr(cb.time, "sleep", lambda s: None)
+    assert cb._left("cb-x") is True
+    with pytest.raises(cb.ContainerError):
+        cb._remove_container("cb-x", force=True)
+
+
+def test_cleanup_steps_run_even_when_one_fails(cb, monkeypatch):
+    calls = []
+
+    def docker(*args, **k):
+        calls.append(args[0])
+        if args[0] == "kill":
+            raise subprocess.TimeoutExpired("docker kill", 30)
+        return subprocess.CompletedProcess([], 0, "", "")
+
+    class Proc:
+        pid = 999999999
+
+        def poll(self):
+            return None
+
+        def wait(self, timeout=None):
+            calls.append("wait")
+            return 0
+
+    monkeypatch.setattr(cb, "_docker", docker)
+    monkeypatch.setattr(cb, "_kill_group", lambda pid: calls.append("killpg"))
+    with pytest.raises(subprocess.TimeoutExpired):
+        cb._cleanup(Proc(), "cb-x", clean=False)
+    assert calls[:3] == ["kill", "killpg", "wait"]
+    assert "rm" in calls and "ps" in calls
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "⎕SH 'ls'", "⎕CMD 'dir'", "⎕SHELL 'ls'", "'f' ⎕NA 'I4 x|y'",
+        "⎕USING←'System'", "x←⎕NEW DateTime", "DateTime.⎕NL -2",
+        "FormBorderStyle.({⍵}⎕NL -2)", "⎕NINFO 'x'", "(⊂'a') ⎕NPUT 'f'",
+        "'a' ⎕NAPPEND 1", "'a' ⎕NREPLACE 1 0", "⎕NGET 'c:\\temp\\x.txt'",
+        "⎕NEXISTS '\\\\server\\share'",
+    ],
+)
+def test_judge_platform_reason_for_differs(cb, line):
+    v = _judge(cb, ["      " + line, "x"], [_lr(cb, ["y"])])
+    assert v[:2] == ("differs", "platform")
+
+
+def test_judge_platform_reason_precedence_and_scope(cb):
+    lines = ["      ⎕SH 'ls' ⋄ 1", "x"]
+    # after-unrun first, then platform, then diamond.
+    assert _judge(cb, lines, [_lr(cb, ["y"])], prior_unrun=True)[:2] == (
+        "differs", "after-unrun")
+    assert _judge(cb, lines, [_lr(cb, ["y"])])[:2] == ("differs", "platform")
+    # Only differs gets it: a match stays a plain match.
+    assert _judge(cb, ["      ⎕SH 'ls'", "x"], [_lr(cb, ["x"])]) == ("match", None, None)
+    # ⎕NL on its own, ⎕NGET with a POSIX path: not platform.
+    for line in ("⎕NL -2", "⎕NGET 'a/b.txt'"):
+        assert _judge(cb, ["      " + line, "x"], [_lr(cb, ["y"])])[:2] == ("differs", None)
+
+
+@pytest.mark.parametrize(
+    "line",
+    ["'f' (⎕NCREATE⍠'Unique' 1) 0", "'f'(⎕NCREATE⍠('unique' 1))0", "⎕ncreate⍠'UNIQUE' 1"],
+)
+def test_ncreate_unique_is_volatile(cb, line):
+    assert cb._is_volatile(line)
+
+
+def test_ncreate_without_unique_is_not_volatile(cb):
+    assert not cb._is_volatile("'f' ⎕NCREATE 0")
+
+
+def test_dockerfile_pins_dotnet_and_checks_the_installer(cb):
+    text = cb.DOCKERFILE.read_text(encoding="utf-8")
+    assert "--version 10.0.15" in text and "--channel" not in text
+    assert re.search(r"DOTNET_INSTALL_SHA256=[0-9a-f]{64}\b", text)
+    assert "sha256sum -c" in text
