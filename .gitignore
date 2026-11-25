@@ -17,3 +17,7 @@ __pycache__/
 
 # CHM build output (tools/chm/build_chm.py --project-dir out/chm)
 /out/
+
+# code-blocks.py review log (tools/cutover/code-blocks.py) and its backup
+/code-blocks.yml
+/code-blocks.yml.bak

@@ -1,8 +1,109 @@
-"""Review tool for `apl` code fences in the Markdown documentation.
+"""Review the `apl` code examples of a guide: propose splits, run them.
 
-It finds `apl` fences, proposes splitting session input from output, and
-validates examples against Dyalog APL. This module holds the block finder.
-The tool only reads the corpus; it never writes to it.
+    uv run python tools/cutover/code-blocks.py [--guide language-reference-guide]
+        [--log code-blocks.yml] [--page GLOB] [--no-run] [--timeout SECONDS]
+        [--docs zensical/docs]
+
+The `apl` fences mix session input (the six-space indent) with output. For
+each fence of the guide under --docs, the tool proposes splitting it into an
+`apl` block of input followed by a `text` block of output, runs the input
+under `dyalogscript` (one interpreter per page, through
+code-blocks-harness.apls) and compares what Dyalog prints with the printed
+output. It writes a YAML log for people to review entry by entry; the
+approved entries are applied later, during the cutover. The tool only reads
+the corpus; it never writes to it. Design:
+design/superpowers/specs/2026-11-25-code-blocks-design.md.
+
+--guide is the guide's directory under --docs, --log the log to write (an
+existing one is copied to <log>.bak first), --page a glob, relative to the
+guide, that limits the run to matching pages (their entries replace those
+pages' entries in an existing log; other pages' entries are kept),
+--no-run proposes splits without running anything, --timeout is the limit
+in seconds for each page's interpreter. `dyalogscript` is taken from
+$DYALOGSCRIPT or PATH; without it the tool runs as --no-run. The tool exits
+with status 2, leaving the log alone, if the guide does not exist or no
+page matches.
+
+Side effects: an example is never run if any input line of its block may
+act outside the interpreter's workspace. A line is a side effect if it uses
+a system name not in SAFE_QUADS, an I-beam not in PURE_IBEAMS, a system
+command (`)` at a statement start), a user command other than ]box,
+]boxing, ]display, ]disp and ]rows, bare `⎕` input, a .NET name
+(`System.…`, `Microsoft.…`), ⍎, ⎕FX or 85⌶ with a computed argument, or a
+⎕TRAP action built at run time. Every string is checked as if it were
+code. After ⎕USING appears on a page, none of its later blocks run. On
+macOS the interpreter runs under sandbox-exec, with no network and no
+writes outside its temporary directory.
+
+The log (YAML) has `meta` and `entries`. `meta`: guide, dyalog (the
+interpreter's version, null without one), platform, generated (UTC), and
+pages (verdict counts for each page with at least one `differs`). Each
+entry is one session or ambiguous block (listings without input lines are
+only counted), ordered by page and line:
+
+    page      path relative to --docs
+    line      line of the opening fence (1-based)
+    sha256    of the block's exact text, fence to fence
+    verdict   match | differs | not-run | timeout
+    reason    why, for most verdicts other than a plain match (below)
+    split     confirmed | unambiguous | ambiguous | none
+    nbsp      the input indent used non-breaking spaces
+    decision  pending | apply | skip; the reviewer sets it
+    original  the block as it is
+    proposed  the split, for confirmed and unambiguous splits, else null
+    actual    the session as it ran (input at six spaces, then its output),
+              for differs and for not-run error, dependency, suspect-input
+
+Verdicts:
+
+    match     every input line printed what the block shows
+    differs   it ran and printed something else
+    not-run   it was not run, or not meaningfully (reason says why)
+    timeout   the page's interpreter timed out or exited before the block
+              finished
+
+Reasons:
+
+    del-definition  not run: a ∇ definition in session-editor notation
+    script          not run: a :Class, :Namespace or :Interface script
+    indent          not run: input at an odd indent
+    nested          not run: the fence is indented (in a list, say)
+    side-effect     not run: a side effect, or after ⎕USING (above)
+    not-run         not run: --no-run, or no dyalogscript
+    system-command  not run: the harness skipped a system command or
+                    ⎕OFF (these are normally side-effect already)
+    quote-quad      not run: uses ⍞
+    volatile        ran, not judged: time, random numbers, the stack, ...
+    environment     ran, not judged: depends on the machine (⎕AN, files, ...)
+    error           not-run: an error the printed output does not show
+    dependency      not-run: such an error after a block that did not run
+    suspect-input   an input line may be printed output: not-run for an
+                    unexpected SYNTAX/VALUE ERROR, differs when a line with
+                    no printed output printed something; split ambiguous
+    incomplete      not-run: fewer results than input lines, no timeout
+    unreached       not-run: after the block where the interpreter stopped
+    exited          timeout: the interpreter exited early (no time-out)
+    after-unrun     differs: an earlier block on the page did not run
+    diamond         differs: a line has ⋄-separated statements, which the
+                    harness runs one at a time
+    annotation      match or differs: column-0 ⍝ lines in the output, not
+                    compared; split ambiguous
+    indented-output an output line is indented six or more spaces; split
+                    ambiguous unless the block matches
+    split-check     the split would lose or move a line; split ambiguous
+
+Splits:
+
+    confirmed    it ran and matched: the proposal is backed by Dyalog
+    unambiguous  every line's role is clear without running it
+    ambiguous    the roles are uncertain; no proposal (reason says why)
+    none         nothing to split (a nested block)
+
+Decisions are carried to the new log by page and sha256 (duplicate blocks
+in order): an entry keeps its decision while `proposed` is unchanged and
+its split is unchanged or both splits are confirmed or unambiguous;
+otherwise it is reset to pending. The tool prints how many decisions were
+reset and how many were dropped because their block changed or went away.
 """
 
 import argparse
@@ -377,11 +478,12 @@ def _sandboxed(argv: list[str], run_dir: str) -> list[str]:
 
 def run_page(
     blocks: list[RunBlock], dyalogscript: str, timeout: float = 60.0
-) -> tuple[dict[int, list[LineResult]], bool]:
+) -> tuple[dict[int, list[LineResult]], str | None]:
     """Run each block's input lines in one fresh interpreter.
 
-    Results are keyed by block id; blocks not reached are absent. The flag is
-    True if the run timed out or the interpreter stopped before the last line.
+    Results are keyed by block id; blocks not reached are absent. The second
+    value is "timeout" if the run timed out, "exited" if the interpreter
+    stopped before the last line, else None.
     """
     token = secrets.token_hex(8)
     request = {
@@ -403,7 +505,9 @@ def run_page(
         )
     results, done = _parse_output(out, token)
     expected = sum(len(b.lines) for b in blocks)
-    return results, timed_out or done < expected
+    if timed_out:
+        return results, "timeout"
+    return results, "exited" if done < expected else None
 
 
 def _parse_output(text: str, token: str) -> tuple[dict[int, list[LineResult]], int]:
@@ -753,7 +857,7 @@ def judge(
     cls: Classification,
     results: list[LineResult] | None,
     prior_unrun: bool,
-    timed_out: bool,
+    stop: str | None,
 ) -> tuple[str, str | None, str | None]:
     """Decide `(verdict, reason, actual)` for a block.
 
@@ -783,9 +887,9 @@ def judge(
         return "not-run", cls.reason, None
     inputs = _input_texts(block, cls)
     if results is None:
-        return ("timeout", None, None) if timed_out else ("not-run", "not-run", None)
+        return _stopped(stop) if stop else ("not-run", "not-run", None)
     if len(results) < len(inputs):
-        return ("timeout", None, None) if timed_out else ("not-run", "incomplete", None)
+        return _stopped(stop) if stop else ("not-run", "incomplete", None)
     for res in results:
         if res.skipped:
             return "not-run", res.skipped, None
@@ -831,6 +935,10 @@ def judge(
     return "differs", reason, actual
 
 
+def _stopped(stop: str) -> tuple[str, str | None, None]:
+    return "timeout", ("exited" if stop == "exited" else None), None
+
+
 class LogError(Exception):
     """The log could not be written faithfully."""
 
@@ -839,6 +947,8 @@ _HEADER = (
     "# Code-blocks review log. Review each entry and set `decision` to\n"
     "# `apply` or `skip` (it starts as `pending`); only `apply` entries are\n"
     "# applied. Text fields are exact; do not re-indent or strip them.\n"
+    "# Fields, verdicts, reasons and splits: the docstring of\n"
+    "# tools/cutover/code-blocks.py.\n"
 )
 _TEXT_KEYS = ("original", "proposed", "actual")
 
@@ -934,8 +1044,17 @@ def write_log(path: Path, meta: dict, entries: list[dict]) -> None:
         tmp.unlink(missing_ok=True)
 
 
+DECISIONS = ("pending", "apply", "skip")
+
+
 def read_log(path: Path) -> tuple[dict, list[dict]]:
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    for e in data["entries"]:
+        if e.get("decision") not in DECISIONS:
+            raise LogError(
+                f"{path}: {e.get('page')} (block at page line {e.get('line')}): "
+                f"decision {e.get('decision')!r} is not one of {', '.join(DECISIONS)}"
+            )
     return data["meta"], data["entries"]
 
 
@@ -997,7 +1116,7 @@ def _process_page(
         i: classify(b) for i, b in enumerate(blocks) if not b.nested
     }
     results: dict[int, list[LineResult]] = {}
-    early_exit = False
+    stop: str | None = None
     side: set[int] = set()
     sent: dict[int, int] = {}  # block index -> number of lines sent
     if dyalogscript:
@@ -1020,7 +1139,7 @@ def _process_page(
             to_run.append(RunBlock(i, None if boxed else cls.style, lines))
             sent[i] = len(lines)
         if to_run:
-            results, early_exit = run_page(to_run, dyalogscript, timeout)
+            results, stop = run_page(to_run, dyalogscript, timeout)
 
     entries: list[dict] = []
     listings = 0
@@ -1037,16 +1156,16 @@ def _process_page(
             continue
         if i in side:
             verdict, reason, actual = "not-run", "side-effect", None
-        elif early_exit and i in sent and len(results.get(i, [])) < sent[i] and hung_seen:
+        elif stop and i in sent and len(results.get(i, [])) < sent[i] and hung_seen:
             verdict, reason, actual = "not-run", "unreached", None
         elif dyalogscript:
-            if early_exit and i in sent and len(results.get(i, [])) < sent[i]:
+            if stop and i in sent and len(results.get(i, [])) < sent[i]:
                 hung_seen = True  # the first block with a missing line
             verdict, reason, actual = judge(
-                b, cls, results.get(i), prior_unrun, early_exit
+                b, cls, results.get(i), prior_unrun, stop
             )
         else:
-            verdict, reason, actual = judge(b, cls, None, prior_unrun, False)
+            verdict, reason, actual = judge(b, cls, None, prior_unrun, None)
         if reason is None and cls.kind == "ambiguous":
             reason = cls.reason
         split = split_kind(cls, verdict, reason)
@@ -1088,14 +1207,44 @@ def _entry(
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
-        description="Review `apl` code fences: propose splits and run them."
+        description="Review `apl` code fences: propose splits and run them. "
+        "See the module docstring for the log format."
     )
-    ap.add_argument("--guide", default="language-reference-guide")
-    ap.add_argument("--log", default="code-blocks.yml")
-    ap.add_argument("--page", help="glob matched against the path inside the guide")
-    ap.add_argument("--no-run", action="store_true", help="do not run examples")
-    ap.add_argument("--timeout", type=float, default=60)
-    ap.add_argument("--docs", default="zensical/docs")
+    ap.add_argument(
+        "--guide",
+        default="language-reference-guide",
+        help="the guide's directory under --docs (default: %(default)s)",
+    )
+    ap.add_argument(
+        "--log",
+        default="code-blocks.yml",
+        help="review log to write; an existing one is copied to <log>.bak "
+        "and its decisions carried over (default: %(default)s)",
+    )
+    ap.add_argument(
+        "--page",
+        metavar="GLOB",
+        help="only pages whose path inside the guide matches GLOB; other "
+        "pages' entries in the log are kept",
+    )
+    ap.add_argument(
+        "--no-run",
+        action="store_true",
+        help="do not run examples; propose only splits that need no run",
+    )
+    ap.add_argument(
+        "--timeout",
+        type=float,
+        default=60,
+        metavar="SECONDS",
+        help="time limit for each page's interpreter (default: %(default)s)",
+    )
+    ap.add_argument(
+        "--docs",
+        default="zensical/docs",
+        help="the documentation root; log paths are relative to it "
+        "(default: %(default)s)",
+    )
     args = ap.parse_args(argv)
 
     dyalogscript = None if args.no_run else find_dyalogscript()
@@ -1149,6 +1298,9 @@ def main(argv: list[str] | None = None) -> int:
         else:
             entries = carry_decisions(old, entries, stats)
         shutil.copy2(log, log.with_name(log.name + ".bak"))
+    by_page: dict[str, Counter] = {}
+    for e in entries:
+        by_page.setdefault(e["page"], Counter())[e["verdict"]] += 1
     meta = {
         "guide": args.guide,
         "dyalog": dyalog_version(dyalogscript) if dyalogscript else None,
@@ -1156,6 +1308,12 @@ def main(argv: list[str] | None = None) -> int:
         "generated": datetime.datetime.now(datetime.timezone.utc).strftime(
             "%Y-%m-%dT%H:%M:%SZ"
         ),
+        # Verdict counts for each page with at least one differs.
+        "pages": {
+            page: dict(sorted(c.items()))
+            for page, c in by_page.items()
+            if c["differs"]
+        },
     }
     write_log(log, meta, entries)
 

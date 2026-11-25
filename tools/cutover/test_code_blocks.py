@@ -324,8 +324,8 @@ def _out(results, block=1):
 
 @needs_dyalog
 def test_run_page_displays_non_shy_result_and_suppresses_shy(cb):
-    res, timed_out = _run(cb, (None, ["2+3", "x←5", "x"]))
-    assert timed_out is False
+    res, stop = _run(cb, (None, ["2+3", "x←5", "x"]))
+    assert stop is None
     assert _out(res) == [["5"], [], ["5"]]
     assert [r.error for r in res[1]] == [False] * 3
     assert [r.skipped for r in res[1]] == [None] * 3
@@ -397,8 +397,8 @@ def test_run_page_input_does_not_hang(cb):
 
 @needs_dyalog
 def test_run_page_timeout_kills_process(cb):
-    res, timed_out = _run(cb, (None, ["1+1", "⎕DL 1000"]), timeout=5)
-    assert timed_out is True
+    res, stop = _run(cb, (None, ["1+1", "⎕DL 1000"]), timeout=5)
+    assert stop == "timeout"
     assert _out(res) == [["2"]]  # the finished line is kept
     left = subprocess.run(
         ["pgrep", "-f", "code-blocks-harness"], capture_output=True, text=True
@@ -505,7 +505,8 @@ def _lr(cb, output, error=False, skipped=None):
 
 def _judge(cb, lines, results, prior_unrun=False, timed_out=False):
     b, c = _block(cb, *lines)
-    return cb.judge(b, c, results, prior_unrun, timed_out)
+    stop = timed_out if isinstance(timed_out, str) else ("timeout" if timed_out else None)
+    return cb.judge(b, c, results, prior_unrun, stop)
 
 
 def test_judge_match(cb):
@@ -577,7 +578,7 @@ def test_judge_timeout(cb):
 def test_judge_indented_output_confirmed_by_match(cb):
     lines = ["      ↑'       ab' 'cd'", "       ab", "cd"]
     b, c = _block(cb, *lines)
-    v, r, _ = cb.judge(b, c, [_lr(cb, ["       ab", "cd"])], False, False)
+    v, r, _ = cb.judge(b, c, [_lr(cb, ["       ab", "cd"])], False, None)
     assert v == "match" and cb.split_kind(c, v, r) == "confirmed"
 
 
@@ -880,6 +881,8 @@ def test_main_end_to_end_match_and_differs(cb, tmp_path):
 
 @needs_dyalog
 def test_run_page_does_not_write_into_the_callers_cwd(cb, tmp_path, monkeypatch):
+    # The ⎕NPUT is deliberate: run_page does not filter side effects (that is
+    # _process_page's job), so this checks the run's own scratch directory.
     monkeypatch.chdir(tmp_path)
     _run(cb, (None, ["(⊂'x') ⎕NPUT 'litter.txt'"]))
     assert list(tmp_path.iterdir()) == []
@@ -895,7 +898,7 @@ def test_volatile_additions(cb):
     assert not v("0 ⎕DT 2020 1 1") and not v("⎕DT ⍝ 'Z'")
 
 
-def _fake_run(cb, monkeypatch, results_fn, early=False):
+def _fake_run(cb, monkeypatch, results_fn, early=None):
     calls = []
 
     def fake(blocks, dyalogscript, timeout):
@@ -943,7 +946,7 @@ def test_main_unreached_blocks_after_the_first_missing_line(
     md = "".join(f"```apl\n      {i}+0\n{i}\n```\n\n" for i in (1, 2, 3, 4))
     _docs(tmp_path, {"a.md": md})
     _fake_run(
-        cb, monkeypatch, lambda bs: {bs[0].id: [_lres(cb, ["1"])]}, early=True
+        cb, monkeypatch, lambda bs: {bs[0].id: [_lres(cb, ["1"])]}, early="timeout"
     )
     _, log = _main(cb, tmp_path)
     _, entries = cb.read_log(log)
@@ -1183,7 +1186,7 @@ def test_judge_annotation_lines_are_not_compared(cb):
     lines = ["      x←1", "⍝ x is now 1", "      x", "1", "⍝ see above"]
     b, c = _block(cb, *lines)
     assert c.annotation is True
-    v, r, _ = cb.judge(b, c, [_lr(cb, []), _lr(cb, ["1"])], False, False)
+    v, r, _ = cb.judge(b, c, [_lr(cb, []), _lr(cb, ["1"])], False, None)
     assert (v, r) == ("match", "annotation")
     assert cb.split_kind(c, v, r) == "ambiguous"
     # an indented ⍝ line is not an annotation
@@ -1205,7 +1208,7 @@ def test_judge_suspect_input_for_wrapped_output_row(cb):
         _lr(cb, ["0.3333333333"]),
     ]
     b, c = _block(cb, *lines)
-    v, r, actual = cb.judge(b, c, results, False, False)
+    v, r, actual = cb.judge(b, c, results, False, None)
     assert (v, r) == ("differs", "suspect-input") and actual
     assert cb.split_kind(c, v, r) == "ambiguous"
 
@@ -1274,3 +1277,57 @@ def test_main_keeps_a_backup_and_reports_reset_decisions(cb, tmp_path, capsys):
     assert "Decisions: 1 reset to pending, 1 dropped" in out
     _, after = cb.read_log(log)
     assert [e["decision"] for e in after] == ["pending", "pending"]
+
+
+# --- minors: exited, read_log, per-page counts, --page merge ------------------
+
+
+@needs_dyalog
+def test_run_page_reports_an_early_exit(cb):
+    # Evaluated input reads the closed stdin and ends the interpreter.
+    res, stop = _run(cb, (None, ["1+1", "x←⎕", "2+2"]), timeout=20)
+    assert stop == "exited"
+    assert _out(res) == [["2"]]
+
+
+def test_judge_early_exit_is_timeout_exited(cb):
+    two = ["      1", "1", "      2", "2"]
+    assert _judge(cb, two, [_lr(cb, ["1"])], timed_out="exited") == (
+        "timeout", "exited", None)
+    assert _judge(cb, two, None, timed_out="exited") == ("timeout", "exited", None)
+
+
+def test_main_early_exit_entry(cb, tmp_path, monkeypatch):
+    md = "```apl\n      1+0\n1\n      2+0\n2\n```\n"
+    _docs(tmp_path, {"a.md": md})
+    _fake_run(cb, monkeypatch, lambda bs: {bs[0].id: [_lres(cb, ["1"])]}, early="exited")
+    _, log = _main(cb, tmp_path)
+    _, entries = cb.read_log(log)
+    assert [(e["verdict"], e["reason"]) for e in entries] == [("timeout", "exited")]
+
+
+def test_read_log_rejects_unknown_decision(cb, tmp_path):
+    path = tmp_path / "log.yaml"
+    cb.write_log(path, META, [_entry(), _entry(line=9, decision="aply")])
+    with pytest.raises(cb.LogError, match=r"a\.md.*9.*aply"):
+        cb.read_log(path)
+
+
+def test_main_meta_pages_counts_pages_with_differs(cb, tmp_path, monkeypatch):
+    two = "```apl\n      1+1\n2\n```\n\n```apl\n      1+1\n3\n```\n"
+    one = "```apl\n      1+1\n2\n```\n"
+    _docs(tmp_path, {"a.md": two, "b.md": one})
+    _fake_run(cb, monkeypatch, lambda bs: {b.id: [_lres(cb, ["2"])] for b in bs})
+    _, log = _main(cb, tmp_path)
+    meta, _ = cb.read_log(log)
+    assert meta["pages"] == {"g/a.md": {"differs": 1, "match": 1}}
+
+
+def test_main_page_merge_when_page_has_no_entries_left(cb, tmp_path):
+    _docs(tmp_path, {"a.md": _PAGE, "sub/b.md": _PAGE})
+    _, log = _main(cb, tmp_path, "--no-run")
+    _, entries = cb.read_log(log)
+    (tmp_path / "docs" / "g" / "sub" / "b.md").write_text("# only text\n", encoding="utf-8")
+    _main(cb, tmp_path, "--no-run", "--page", "sub/*.md")
+    _, after = cb.read_log(log)
+    assert after == [e for e in entries if e["page"] == "g/a.md"]

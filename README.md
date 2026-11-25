@@ -58,3 +58,17 @@ The monorepo's `macros` plugin is not carried over: macros are not available. Th
 only for version numbers, so the `dyalog_vars` Markdown extension (`tools/dyalog_vars.py`)
 substitutes `{{ name }}` with the scalar of that name in `[project.extra]` instead, for example
 `{{ version_majmin }}`.
+
+## Reviewing code examples
+
+`tools/cutover/code-blocks.py` proposes splitting the session examples in the language reference
+guide's `apl` blocks into input (`apl`) and output (`text`), runs them under `dyalogscript`, and
+writes a review log (it never edits `zensical/`):
+
+```
+uv run python tools/cutover/code-blocks.py --log code-blocks.yml
+```
+
+Set each entry's `decision` to `apply` or `skip`; reruns keep decisions whose proposal is
+unchanged. The options, the log's fields and every verdict, reason and split value are described in
+the module docstring.
