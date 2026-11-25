@@ -727,3 +727,29 @@ def test_log_quotes_only_strings_with_cr(cb, tmp_path):
     assert 'original: "a\\r\\nb\\r\\n"' in raw
     assert "proposed: |" in raw
     assert cb.read_log(path)[1][0]["original"] == "a\r\nb\r\n"
+
+
+def test_log_single_line_text_field_falls_back_to_quotes(cb, tmp_path):
+    path = tmp_path / "log.yaml"
+    cb.write_log(path, META, [_entry(original="a\x85b", proposed=None)])
+    assert cb.read_log(path)[1][0]["original"] == "a\x85b"
+
+
+def test_carry_decisions_matches_duplicates_by_occurrence(cb):
+    old = [_entry(decision="apply"), _entry(decision="skip")]
+    new = [_entry(line=1), _entry(line=2), _entry(line=3)]
+    out = cb.carry_decisions(old, new)
+    assert [e["decision"] for e in out] == ["apply", "skip", "pending"]
+
+
+def test_write_log_failure_leaves_existing_log_untouched(cb, tmp_path, monkeypatch):
+    path = tmp_path / "log.yaml"
+    path.write_text("old contents\n", encoding="utf-8")
+    monkeypatch.setattr(
+        cb.yaml, "safe_load",
+        lambda s: {"meta": META, "entries": [_entry(original="x")]},
+    )
+    with pytest.raises(cb.LogError):
+        cb.write_log(path, META, [_entry()])
+    assert path.read_text(encoding="utf-8") == "old contents\n"
+    assert [p.name for p in tmp_path.iterdir()] == ["log.yaml"]

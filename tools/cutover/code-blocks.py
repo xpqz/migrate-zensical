@@ -569,12 +569,12 @@ class _LogDumper(yaml.SafeDumper):
 
 
 def _represent_str(dumper: _LogDumper, value: str) -> yaml.ScalarNode:
-    if "\n" not in value:
-        style = None
-    elif value in dumper.quoted:
+    if value in dumper.quoted:
         style = '"'
-    else:
+    elif "\n" in value:
         style = "|"
+    else:
+        style = None
     return dumper.represent_scalar("tag:yaml.org,2002:str", value, style=style)
 
 
@@ -608,23 +608,32 @@ def write_log(path: Path, meta: dict, entries: list[dict]) -> None:
     the round trip is rewritten in double-quoted style (per string).
     """
     data = {"meta": meta, "entries": entries}
-    text = _dump(data, frozenset())
-    bad = _mismatches(text, entries)
-    if bad:
-        quoted = frozenset(entries[i][k] for i, k in bad)
-        text = _dump(data, quoted)
-        bad = _mismatches(text, entries)
-    path.write_text(text, encoding="utf-8", newline="\n")
-    if bad:
-        root = yaml.compose(text)
-        nodes = next((v.value for k, v in root.value if k.value == "entries"), [])
-        i, key = bad[0]
-        line = nodes[i].start_mark.line + 1 if i < len(nodes) else "?"
-        raise LogError(
-            f"{path}: {entries[i].get('page')} (block at page line "
-            f"{entries[i].get('line')}, log line {line}): {key} did not "
-            "survive the round trip"
-        )
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    try:
+        text = _dump(data, frozenset())
+        tmp.write_text(text, encoding="utf-8", newline="\n")
+        bad = _mismatches(tmp.read_text(encoding="utf-8"), entries)
+        if bad:
+            quoted = frozenset(entries[i][k] for i, k in bad)
+            text = _dump(data, quoted)
+            tmp.write_text(text, encoding="utf-8", newline="\n")
+            text = tmp.read_text(encoding="utf-8")
+            bad = _mismatches(text, entries)
+        if bad:
+            root = yaml.compose(text)
+            nodes = next(
+                (v.value for k, v in root.value if k.value == "entries"), []
+            )
+            i, key = bad[0]
+            line = nodes[i].start_mark.line + 1 if i < len(nodes) else "?"
+            raise LogError(
+                f"{path}: {entries[i].get('page')} (block at page line "
+                f"{entries[i].get('line')}, log line {line}): {key} did not "
+                "survive the round trip"
+            )
+        os.replace(tmp, path)
+    finally:
+        tmp.unlink(missing_ok=True)
 
 
 def read_log(path: Path) -> tuple[dict, list[dict]]:
@@ -634,11 +643,14 @@ def read_log(path: Path) -> tuple[dict, list[dict]]:
 
 def carry_decisions(old: list[dict], new: list[dict]) -> list[dict]:
     """Keep earlier decisions for blocks whose proposal is unchanged."""
-    prior = {(e["page"], e["sha256"]): e for e in old}
+    prior: dict[tuple, list[dict]] = {}
+    for e in old:
+        prior.setdefault((e["page"], e["sha256"]), []).append(e)
     out = []
     for entry in new:
         entry = dict(entry)
-        before = prior.get((entry["page"], entry["sha256"]))
+        queue = prior.get((entry["page"], entry["sha256"]))
+        before = queue.pop(0) if queue else None
         same = (
             before is not None
             and before["proposed"] == entry["proposed"]
