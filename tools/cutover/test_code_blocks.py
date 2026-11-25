@@ -268,3 +268,25 @@ def test_check_no_lost_lines_rejects_dropped_line(cb):
 def test_split_kind_table(cb, lines, verdict, reason, expected):
     _, c = _block(cb, *lines)
     assert cb.split_kind(c, verdict, reason) == expected
+
+
+def test_check_no_lost_lines_rejects_line_on_wrong_side(cb):
+    b, _ = _block(cb, "      ⍳2", "1 2")
+    with pytest.raises(cb.SplitError):
+        cb.check_no_lost_lines(b, "```apl\n1 2\n```\n\n```text\n⍳2\n```\n")
+
+
+def test_split_fence_longer_than_backtick_content(cb):
+    b, _ = _block(cb, "      x", "1")
+    b = cb.Block(b.page, b.line, b.sha256, b.text, ["      x", "```", "``` y"], False)
+    c = cb.classify(b)
+    got = cb.split_block(b, c)
+    assert got == "```apl\nx\n```\n\n````text\n```\n``` y\n````\n"
+    cb.check_no_lost_lines(b, got)
+
+
+def test_split_output_before_input(cb):
+    b, c = _block(cb, "1 2", "      x", "3")
+    assert cb.split_block(b, c) == (
+        "```text\n1 2\n```\n\n```apl\nx\n```\n\n```text\n3\n```\n"
+    )

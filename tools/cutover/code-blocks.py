@@ -7,6 +7,7 @@ The tool only reads the corpus; it never writes to it.
 
 import hashlib
 import re
+from collections import Counter
 from dataclasses import dataclass
 from typing import Literal
 
@@ -171,7 +172,12 @@ def split_kind(
 
 
 def _fence(tag: str, lines: list[str]) -> str:
-    return f"```{tag}\n" + "".join(ln + "\n" for ln in lines) + "```\n"
+    longest = max(
+        (len(m.group()) for ln in lines if (m := re.match(r"`+", ln.lstrip()))),
+        default=0,
+    )
+    ticks = "`" * max(3, longest + 1)
+    return f"{ticks}{tag}\n" + "".join(ln + "\n" for ln in lines) + f"{ticks}\n"
 
 
 def split_block(block: Block, cls: Classification) -> str:
@@ -209,28 +215,46 @@ def split_block(block: Block, cls: Classification) -> str:
     return result
 
 
-def _fenced_lines(text: str) -> list[str]:
-    lines, inside = [], False
+_OPEN_RE = re.compile(r" {0,3}(`{3,})([^`]*)$")
+_CLOSE_RE = re.compile(r" {0,3}(`{3,})\s*$")
+
+
+def _fences(text: str) -> list[tuple[str, list[str]]]:
+    """Parse (info, content lines) for each fenced block, CommonMark-style."""
+    out: list[tuple[str, list[str]]] = []
+    cur: list[str] | None = None
+    width = 0
     for ln in text.split("\n"):
-        if ln.startswith("```"):
-            inside = not inside
-        elif inside:
-            lines.append(ln.rstrip("\r"))
-    return lines
+        ln = ln.rstrip("\r")
+        if cur is None:
+            if m := _OPEN_RE.match(ln):
+                width = len(m.group(1))
+                cur = []
+                out.append((m.group(2).strip(), cur))
+        elif (m := _CLOSE_RE.match(ln)) and len(m.group(1)) >= width:
+            cur = None
+        else:
+            cur.append(ln)
+    return out
 
 
 def check_no_lost_lines(original: Block, proposed: str) -> None:
-    from collections import Counter
-
+    """Every non-blank line must survive, on the same side (apl vs text)."""
     cls = classify(original)
-    before: Counter[str] = Counter()
+    before = {"input": Counter[str](), "output": Counter[str]()}
     for raw, role in zip(original.body, cls.roles):
         ln = raw.rstrip("\r")
         if role == "input":
             ln = strip_indent(ln)
         if ln.strip():
-            before[ln] += 1
-    after = Counter(ln for ln in _fenced_lines(proposed) if ln.strip())
-    if before != after:
-        diff = (before - after) + (after - before)
-        raise SplitError(f"{original.page}:{original.line}: lines differ: {dict(diff)}")
+            before[role][ln] += 1
+    after = {"input": Counter[str](), "output": Counter[str]()}
+    for info, lines in _fences(proposed):
+        side = "input" if info == "apl" else "output"
+        after[side].update(ln for ln in lines if ln.strip())
+    for side in before:
+        if before[side] != after[side]:
+            diff = (before[side] - after[side]) + (after[side] - before[side])
+            raise SplitError(
+                f"{original.page}:{original.line}: {side} lines differ: {dict(diff)}"
+            )
