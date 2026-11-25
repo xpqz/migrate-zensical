@@ -8,6 +8,8 @@ import sys
 import time
 from pathlib import Path
 
+import shutil as _shutil
+
 import pytest
 
 
@@ -295,34 +297,60 @@ def test_split_output_before_input(cb):
     )
 
 
-# --- Running examples under dyalogscript ---------------------------------
+# --- Running examples in Docker ---------------------------------------------
 
 
-def _dyalogscript():
+def _docker_image():
+    """The tool's default image if Docker runs and the image is built, else None.
+
+    Cheap on purpose: collection never builds or pulls an image.
+    """
     path = Path(__file__).with_name("code-blocks.py")
     spec = importlib.util.spec_from_file_location("code_blocks_probe", path)
     assert spec is not None and spec.loader is not None
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
-    return mod.find_dyalogscript()
+    image = mod.default_image()
+    docker = _shutil.which("docker")
+    if docker is None:
+        return None
+    for args in (["info"], ["image", "inspect", image]):
+        try:
+            done = subprocess.run(
+                [docker, *args], capture_output=True, timeout=30
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            return None
+        if done.returncode:
+            return None
+    return image
 
 
-needs_dyalog = pytest.mark.skipif(
-    _dyalogscript() is None, reason="dyalogscript is not installed"
+IMAGE = _docker_image()
+needs_docker = pytest.mark.skipif(
+    IMAGE is None, reason="Docker or the code-blocks image is not available"
 )
 
 
 def _run(cb, *blocks, timeout=60.0):
     """Run (style, lines) blocks, numbered from 1."""
     rb = [cb.RunBlock(i, st, ln) for i, (st, ln) in enumerate(blocks, 1)]
-    return cb.run_page(rb, cb.find_dyalogscript(), timeout=timeout)
+    return cb.run_page(rb, IMAGE, timeout=timeout)
+
+
+def _containers(name="cb-"):
+    out = subprocess.run(
+        ["docker", "ps", "-a", "-q", "--filter", f"name={name}"],
+        capture_output=True, text=True, check=True,
+    )
+    return out.stdout.split()
 
 
 def _out(results, block=1):
     return [r.output for r in results[block]]
 
 
-@needs_dyalog
+@needs_docker
 def test_run_page_displays_non_shy_result_and_suppresses_shy(cb):
     res, stop = _run(cb, (None, ["2+3", "x←5", "x"]))
     assert stop is None
@@ -331,13 +359,13 @@ def test_run_page_displays_non_shy_result_and_suppresses_shy(cb):
     assert [r.skipped for r in res[1]] == [None] * 3
 
 
-@needs_dyalog
+@needs_docker
 def test_run_page_state_carries_across_blocks(cb):
     res, _ = _run(cb, (None, ["x←7"]), (None, ["x+1"]))
     assert _out(res, 2) == [["8"]]
 
 
-@needs_dyalog
+@needs_docker
 def test_run_page_error_display(cb):
     res, _ = _run(
         cb, (None, ["1÷0", "⎕←3 ⋄ 1÷0", "foo 1", "1+(2 3+4 5 6)"]))
@@ -354,21 +382,21 @@ def test_run_page_error_display(cb):
     assert r[3].output[1:] == ["      1+(2 3+4 5 6)", "            ∧"]
 
 
-@needs_dyalog
+@needs_docker
 def test_run_page_box_max(cb):
     res, _ = _run(cb, ("max", ["2 2⍴1 'ab' (1 2) 3"]), ("off", ["2 2⍴1 'ab' (1 2) 3"]))
     assert _out(res)[0][0] == "┌→───────────┐"
     assert [ln.rstrip() for ln in _out(res, 2)[0]] == ["   1  ab", " 1 2   3"]
 
 
-@needs_dyalog
+@needs_docker
 def test_run_page_user_command(cb):
     res, _ = _run(cb, (None, ["]box on", "1+1"]))
     assert res[1][0].output and res[1][0].output != [""]
     assert res[1][0].error is False
 
 
-@needs_dyalog
+@needs_docker
 def test_run_page_display_command_sees_user_names_and_has_no_result(cb):
     res, _ = _run(cb, (None, ["Q1←2 2⍴⍳4", "]Display Q1", "]disp 2 2⍴⍳4", "1+1"]))
     r = res[1]
@@ -378,7 +406,7 @@ def test_run_page_display_command_sees_user_names_and_has_no_result(cb):
     assert r[3].output == ["2"]
 
 
-@needs_dyalog
+@needs_docker
 def test_run_page_skips_off(cb):
     res, _ = _run(cb, (None, ["⎕OFF", ")off", "1+1"]))
     assert [(r.skipped, r.output) for r in res[1]] == [
@@ -388,30 +416,29 @@ def test_run_page_skips_off(cb):
     ]
 
 
-@needs_dyalog
+@needs_docker
 def test_run_page_input_does_not_hang(cb):
     start = time.monotonic()
     _run(cb, (None, ["⍞"]), timeout=10)
     assert time.monotonic() - start < 15
 
 
-@needs_dyalog
-def test_run_page_timeout_kills_process(cb):
+@needs_docker
+def test_run_page_timeout_kills_process(cb, monkeypatch):
+    monkeypatch.setattr(cb.secrets, "token_hex", lambda n: "feedc0dedeadbeef")
     res, stop = _run(cb, (None, ["1+1", "⎕DL 1000"]), timeout=5)
     assert stop == "timeout"
     assert _out(res) == [["2"]]  # the finished line is kept
-    left = subprocess.run(
-        ["pgrep", "-f", "code-blocks-harness"], capture_output=True, text=True
-    )
-    assert left.stdout == ""
+    assert _containers("cb-feedc0dedeadbeef") == []
 
 
-@needs_dyalog
+@needs_docker
 def test_dyalog_version(cb):
-    assert re.fullmatch(r"\d+\.\d+\.\d+(\.\d+)?", cb.dyalog_version(cb.find_dyalogscript()))
+    assert re.fullmatch(r"\d+\.\d+\.\d+(\.\d+)?", cb.dyalog_version(IMAGE))
+    assert _containers() == []
 
 
-@needs_dyalog
+@needs_docker
 def test_run_page_error_in_called_function_shows_function_line(cb):
     res, _ = _run(cb, (None, ["⎕FX 'r←foo x' 'r←10+1÷x'", "foo 0", "1"]))
     r = res[1]
@@ -424,7 +451,7 @@ def test_run_page_error_in_called_function_shows_function_line(cb):
     assert r[2].output == ["1"]  # the failed call left nothing suspended
 
 
-@needs_dyalog
+@needs_docker
 def test_run_page_splits_statements_on_diamond(cb):
     lines = [
         "x←1 ⋄ y←2",
@@ -447,14 +474,14 @@ def test_run_page_splits_statements_on_diamond(cb):
     assert got[5] == ["4"]
 
 
-@needs_dyalog
+@needs_docker
 def test_run_page_sentinel_text_in_output_is_not_a_sentinel(cb):
     res, _ = _run(cb, (None, ["⎕←'⍝CB-END'", "⎕←'⍝CB-BEGIN 9 9'", "1+1"]))
     assert _out(res) == [["⍝CB-END"], ["⍝CB-BEGIN 9 9"], ["2"]]
     assert 9 not in res
 
 
-@needs_dyalog
+@needs_docker
 def test_run_page_skips_quote_quad_and_scans_outside_strings(cb):
     lines = [
         "⍞←'q'",
@@ -478,7 +505,7 @@ def test_run_page_skips_quote_quad_and_scans_outside_strings(cb):
     assert r[7].skipped == "system-command"
 
 
-@needs_dyalog
+@needs_docker
 def test_run_page_top_level_dfn_error_arrow_and_mid_line_output(cb):
     res, _ = _run(cb, (None, ["{1÷⍵}0", "→0", "1 ⋄ →⍬", "→⍬ ⋄ 2", "1+1"]))
     r = res[1]
@@ -768,8 +795,6 @@ def test_write_log_failure_leaves_existing_log_untouched(cb, tmp_path, monkeypat
 
 # --- main ---------------------------------------------------------------
 
-import shutil as _shutil
-
 _PAGE = (
     "# T\n\n```apl\n      1+1\n3\n```\n\n```apl\nplain listing\n```\n\n"
     "```apl\n      2+2\n4\n```\n"
@@ -867,19 +892,23 @@ def test_main_split_error_becomes_ambiguous_split_check(cb, tmp_path, monkeypatc
     }
 
 
-@pytest.mark.skipif(_shutil.which("dyalogscript") is None, reason="no dyalogscript")
+@needs_docker
 def test_main_end_to_end_match_and_differs(cb, tmp_path):
     _docs(tmp_path, {"a.md": "```apl\n      1+1\n2\n```\n\n```apl\n      2+2\n5\n```\n"})
     rc, log = _main(cb, tmp_path)
     assert rc == 0
     meta, entries = cb.read_log(log)
     assert meta["dyalog"]
+    # The container's image and platform, not the host's.
+    assert meta["image"] == IMAGE
+    assert meta["image_id"].startswith("sha256:")
+    assert re.fullmatch(r"linux/\w+", meta["platform"])
     assert [e["verdict"] for e in entries] == ["match", "differs"]
     assert [e["split"] for e in entries] == ["confirmed", "unambiguous"]
     assert entries[1]["actual"] == "      2+2\n4\n"
 
 
-@needs_dyalog
+@needs_docker
 def test_run_page_does_not_write_into_the_callers_cwd(cb, tmp_path, monkeypatch):
     # The ⎕NPUT is deliberate: run_page does not filter side effects (that is
     # _process_page's job), so this checks the run's own scratch directory.
@@ -901,13 +930,16 @@ def test_volatile_additions(cb):
 def _fake_run(cb, monkeypatch, results_fn, early=None):
     calls = []
 
-    def fake(blocks, dyalogscript, timeout):
+    def fake(blocks, image, timeout):
         calls.append(blocks)
         return results_fn(blocks), early
 
     monkeypatch.setattr(cb, "run_page", fake)
-    monkeypatch.setattr(cb, "find_dyalogscript", lambda: "/fake")
-    monkeypatch.setattr(cb, "dyalog_version", lambda d: "v")
+    monkeypatch.setattr(cb, "prepare_image", lambda image: "fake:image")
+    monkeypatch.setattr(cb, "dyalog_version", lambda image: "v")
+    monkeypatch.setattr(
+        cb, "image_meta", lambda image: {"image": image, "image_id": "x", "platform": "p"}
+    )
     return calls
 
 
@@ -966,7 +998,7 @@ def test_classify_accepts_short_caret_in_error_triple(cb):
     assert cls.kind == "session"
 
 
-@needs_dyalog
+@needs_docker
 def test_run_page_harness_leaves_no_names_in_the_workspace(cb):
     res, _ = _run(cb, (None, ["≢⎕NL ¯2 ¯9"]))
     assert _out(res) == [["0"]]
@@ -1082,19 +1114,6 @@ def test_main_evidence_forms_are_never_sent(cb, tmp_path, monkeypatch):
     )
     _main(cb, tmp_path)
     assert [[b.lines for b in c] for c in calls] == [[["2+2"]]]
-
-
-@needs_dyalog
-@pytest.mark.skipif(
-    not Path("/usr/bin/sandbox-exec").exists(), reason="no macOS sandbox-exec"
-)
-def test_run_page_sandbox_blocks_writes_outside_the_run_directory(cb, tmp_path):
-    # run_page does not filter side effects; the sandbox must stop this write.
-    target = tmp_path / "escaped.txt"
-    res, _ = _run(cb, (None, [f"(⊂'x') ⎕NPUT '{target}'", "1+1"]))
-    assert not target.exists()
-    assert res[1][0].error is True
-    assert _out(res)[1] == ["2"]
 
 
 def test_judge_value_error_suspect_only_if_name_not_used_elsewhere(cb):
@@ -1282,7 +1301,7 @@ def test_main_keeps_a_backup_and_reports_reset_decisions(cb, tmp_path, capsys):
 # --- minors: exited, read_log, per-page counts, --page merge ------------------
 
 
-@needs_dyalog
+@needs_docker
 def test_run_page_reports_an_early_exit(cb):
     # Evaluated input reads the closed stdin and ends the interpreter.
     res, stop = _run(cb, (None, ["1+1", "x←⎕", "2+2"]), timeout=20)
@@ -1349,3 +1368,139 @@ def test_judge_user_command_output_is_not_suspect(cb):
     lines = ["      ]box on", "      1+1", "2"]
     res = [_lr(cb, ["Was OFF"]), _lr(cb, ["3"])]
     assert _judge(cb, lines, res)[:2] == ("differs", None)
+
+
+# --- the Docker jail -----------------------------------------------------------
+
+
+@needs_docker
+def test_docker_has_no_network(cb):
+    # Opening a TCP socket fails at once: there is no route out.
+    res, _ = _run(cb, (None, [
+        "⎕SH 'bash -c \"exec 3<>/dev/tcp/1.1.1.1/53\" 2>&1; echo rc=$?'",
+    ]))
+    out = res[1][0].output
+    assert any("Network is unreachable" in ln for ln in out), out
+    assert out[-1] == "rc=1"
+
+
+@needs_docker
+def test_docker_cannot_write_outside_work(cb, tmp_path):
+    host = tmp_path / "escaped.txt"
+    res, _ = _run(cb, (None, [
+        "(⊂'x') ⎕NPUT '/etc/x'",
+        f"(⊂'x') ⎕NPUT '{host}'",
+        "(⊂'x') ⎕NPUT '/work/ok.txt'",
+        "⊃⊃⎕NGET '/work/ok.txt' 1",
+    ]))
+    r = res[1]
+    assert r[0].error and r[0].output[0].startswith("FILE ACCESS ERROR")
+    assert r[1].error
+    assert not host.exists()
+    assert (r[2].error, r[3].output) == (False, ["x"])
+
+
+@needs_docker
+def test_docker_files_persist_between_blocks_of_a_page(cb):
+    res, _ = _run(
+        cb,
+        (None, ["(⊂'hello') ⎕NPUT 'a.txt'", "⎕MKDIR 'd'"]),
+        (None, ["⊃⊃⎕NGET 'a.txt' 1", "⎕NEXISTS 'd'"]),
+    )
+    assert _out(res, 2) == [["hello"], ["1"]]
+
+
+@needs_docker
+def test_docker_nothing_persists_between_pages(cb):
+    _run(cb, (None, ["(⊂'hello') ⎕NPUT '/work/a.txt'", "(⊂'x') ⎕NPUT '/tmp/b.txt'"]))
+    res, _ = _run(cb, (None, ["⎕NEXISTS '/work/a.txt' '/tmp/b.txt'", "x"]))
+    assert _out(res) == [["0 0"], _out(res)[1]]
+    assert res[1][1].error  # no name from the earlier page
+    assert _containers() == []
+
+
+@needs_docker
+def test_docker_dotnet_runs_and_cannot_write_outside_work(cb):
+    res, _ = _run(cb, (None, [
+        "⎕USING←'System' 'System.IO'",
+        "(⎕NEW DateTime (2020 1 2)).Year",
+        "File.WriteAllText '/etc/x' 'hi'",
+        "File.WriteAllText '/work/y' 'hi'",
+        "⊃⊃⎕NGET 'y' 1",
+    ]))
+    r = res[1]
+    assert r[1].output == ["2020"]
+    assert r[2].error and r[2].output[0].startswith("EXCEPTION")
+    assert (r[3].error, r[4].output) == (False, ["hi"])
+
+
+@needs_docker
+def test_docker_shell_runs_as_uid_1000_and_cannot_write_outside_work(cb):
+    res, _ = _run(cb, (None, [
+        "⎕SH 'id -u'",
+        "⎕SH 'touch /etc/x 2>/dev/null || echo refused'",
+        "⎕SH 'touch /work/x && echo ok'",
+    ]))
+    assert _out(res) == [["1000"], ["refused"], ["ok"]]
+
+
+def test_main_without_docker_runs_as_no_run(cb, tmp_path, monkeypatch, capsys):
+    _docs(tmp_path, {"a.md": _PAGE})
+    monkeypatch.setattr(cb, "DOCKER", str(tmp_path / "no-such-docker"))
+    called = []
+    monkeypatch.setattr(cb, "run_page", lambda *a, **k: called.append(a))
+    rc, log = _main(cb, tmp_path)
+    assert rc == 0 and called == []
+    assert "Docker" in capsys.readouterr().err
+    meta, entries = cb.read_log(log)
+    assert {e["reason"] for e in entries} == {"not-run"}
+    assert meta["dyalog"] is None and meta["image"] is None
+
+
+def test_main_image_option_is_passed_on(cb, tmp_path, monkeypatch):
+    _docs(tmp_path, {"a.md": _PAGE})
+    seen = []
+    _fake_run(cb, monkeypatch, lambda bs: {})
+    monkeypatch.setattr(cb, "prepare_image", lambda image: seen.append(image) or image)
+    _main(cb, tmp_path, "--image", "my/image:1")
+    assert seen == ["my/image:1"]
+
+
+def test_default_image_is_tagged_by_the_dockerfile(cb):
+    digest = hashlib.sha256(cb.DOCKERFILE.read_bytes()).hexdigest()
+    assert cb.default_image() == f"code-blocks-dyalog:{digest[:12]}"
+    assert cb.BASE_IMAGE in cb.DOCKERFILE.read_text(encoding="utf-8")
+
+
+def test_container_argv_is_locked_down(cb):
+    argv = cb._container_argv("img", "cb-x", "/host/dir", ["a", "b"])
+    assert argv[:2] == [cb.DOCKER, "run"]
+    for flag in (
+        "--rm", "-i", "--read-only", "--network none", "--cap-drop ALL",
+        "--security-opt no-new-privileges", "--pids-limit 64", "--memory 512m",
+        "--cpus 1", "--name cb-x", "-w /work", "--entrypoint dyalogscript",
+        "--tmpfs /work:rw,size=16m,mode=1777", "--tmpfs /tmp:rw,size=64m",
+        "--tmpfs /home/dyalog:rw,size=16m,uid=1000,gid=1000",
+        "-v /host/dir:/cb:ro",
+    ):
+        assert f" {flag} " in " " + " ".join(argv) + " ", flag
+    assert argv[-3:] == ["img", "a", "b"]
+
+
+@needs_docker
+def test_run_page_exception_leaves_no_container(cb, monkeypatch):
+    monkeypatch.setattr(cb.secrets, "token_hex", lambda n: "0ddba11c0ffee000")
+    real = subprocess.Popen
+
+    class Boom(real):
+        def communicate(self, *a, **k):
+            if self.args[1:2] == ["run"]:
+                time.sleep(2)  # the container is up
+                raise RuntimeError("interrupted")
+            return super().communicate(*a, **k)
+
+    monkeypatch.setattr(cb.subprocess, "Popen", Boom)
+    with pytest.raises(RuntimeError, match="interrupted"):
+        _run(cb, (None, ["⎕DL 1000"]))
+    monkeypatch.setattr(cb.subprocess, "Popen", real)
+    assert _containers("cb-0ddba11c0ffee000") == []

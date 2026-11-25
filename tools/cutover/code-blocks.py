@@ -114,7 +114,6 @@ import fnmatch
 import hashlib
 import json
 import os
-import platform
 import re
 import secrets
 import shutil
@@ -122,6 +121,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import time
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
@@ -383,7 +383,7 @@ def check_no_lost_lines(original: Block, proposed: str) -> None:
             )
 
 
-# --- Running examples under dyalogscript ---------------------------------
+# --- Running examples in Docker -----------------------------------------
 
 HARNESS = Path(__file__).with_name("code-blocks-harness.apls")
 
@@ -405,37 +405,101 @@ class RunBlock:
     lines: list[str]
 
 
-def find_dyalogscript() -> str | None:
-    """`$DYALOGSCRIPT`, else `dyalogscript` on PATH, else None."""
-    return os.environ.get("DYALOGSCRIPT") or shutil.which("dyalogscript")
+DOCKER = shutil.which("docker") or "docker"
+DOCKERFILE = Path(__file__).with_name("docker") / "Dockerfile"
+# The Dockerfile's base: Dyalog 21.0, pinned by digest (arm64 and amd64).
+BASE_IMAGE = (
+    "dyalog/dyalog@sha256:"
+    "d9c0dda7c53b3505b726a41709d5136ddcf15a441fdf572e2c439c69602ceb32"
+)
 
 
-def _launch(
-    argv: list[str], timeout: float, cwd: str | None = None
-) -> tuple[str, bool]:
-    """Run argv in its own process group; kill the group on timeout and on exit.
+def default_image() -> str:
+    """The tag of the image built from DOCKERFILE: its content decides the tag."""
+    digest = hashlib.sha256(DOCKERFILE.read_bytes()).hexdigest()
+    return f"code-blocks-dyalog:{digest[:12]}"
 
-    Returns (stdout with CR/CRLF turned into LF, timed_out).
-    """
-    proc = subprocess.Popen(
-        argv,
+
+def _docker(*args: str, timeout: float = 60) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        [DOCKER, *args],
         stdin=subprocess.DEVNULL,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
-        start_new_session=True,
-        cwd=cwd,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
     )
-    timed_out = False
+
+
+def prepare_image(image: str | None) -> str | None:
+    """The image to run examples in, or None (with a note on stderr).
+
+    Docker must be running. The default image is built from DOCKERFILE when
+    missing (the only time the network is used); an --image is pulled when
+    missing.
+    """
+    image = image or default_image()
     try:
-        out, _ = proc.communicate(timeout=timeout)
-    except subprocess.TimeoutExpired:
-        timed_out = True
-        _kill_group(proc.pid)
-        out, _ = proc.communicate()
-    finally:
-        _kill_group(proc.pid)  # an interpreter may outlive the launcher
-    text = out.decode("utf-8", errors="replace")
-    return text.replace("\r\n", "\n").replace("\r", "\n"), timed_out
+        if _docker("info", timeout=60).returncode:
+            raise OSError("docker info failed")
+    except (OSError, subprocess.TimeoutExpired):
+        print("note: Docker is not available; not running examples", file=sys.stderr)
+        return None
+    if _docker("image", "inspect", image).returncode == 0:
+        return image
+    if image == default_image():
+        print(f"note: building {image}", file=sys.stderr)
+        made = _docker(
+            "build", "-q", "-t", image, "-f", str(DOCKERFILE), str(DOCKERFILE.parent),
+            timeout=1800,
+        )
+    else:
+        print(f"note: pulling {image}", file=sys.stderr)
+        made = _docker("pull", "-q", image, timeout=1800)
+    if made.returncode:
+        print(
+            f"note: no image {image} ({made.stderr.strip()}); not running examples",
+            file=sys.stderr,
+        )
+        return None
+    return image
+
+
+def image_meta(image: str) -> dict:
+    """The image's tag, id and platform (the container's, e.g. linux/arm64)."""
+    out = _docker(
+        "image", "inspect", "--format",
+        "{{.Id}} {{.Os}}/{{.Architecture}}",
+        image,
+    )
+    if out.returncode:
+        raise RuntimeError(f"docker image inspect {image}: {out.stderr.strip()}")
+    image_id, plat = out.stdout.split()
+    return {"image": image, "image_id": image_id, "platform": plat}
+
+
+def _container_argv(image: str, name: str, mount: str, args: list[str]) -> list[str]:
+    """docker run argv: one locked-down, throw-away container.
+
+    No network, no capabilities, a read-only root; only /work (the working
+    directory), /tmp and the home directory are writable, as small tmpfs
+    mounts that vanish with the container. `mount` (the harness and the
+    request) is read-only at /cb.
+    """
+    return [
+        DOCKER, "run", "--rm", "-i", "--name", name,
+        "--network", "none", "--read-only", "--cap-drop", "ALL",
+        "--security-opt", "no-new-privileges", "--pids-limit", "64",
+        "--memory", "512m", "--cpus", "1",
+        "--tmpfs", "/work:rw,size=16m,mode=1777",
+        "--tmpfs", "/tmp:rw,size=64m",  # the .NET runtime needs room here
+        "--tmpfs", "/home/dyalog:rw,size=16m,uid=1000,gid=1000",
+        "-w", "/work", "-v", f"{mount}:/cb:ro",
+        "--entrypoint", "dyalogscript", image, *args,
+    ]
+
+
+class ContainerError(RuntimeError):
+    """A container outlived its run."""
 
 
 def _kill_group(pgid: int) -> None:
@@ -445,43 +509,91 @@ def _kill_group(pgid: int) -> None:
         pass
 
 
-def dyalog_version(dyalogscript: str) -> str:
-    """The interpreter's version field, e.g. "21.0.54424.0"."""
+def _left(name: str) -> bool:
+    out = _docker("ps", "-a", "-q", "--filter", f"name=^/{name}$", timeout=30)
+    return bool(out.stdout.strip())
+
+
+def _remove_container(name: str, force: bool) -> None:
+    """Make sure the container `name` is gone; raise ContainerError if not.
+
+    --rm removes a container asynchronously, so poll for a while.
+    """
+    if force:
+        _docker("kill", name, timeout=30)
+        _docker("rm", "-f", name, timeout=30)
+    for _ in range(50):
+        if not _left(name):
+            return
+        time.sleep(0.2)
+    _docker("rm", "-f", name, timeout=30)
+    if _left(name):
+        raise ContainerError(f"container {name} is still there")
+
+
+def _in_container(
+    image: str, files: dict[str, str], args: list[str], timeout: float
+) -> tuple[str, bool]:
+    """Run dyalogscript `args` in a fresh container, `files` mounted at /cb.
+
+    Returns (stdout with CR/CRLF turned into LF, timed_out). On a time-out or
+    any exception the container is killed and removed and the local docker
+    client's process group is killed; either way the container is gone when
+    this returns.
+    """
+    name = f"cb-{secrets.token_hex(8)}"
     with tempfile.TemporaryDirectory() as tmp:
-        script = Path(tmp, "version.apls")
-        script.write_text("⎕←2⊃#⎕WG'APLVersion'\n⎕OFF\n", encoding="utf-8")
-        out, _ = _launch([dyalogscript, str(script)], timeout=30)
+        tmp = os.path.realpath(tmp)
+        os.chmod(tmp, 0o755)  # the container's user is uid 1000
+        for fname, text in files.items():
+            Path(tmp, fname).write_text(text, encoding="utf-8")
+            os.chmod(Path(tmp, fname), 0o644)
+        proc = subprocess.Popen(
+            _container_argv(image, name, tmp, args),
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+        timed_out = False
+        clean = False
+        try:
+            try:
+                out, _ = proc.communicate(timeout=timeout)
+            except subprocess.TimeoutExpired:
+                timed_out = True
+                _docker("kill", name, timeout=30)
+                try:
+                    out, _ = proc.communicate(timeout=10)
+                except subprocess.TimeoutExpired:
+                    _kill_group(proc.pid)
+                    out, _ = proc.communicate()
+            clean = not timed_out
+        finally:
+            if proc.poll() is None:
+                _docker("kill", name, timeout=30)
+            _kill_group(proc.pid)
+            proc.wait()
+            _remove_container(name, force=not clean)
+    text = out.decode("utf-8", errors="replace")
+    return text.replace("\r\n", "\n").replace("\r", "\n"), timed_out
+
+
+def dyalog_version(image: str) -> str:
+    """The container interpreter's version field, e.g. "21.0.54424.0"."""
+    out, _ = _in_container(
+        image,
+        {"version.apls": "⎕←2⊃#⎕WG'APLVersion'\n⎕OFF\n"},
+        ["/cb/version.apls"],
+        timeout=60,
+    )
     return out.strip()
 
 
-SANDBOX_EXEC = "/usr/bin/sandbox-exec"
-# Defence in depth on macOS, behind the side-effect allowlist: the interpreter
-# may write only in the run's temporary directory and to /dev/null and the
-# terminal, and has no network.
-_SANDBOX_PROFILE = """\
-(version 1)
-(allow default)
-(deny network*)
-(deny file-write*)
-(allow file-write*
-    (subpath (param "RUN_DIR"))
-    (literal "/dev/null")
-    (literal "/dev/tty")
-    (literal "/dev/dtracehelper"))
-"""
-
-
-def _sandboxed(argv: list[str], run_dir: str) -> list[str]:
-    """argv under sandbox-exec, if this system has it."""
-    if not os.path.exists(SANDBOX_EXEC):
-        return argv
-    return [SANDBOX_EXEC, "-D", f"RUN_DIR={run_dir}", "-p", _SANDBOX_PROFILE, *argv]
-
-
 def run_page(
-    blocks: list[RunBlock], dyalogscript: str, timeout: float = 60.0
+    blocks: list[RunBlock], image: str, timeout: float = 60.0
 ) -> tuple[dict[int, list[LineResult]], str | None]:
-    """Run each block's input lines in one fresh interpreter.
+    """Run each block's input lines in one fresh container (one interpreter).
 
     Results are keyed by block id; blocks not reached are absent. The second
     value is "timeout" if the run timed out, "exited" if the interpreter
@@ -495,16 +607,15 @@ def run_page(
             {"id": b.id, "style": b.style, "lines": b.lines} for b in blocks
         ],
     }
-    with tempfile.TemporaryDirectory() as tmp:
-        tmp = os.path.realpath(tmp)  # the sandbox matches resolved paths
-        req = Path(tmp, "request.json")
-        req.write_text(json.dumps(request, ensure_ascii=False), encoding="utf-8")
-        argv = [dyalogscript, "DYALOG_INITSESSION=1", str(HARNESS), str(req)]
-        out, timed_out = _launch(
-            _sandboxed(argv, tmp),
-            timeout,
-            cwd=tmp,  # examples that write files must not litter the caller's cwd
-        )
+    out, timed_out = _in_container(
+        image,
+        {
+            HARNESS.name: HARNESS.read_text(encoding="utf-8"),
+            "request.json": json.dumps(request, ensure_ascii=False),
+        },
+        ["DYALOG_INITSESSION=1", f"/cb/{HARNESS.name}", "/cb/request.json"],
+        timeout,
+    )
     results, done = _parse_output(out, token)
     expected = sum(len(b.lines) for b in blocks)
     if timed_out:
@@ -1121,7 +1232,7 @@ _USING_RE = re.compile(r"⎕USING(?![A-Za-z0-9_])", re.I)
 
 
 def _process_page(
-    page: str, markdown: str, dyalogscript: str | None, timeout: float
+    page: str, markdown: str, image: str | None, timeout: float
 ) -> tuple[list[dict], int, int]:
     """Entries for one page, plus (block count, listing count)."""
     blocks = find_blocks(page, markdown)
@@ -1132,7 +1243,7 @@ def _process_page(
     stop: str | None = None
     side: set[int] = set()
     sent: dict[int, int] = {}  # block index -> number of lines sent
-    if dyalogscript:
+    if image:
         boxed = False
         dotnet = False
         to_run: list[RunBlock] = []
@@ -1152,7 +1263,7 @@ def _process_page(
             to_run.append(RunBlock(i, None if boxed else cls.style, lines))
             sent[i] = len(lines)
         if to_run:
-            results, stop = run_page(to_run, dyalogscript, timeout)
+            results, stop = run_page(to_run, image, timeout)
 
     entries: list[dict] = []
     listings = 0
@@ -1171,7 +1282,7 @@ def _process_page(
             verdict, reason, actual = "not-run", "side-effect", None
         elif stop and i in sent and len(results.get(i, [])) < sent[i] and hung_seen:
             verdict, reason, actual = "not-run", "unreached", None
-        elif dyalogscript:
+        elif image:
             if stop and i in sent and len(results.get(i, [])) < sent[i]:
                 hung_seen = True  # the first block with a missing line
             verdict, reason, actual = judge(
@@ -1253,6 +1364,11 @@ def main(argv: list[str] | None = None) -> int:
         help="time limit for each page's interpreter (default: %(default)s)",
     )
     ap.add_argument(
+        "--image",
+        help="Docker image to run examples in (default: the image built from "
+        "tools/cutover/docker/Dockerfile, built when missing)",
+    )
+    ap.add_argument(
         "--docs",
         default="zensical/docs",
         help="the documentation root; log paths are relative to it "
@@ -1260,9 +1376,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = ap.parse_args(argv)
 
-    dyalogscript = None if args.no_run else find_dyalogscript()
-    if not args.no_run and dyalogscript is None:
-        print("note: dyalogscript not found; not running examples", file=sys.stderr)
+    image = None if args.no_run else prepare_image(args.image)
 
     docs = Path(args.docs)
     root = docs / args.guide
@@ -1289,7 +1403,7 @@ def main(argv: list[str] | None = None) -> int:
         found, n, lst = _process_page(
             p.relative_to(docs).as_posix(),
             p.read_text(encoding="utf-8"),
-            dyalogscript,
+            image,
             args.timeout,
         )
         entries += found
@@ -1316,8 +1430,9 @@ def main(argv: list[str] | None = None) -> int:
         by_page.setdefault(e["page"], Counter())[e["verdict"]] += 1
     meta = {
         "guide": args.guide,
-        "dyalog": dyalog_version(dyalogscript) if dyalogscript else None,
-        "platform": platform.platform(),
+        "dyalog": dyalog_version(image) if image else None,
+        # The container's image and platform; null without a run.
+        **(image_meta(image) if image else dict.fromkeys(("image", "image_id", "platform"))),
         "generated": datetime.datetime.now(datetime.timezone.utc).strftime(
             "%Y-%m-%dT%H:%M:%SZ"
         ),
