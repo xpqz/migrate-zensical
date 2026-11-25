@@ -123,7 +123,7 @@ src←⊃⎕NGET(⊃⌽args/⍨'.apls'∘≡¨¯5↑¨args)1
 ⍝|          s←(∨\stmt≠' ')/stmt
 ⍝|          lead←(starts[k]-1)+(≢stmt)-≢s
 ⍝|          s←⌽(∨\' '≠⌽s)/⌽s
-⍝|          :If (0=≢s)∨'⍝'=⊃s
+⍝|          :If (0=≢s)∨(⊃s)∊'⍝→'
 ⍝|              :Continue
 ⍝|          :EndIf
 ⍝|          cur←stmt
@@ -150,7 +150,10 @@ src←⊃⎕NGET(⊃⌽args/⍨'.apls'∘≡¨¯5↑¨args)1
 ⍝|      r←,⊂⎕DMX.EM,(0<≢⎕DMX.Message)/': ',⎕DMX.Message
 ⍝|      dm←⎕DMX.DM
 ⍝|      pfx←'Line['
-⍝|      :If (2≤≢dm)∧(pfx≡(≢pfx)↑2⊃dm)∧stmt≡(-≢stmt)↑2⊃dm
+⍝|      :If 2>≢dm
+⍝|          :Return
+⍝|      :EndIf
+⍝|      :If (pfx≡(≢pfx)↑2⊃dm)∨~0<≢'^\S+\[\d+\]'⎕S 0⊢2⊃dm
 ⍝|          :If 3=≢dm
 ⍝|              p←(≢2⊃dm)-≢stmt
 ⍝|              c←(3⊃dm)⍳'∧'

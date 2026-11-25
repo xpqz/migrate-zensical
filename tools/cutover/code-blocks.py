@@ -366,12 +366,11 @@ def run_page(
 def _parse_output(text: str, token: str) -> tuple[dict[int, list[LineResult]], int]:
     """Parse harness sentinels. Returns (results, number of finished lines).
 
-    Sentinels carry the run's token and sit at the start of a line; anything
+    Sentinels carry the run's token (so output cannot spoof them); anything
     outside a BEGIN/END pair (a traceback, say) is ignored.
     """
     sentinel = re.compile(
-        rf"^⍝CB-{re.escape(token)}-(?:BEGIN (\d+) (\d+)\n|END( ERROR| SKIP QQ| SKIP)?\n)",
-        re.MULTILINE,
+        rf"⍝CB-{re.escape(token)}-(?:BEGIN (\d+) (\d+)\n|END( ERROR| SKIP QQ| SKIP)?\n)",
     )
     results: dict[int, list[LineResult]] = {}
     current: int | None = None

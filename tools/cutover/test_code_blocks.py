@@ -466,3 +466,21 @@ def test_run_page_skips_quote_quad_and_scans_outside_strings(cb):
     assert (r[5].skipped, r[5].output) == (None, ["⎕OFF"])
     assert r[6].skipped is None
     assert r[7].skipped == "system-command"
+
+
+@needs_dyalog
+def test_run_page_top_level_dfn_error_arrow_and_mid_line_output(cb):
+    res, _ = _run(cb, (None, ["{1÷⍵}0", "→0", "1 ⋄ →⍬", "→⍬ ⋄ 2", "1+1"]))
+    r = res[1]
+    assert r[0].output == ["DOMAIN ERROR: Divide by zero", "      {1÷⍵}0", "        ∧"]
+    assert r[0].error is True
+    for i in (1, 2, 3):
+        assert (r[i].error, r[i].skipped) == (False, None)
+    assert [r[i].output for i in (1, 2, 3, 4)] == [[], ["1"], ["2"], ["2"]]
+
+
+def test_parse_output_accepts_sentinel_after_partial_line(cb):
+    text = "⍝CB-t-BEGIN 1 0\nabc⍝CB-t-END\n"
+    res, done = cb._parse_output(text, "t")
+    assert done == 1
+    assert res[1][0].output == ["abc"]
