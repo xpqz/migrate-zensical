@@ -10,7 +10,7 @@ R←Xf[B]Y
 
 For an alternative method of applying any function to a subset of axes, see [Rank](../../primitive-operators/rank.md).
 
-Table: Primitive dyadic mixed functions with optional axis. {: #DyadicMixed }
+Table: Primitive dyadic mixed functions with optional axis. { #DyadicMixed }
 
 |Function|Name|Range of B|
 |---|---|---|
