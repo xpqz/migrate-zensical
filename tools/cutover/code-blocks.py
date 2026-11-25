@@ -426,9 +426,13 @@ SIDE_EFFECTS = frozenset(
         "SH CMD SHELL NA MKDIR NCREATE NERASE NDELETE NMOVE NCOPY NPUT NAPPEND "
         "NREPLACE NRENAME NRESIZE NTIE NSHARE NLOCK FCREATE FTIE FSTIE FERASE "
         "FAPPEND FREPLACE FRENAME FRESIZE FDROP FHOLD FUNTIE NUNTIE FCOPY FPACK "
-        "FSTAC FCHK SAVE LOAD CY FIX WC WS NQ DQ TGET TPUT CSV MAP"
+        "FSTAC FCHK SAVE LOAD CY FIX WC WS NQ DQ TGET TPUT CSV MAP SE ED EXPORT NEW "
+        "FIO HTTPCMD"
     ).split()
 )
+# I-beams known to be pure (no files, processes or workspace changes).
+PURE_IBEAMS = frozenset({8, 181, 201, 219, 220, 1200, 1500, 5581, 7162, 16808})
+_IBEAM_NUM_RE = re.compile(r"(?<![\w∆⍙_.])(\d+)\s*$")
 _SAFE_COMMANDS = frozenset({"box", "boxing", "display", "disp", "rows"})
 
 _QUAD_NAME_RE = re.compile(r"⎕[A-Za-z0-9_]*")
@@ -473,21 +477,50 @@ def _is_volatile(line: str) -> bool:
         return True
     names = {v.upper() for v in VOLATILE if v.startswith("⎕")}
     found = {m.upper() for m in _QUAD_NAME_RE.findall(code)}
-    if found & names:
+    if found & names or re.search(r"16808\s*⌶", code):
         return True
     # ⎕DT is volatile only when it converts the current time ('Z').
     return "⎕DT" in found and "'Z'" in _strip_comment(line)
 
 
+def _statements(text: str) -> list[str]:
+    """Split a comment-free line at ⋄ outside strings."""
+    parts: list[str] = []
+    cur: list[str] = []
+    in_str = False
+    for ch in text:
+        if ch == "'":
+            in_str = not in_str
+        if ch == "⋄" and not in_str:
+            parts.append("".join(cur))
+            cur = []
+        else:
+            cur.append(ch)
+    parts.append("".join(cur))
+    return parts
+
+
 def has_side_effect(line: str) -> bool:
-    """True if an input line uses a side-effecting facility or user command."""
-    text = line.lstrip()
-    if text.startswith("]"):
-        parts = text[1:].split()
+    """True if an input line may have a side effect.
+
+    Matching is deliberately string-blind in the cautious direction: only the
+    comment is removed, so a facility named inside a string (for `⍎`, `⎕FX`,
+    `85⌶`) counts. A string that merely mentions one is an accepted false
+    positive.
+    """
+    text = _strip_comment(line)
+    if text.lstrip().startswith("]"):
+        parts = text.lstrip()[1:].split()
         return not parts or parts[0].lower() not in _SAFE_COMMANDS
-    code = _code_only(line)
-    names = {m.upper() for m in _QUAD_NAME_RE.findall(code)}
-    return bool(names & SIDE_EFFECTS)
+    if any(st.lstrip().startswith(")") for st in _statements(text)):
+        return True
+    if {m.upper() for m in _QUAD_NAME_RE.findall(text)} & SIDE_EFFECTS:
+        return True
+    for m in re.finditer("⌶", text):
+        num = _IBEAM_NUM_RE.search(text[: m.start()])
+        if not num or int(num.group(1)) not in PURE_IBEAMS:
+            return True
+    return False
 
 
 def expected_outputs(block: Block, cls: Classification) -> list[list[str]]:
@@ -522,6 +555,12 @@ def _session(inputs: list[str], results: list[LineResult]) -> list[str]:
         out.append("      " + text)
         out.extend(res.output)
     return out
+
+
+def _uses_name(line: str, name: str) -> bool:
+    return bool(
+        re.search(rf"(?<![\w∆⍙_.]){re.escape(name)}(?![\w∆⍙_])", _strip_comment(line))
+    )
 
 
 def judge(
@@ -565,7 +604,7 @@ def judge(
 
     expected = expected_outputs(block, cls)
     actual = "".join(ln + "\n" for ln in _session(inputs, results))
-    for exp, res in zip(expected, results):
+    for idx, (exp, res) in enumerate(zip(expected, results)):
         if not res.error:
             continue
         if any(_ERROR_RE.match(ln.rstrip()) for ln in exp):
@@ -573,8 +612,14 @@ def judge(
         head = next((ln for ln in res.output if _ERROR_RE.match(ln)), "")
         if prior_unrun:
             return "not-run", "dependency", actual
-        if head.startswith(("SYNTAX ERROR", "VALUE ERROR")):
+        if head.startswith("SYNTAX ERROR"):
             return "not-run", "suspect-input", actual
+        if head.startswith("VALUE ERROR"):
+            m = re.match(r"VALUE ERROR: Undefined name: (\S+)", head)
+            name = m.group(1) if m else None
+            others = [t for k, t in enumerate(inputs) if k != idx]
+            if not name or not any(_uses_name(t, name) for t in others):
+                return "not-run", "suspect-input", actual
         return "not-run", "error", actual
 
     if len(results) == len(expected) and all(
@@ -853,7 +898,16 @@ def main(argv: list[str] | None = None) -> int:
 
     log = Path(args.log)
     if log.exists():
-        entries = carry_decisions(read_log(log)[1], entries)
+        old = read_log(log)[1]
+        if args.page:
+            done = {p.relative_to(docs).as_posix() for p in pages}
+            kept = [e for e in old if e["page"] not in done]
+            replaced = carry_decisions(
+                [e for e in old if e["page"] in done], entries
+            )
+            entries = sorted(kept + replaced, key=lambda e: (e["page"], e["line"]))
+        else:
+            entries = carry_decisions(old, entries)
     meta = {
         "guide": args.guide,
         "dyalog": dyalog_version(dyalogscript) if dyalogscript else None,

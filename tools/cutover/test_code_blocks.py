@@ -878,17 +878,9 @@ def test_run_page_does_not_write_into_the_callers_cwd(cb, tmp_path, monkeypatch)
 # --- side effects, box pre-set, volatile, unreached, carets -------------------
 
 
-def test_has_side_effect(cb):
-    for line in ["⎕NDELETE 'x'", "⎕ndelete'x'", "]Foo bar", "]", "x←⎕CSV 'a'"]:
-        assert cb.has_side_effect(line), line
-    for line in ["]box on", "]Boxing", "]DISPLAY ⍳3", "]disp 1", "]rows 5",
-                 "'⎕NDELETE' ⍝ ⎕SH", "⎕NDELETEX", "1+1"]:
-        assert not cb.has_side_effect(line), line
-
-
 def test_volatile_additions(cb):
     v = cb._is_volatile
-    assert v("⎕PROFILE 'stop'") and v("120⌶4")
+    assert v("⎕PROFILE 'stop'") and v("120⌶4") and v("¯1 (16808 ⌶) 'U' 5")
     assert v("⎕DT 'Z'") and v("¯1 ⎕DT 'Z' ⍝ x")
     assert not v("0 ⎕DT 2020 1 1") and not v("⎕DT ⍝ 'Z'")
 
@@ -965,3 +957,79 @@ def test_classify_accepts_short_caret_in_error_triple(cb):
 def test_run_page_harness_leaves_no_names_in_the_workspace(cb):
     res, _ = _run(cb, (None, ["≢⎕NL ¯2 ¯9"]))
     assert _out(res) == [["0"]]
+
+
+def test_has_side_effect(cb):
+    for line in [
+        "⎕NDELETE 'x'", "⎕ndelete'x'", "]Foo bar", "]", "x←⎕CSV 'a'",
+        "⍎'⎕NDELETE ''x'''", "⍎'⎕SH ''rm x'''", "85⌶'⎕SH ''x'''",
+        "⎕FX 'f' '⎕NDELETE ''x'''", "'⎕NDELETE'", "⎕SE.UCMD 'x'",
+        "⎕se.SALT.Load 'x'", "⎕ED 'x'", "⎕EXPORT 'x'", "⎕NEW ⍬", "⎕FIO.x",
+        "⎕HTTPCMD 'x'", "85⌶'1'", "(85⌶)'1'", "⌶", "x⌶1", "1 ⋄ )load x",
+        ")load x", "1 ⋄ 2 ⋄  )off", "2⌶1", "8⌶1 ⋄ 85⌶'1'",
+    ]:
+        assert cb.has_side_effect(line), line
+    for line in [
+        "]box on", "]Boxing", "]DISPLAY ⍳3", "]disp 1", "]rows 5",
+        "1 ⍝ ⎕NDELETE ⎕SH", "⎕NDELETEX", "⎕SEX", "1+1", "'a)b'", "1 ⋄ 2)",
+        "8⌶1", "(181⌶)1", "(201 ⌶)1", "219⌶4", "1200⌶1", "16808⌶1",
+        "(7162 ⌶)'x'",
+    ]:
+        assert not cb.has_side_effect(line), line
+
+
+def test_judge_value_error_suspect_only_if_name_not_used_elsewhere(cb):
+    err = cb.LineResult(
+        ["VALUE ERROR: Undefined name: M", "      M", "      ∧"], True, None
+    )
+    # the name is used by another input line: generic error, not suspect
+    r = _judge(cb, ["      M", "      2 0 1/M"], [err, err])
+    assert r[:2] == ("not-run", "error")
+    # only this line uses the name: suspect
+    assert _judge(cb, ["      M"], [err])[:2] == ("not-run", "suspect-input")
+    # a longer name containing it does not count
+    r = _judge(cb, ["      M", "      MM+1"], [err, _lr(cb, ["1"])])
+    assert r[:2] == ("not-run", "suspect-input")
+    # SYNTAX ERROR stays suspect
+    syn = cb.LineResult(["SYNTAX ERROR", "      1+", "       ∧"], True, None)
+    r = _judge(cb, ["      M", "      M"], [syn, syn])
+    assert r[:2] == ("not-run", "suspect-input")
+
+
+def test_main_side_effect_forms_are_never_sent(cb, tmp_path, monkeypatch):
+    blocks = [
+        "      1+1\n2\n      ⎕NDELETE 'x'",
+        "      ⍎'⎕SH ''rm x'''",
+        "      1 ⋄ )load x",
+        "      ⎕SE.UCMD 'x'",
+        "      85⌶'x'",
+        "      2+2\n4",
+    ]
+    md = "".join(f"```apl\n{b}\n```\n\n" for b in blocks)
+    _docs(tmp_path, {"a.md": md})
+    calls = _fake_run(
+        cb, monkeypatch, lambda bs: {b.id: [_lres(cb, ["4"])] for b in bs}
+    )
+    _, log = _main(cb, tmp_path)
+    assert [[(b.id, b.lines) for b in c] for c in calls] == [[(5, ["2+2"])]]
+    _, entries = cb.read_log(log)
+    assert [e["reason"] for e in entries[:5]] == ["side-effect"] * 5
+
+
+def test_main_page_with_existing_log_keeps_other_pages(cb, tmp_path):
+    _docs(tmp_path, {"a.md": _PAGE, "sub/b.md": _PAGE})
+    _, log = _main(cb, tmp_path, "--no-run")
+    meta, entries = cb.read_log(log)
+    for e in entries:
+        e["decision"] = "apply"
+    cb.write_log(log, meta, entries)
+    (tmp_path / "docs" / "g" / "sub" / "b.md").write_text(
+        _PAGE.replace("2+2\n4\n", "3+3\n6\n"), encoding="utf-8"
+    )
+    _main(cb, tmp_path, "--no-run", "--page", "sub/*.md")
+    _, after = cb.read_log(log)
+    assert [(e["page"], e["line"]) for e in after] == [
+        (e["page"], e["line"]) for e in entries[:2]
+    ] + [("g/sub/b.md", 3), ("g/sub/b.md", 12)]
+    assert after[:2] == entries[:2]
+    assert [e["decision"] for e in after[2:]] == ["apply", "pending"]
