@@ -9,6 +9,7 @@ import hashlib
 import json
 import os
 import re
+import secrets
 import shutil
 import signal
 import subprocess
@@ -270,7 +271,9 @@ def check_no_lost_lines(original: Block, proposed: str) -> None:
 # --- Running examples under dyalogscript ---------------------------------
 
 HARNESS = Path(__file__).with_name("code-blocks-harness.apls")
-SENTINEL_RE = re.compile(r"⍝CB-(?:BEGIN (\d+) (\d+)\n|END( ERROR| SKIP)?\n)")
+
+
+_SKIPS = {" SKIP": "system-command", " SKIP QQ": "quote-quad"}
 
 
 @dataclass
@@ -341,8 +344,10 @@ def run_page(
     Results are keyed by block id; blocks not reached are absent. The flag is
     True if the run timed out or the interpreter stopped before the last line.
     """
+    token = secrets.token_hex(8)
     request = {
         "pw": 80,
+        "token": token,
         "blocks": [
             {"id": b.id, "style": b.style, "lines": b.lines} for b in blocks
         ],
@@ -353,18 +358,26 @@ def run_page(
         out, timed_out = _launch(
             [dyalogscript, "DYALOG_INITSESSION=1", str(HARNESS), str(req)], timeout
         )
-    results, done = _parse_output(out)
+    results, done = _parse_output(out, token)
     expected = sum(len(b.lines) for b in blocks)
     return results, timed_out or done < expected
 
 
-def _parse_output(text: str) -> tuple[dict[int, list[LineResult]], int]:
-    """Parse harness sentinels. Returns (results, number of finished lines)."""
+def _parse_output(text: str, token: str) -> tuple[dict[int, list[LineResult]], int]:
+    """Parse harness sentinels. Returns (results, number of finished lines).
+
+    Sentinels carry the run's token and sit at the start of a line; anything
+    outside a BEGIN/END pair (a traceback, say) is ignored.
+    """
+    sentinel = re.compile(
+        rf"^⍝CB-{re.escape(token)}-(?:BEGIN (\d+) (\d+)\n|END( ERROR| SKIP QQ| SKIP)?\n)",
+        re.MULTILINE,
+    )
     results: dict[int, list[LineResult]] = {}
     current: int | None = None
     start = 0
     done = 0
-    for m in SENTINEL_RE.finditer(text):
+    for m in sentinel.finditer(text):
         if m.group(1) is not None:
             current, start = int(m.group(1)), m.end()
             continue
@@ -378,7 +391,7 @@ def _parse_output(text: str) -> tuple[dict[int, list[LineResult]], int]:
             LineResult(
                 output=lines,
                 error=flag == " ERROR",
-                skipped="system-command" if flag == " SKIP" else None,
+                skipped=_SKIPS.get(flag or ""),
             )
         )
         current = None

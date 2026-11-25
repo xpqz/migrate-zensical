@@ -1,8 +1,9 @@
 #!/usr/bin/env dyalogscript
 ⍝ Harness for code-blocks.py: runs request lines the way a session would display them.
 ⍝ Usage: dyalogscript DYALOG_INITSESSION=1 code-blocks-harness.apls request.json
-⍝ Protocol (stdout, lines end in CR): "⍝CB-BEGIN <id> <index>" before each input line, then
-⍝ "⍝CB-END" (plain), "⍝CB-END ERROR" or "⍝CB-END SKIP" after it.
+⍝ Protocol (stdout, lines end in CR), <t> being the request's random token:
+⍝ "⍝CB-<t>-BEGIN <id> <index>" before each input line, then "⍝CB-<t>-END" (plain),
+⍝ "⍝CB-<t>-END ERROR", "⍝CB-<t>-END SKIP" (system command) or "⍝CB-<t>-END SKIP QQ" (⍞).
 ⍝ The harness code is the ⍝| lines below, fixed into ⎕SE.CB (out of reach of user code);
 ⍝ user lines execute in #.
 args←2⎕NQ'.' 'GetCommandLineArgs'
@@ -13,8 +14,9 @@ src←⊃⎕NGET(⊃⌽args/⍨'.apls'∘≡¨¯5↑¨args)1
 ⍝|:Namespace CB
 ⍝|    ⎕IO←1 ⋄ ⎕ML←1
 ⍝|
-⍝|    ∇ Main file;req;blk;i;lines
+⍝|    ∇ Main file;req;blk;i;lines;tok
 ⍝|      req←⎕JSON⊃⎕NGET file
+⍝|      tok←'⍝CB-',req.token,'-'
 ⍝|      #.⎕IO←1 ⋄ #.⎕ML←1 ⋄ ⎕PW←req.pw
 ⍝|      :For blk :In ,req.blocks
 ⍝|          :If ⎕NULL≢blk.style
@@ -22,8 +24,8 @@ src←⊃⎕NGET(⊃⌽args/⍨'.apls'∘≡¨¯5↑¨args)1
 ⍝|          :EndIf
 ⍝|          lines←,¨⊆blk.lines
 ⍝|          :For i :In ⍳≢lines
-⍝|              ⎕←'⍝CB-BEGIN ',(⍕blk.id),' ',⍕i-1
-⍝|              ⎕←'⍝CB-END',(1+Line i⊃lines)⊃'' ' ERROR' ' SKIP'
+⍝|              ⎕←tok,'BEGIN ',(⍕blk.id),' ',⍕i-1
+⍝|              ⎕←tok,'END',(1+Line i⊃lines)⊃'' ' ERROR' ' SKIP' ' SKIP QQ'
 ⍝|          :EndFor
 ⍝|      :EndFor
 ⍝|    ∇
@@ -38,6 +40,39 @@ src←⊃⎕NGET(⊃⌽args/⍨'.apls'∘≡¨¯5↑¨args)1
 ⍝|      :EndTrap
 ⍝|    ∇
 ⍝|
+⍝|    ⍝ Scan a line outside quoted strings and comments. Result: seps qq off, where seps are
+⍝|    ⍝ the indices of top-level ⋄ (not inside {} [] ()), qq says whether ⍞ occurs and off
+⍝|    ⍝ whether the ⎕OFF token occurs (any case).
+⍝|    ∇ r←Scan text;i;c;depth;q;seps;qq;off;n;nm
+⍝|      seps←⍬ ⋄ qq←off←depth←q←0 ⋄ n←≢text ⋄ i←0
+⍝|      :While i<n
+⍝|          i+←1 ⋄ c←i⊃text
+⍝|          :If q
+⍝|              q←c≠''''
+⍝|              :Continue
+⍝|          :EndIf
+⍝|          :Select c
+⍝|          :Case ''''
+⍝|              q←1
+⍝|          :Case '⍝'
+⍝|              :Leave
+⍝|          :CaseList '{' '[' '('
+⍝|              depth+←1
+⍝|          :CaseList '}' ']' ')'
+⍝|              depth←0⌈depth-1
+⍝|          :Case '⋄'
+⍝|              seps,←(depth=0)/i
+⍝|          :Case '⍞'
+⍝|              qq←1
+⍝|          :Case '⎕'
+⍝|              nm←⎕C i↓text
+⍝|              nm←(∧\nm∊'abcdefghijklmnopqrstuvwxyz0123456789_∆⍙')/nm
+⍝|              off∨←nm≡'off'
+⍝|          :EndSelect
+⍝|      :EndWhile
+⍝|      r←seps qq off
+⍝|    ∇
+⍝|
 ⍝|    ⍝ Display a value as the session would. ⎕← inside a function bypasses the ]box output
 ⍝|    ⍝ filter (it only sees top-level output), so with boxing on we ask the filter for the
 ⍝|    ⍝ formatted lines and print those.
@@ -45,7 +80,8 @@ src←⊃⎕NGET(⊃⌽args/⍨'.apls'∘≡¨¯5↑¨args)1
 ⍝|      ⎕PP←#.⎕PP
 ⍝|      :If 2=⌊⎕NC'⎕SE.Dyalog.Out.B.state'
 ⍝|      :AndIf 'on'≡⎕SE.Dyalog.Out.B.state
-⍝|          ⎕SE.Dyalog.Out.B.view←⎕SE.Dyalog.Out.B.style ⍝ simulation mode formats per view, event 3 = suspended + return the lines
+⍝|          ⍝ simulation mode formats per view; event 3 = suspended + return the lines
+⍝|          ⎕SE.Dyalog.Out.B.view←⎕SE.Dyalog.Out.B.style
 ⍝|          out←v ⎕SE.Dyalog.Out.Filter 3
 ⍝|          {⎕←⍵}¨out
 ⍝|      :Else
@@ -53,44 +89,77 @@ src←⊃⎕NGET(⊃⌽args/⍨'.apls'∘≡¨¯5↑¨args)1
 ⍝|      :EndIf
 ⍝|    ∇
 ⍝|
-⍝|    ⍝ Run one input line; result 0 = ran, 1 = error displayed, 2 = skipped.
-⍝|    ∇ state←Line text;t;res
+⍝|    ⍝ Run one input line; result 0 = ran, 1 = error displayed, 2 = skipped (system command),
+⍝|    ⍝ 3 = skipped (uses ⍞). The line is split into statements at top-level ⋄.
+⍝|    ∇ state←Line text;t;seps;qq;off;res;starts;ends;k;stmt;s;lead
 ⍝|      cur←text ⋄ state←0
 ⍝|      t←(∨\text≠' ')/text
 ⍝|      :If 0=≢t
 ⍝|          :Return
 ⍝|      :EndIf
-⍝|      :If (')'=⊃t)∨∨/'⎕OFF'⍷text
+⍝|      seps qq off←Scan text
+⍝|      :If (')'=⊃t)∨off
 ⍝|          state←2 ⋄ :Return
 ⍝|      :EndIf
-⍝|      :Trap 0
-⍝|          :If ']'=⊃t
+⍝|      :If qq
+⍝|          state←3 ⋄ :Return
+⍝|      :EndIf
+⍝|      :If ']'=⊃t
+⍝|          :Trap 0
 ⍝|              res←⎕SE.UCMD 1↓t
 ⍝|              :If 0<≢res
 ⍝|                  Show res
 ⍝|              :EndIf
 ⍝|          :Else
-⍝|              Show #.⍎'1(85⌶)⎕SE.CB.cur'
-⍝|          :EndIf
-⍝|      :Else
-⍝|          :If 85≠⎕DMX.EN
 ⍝|              state←1
-⍝|              #.⍎'{⎕←⍵}¨⎕SE.CB.Err ⎕SE.CB.cur'
+⍝|              {⎕←⍵}¨Err text 0 text
+⍝|          :EndTrap
+⍝|          :Return
+⍝|      :EndIf
+⍝|      starts←1,seps+1
+⍝|      ends←(seps,1+≢text)-1
+⍝|      :For k :In ⍳≢starts
+⍝|          stmt←(starts[k]-1)↓ends[k]↑text
+⍝|          s←(∨\stmt≠' ')/stmt
+⍝|          lead←(starts[k]-1)+(≢stmt)-≢s
+⍝|          s←⌽(∨\' '≠⌽s)/⌽s
+⍝|          :If (0=≢s)∨'⍝'=⊃s
+⍝|              :Continue
 ⍝|          :EndIf
-⍝|      :EndTrap
+⍝|          cur←stmt
+⍝|          :Trap 0
+⍝|              Show #.⍎'1(85⌶)⎕SE.CB.cur'
+⍝|          :Else
+⍝|              :If 85≠⎕DMX.EN
+⍝|                  state←1
+⍝|                  {⎕←⍵}¨Err s(lead)text
+⍝|              :EndIf
+⍝|          :EndTrap
+⍝|          :If state=1
+⍝|              :Leave
+⍝|          :EndIf
+⍝|      :EndFor
 ⍝|    ∇
 ⍝|
-⍝|    ⍝ Session display of the current error: message, the line, and a caret under the position.
-⍝|    ∇ r←Err line;dm;c;p
+⍝|    ⍝ Session display of the current error. Error in the statement itself: the message, the
+⍝|    ⍝ whole line and a caret under the position (the statement starts `lead` characters into
+⍝|    ⍝ the line). Error inside a called function: the message, then Dyalog own function
+⍝|    ⍝ line and caret.
+⍝|    ∇ r←Err arg;stmt;lead;line;dm;c;p;pfx
+⍝|      stmt lead line←arg
 ⍝|      r←,⊂⎕DMX.EM,(0<≢⎕DMX.Message)/': ',⎕DMX.Message
 ⍝|      dm←⎕DMX.DM
-⍝|      :If 3=≢dm
-⍝|          p←(≢2⊃dm)-≢line
-⍝|          c←(3⊃dm)⍳'∧'
-⍝|          :If (c≤≢3⊃dm)∧c>p
-⍝|              r,←(⊂'      ',line),⊂(5+c-p)⍴' '
-⍝|              r[3]←⊂(⊃r[3]),'∧'
+⍝|      pfx←'Line['
+⍝|      :If (2≤≢dm)∧(pfx≡(≢pfx)↑2⊃dm)∧stmt≡(-≢stmt)↑2⊃dm
+⍝|          :If 3=≢dm
+⍝|              p←(≢2⊃dm)-≢stmt
+⍝|              c←(3⊃dm)⍳'∧'
+⍝|              :If (c≤≢3⊃dm)∧c>p
+⍝|                  r,←(⊂'      ',line),⊂((5+lead+c-p)⍴' '),'∧'
+⍝|              :EndIf
 ⍝|          :EndIf
+⍝|      :Else
+⍝|          r,←1↓dm
 ⍝|      :EndIf
 ⍝|    ∇
 ⍝|:EndNamespace

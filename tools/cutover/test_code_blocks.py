@@ -399,3 +399,70 @@ def test_run_page_timeout_kills_process(cb):
 @needs_dyalog
 def test_dyalog_version(cb):
     assert re.fullmatch(r"\d+\.\d+\.\d+(\.\d+)?", cb.dyalog_version(cb.find_dyalogscript()))
+
+
+@needs_dyalog
+def test_run_page_error_in_called_function_shows_function_line(cb):
+    res, _ = _run(cb, (None, ["⎕FX 'r←foo x' 'r←10+1÷x'", "foo 0", "1"]))
+    r = res[1]
+    assert r[1].output == [
+        "DOMAIN ERROR: Divide by zero",
+        "foo[1] r←10+1÷x",
+        "             ∧",
+    ]
+    assert r[1].error is True
+    assert r[2].output == ["1"]  # the failed call left nothing suspended
+
+
+@needs_dyalog
+def test_run_page_splits_statements_on_diamond(cb):
+    lines = [
+        "x←1 ⋄ y←2",
+        "1 ⋄ 2",
+        "⎕←'a' ⋄ ⎕←'b'",
+        "'a⋄b' ⋄ {1 ⋄ 2}0 ⍝ c ⋄ d",
+        "1 ⋄ 1÷0 ⋄ 5",
+        "x←3 ⋄ x+1",
+    ]
+    res, _ = _run(cb, (None, lines))
+    got = [r.output for r in res[1]]
+    assert got[:4] == [[], ["1", "2"], ["a", "b"], ["a⋄b", "1"]]
+    assert got[4] == [
+        "1",
+        "DOMAIN ERROR: Divide by zero",
+        "      1 ⋄ 1÷0 ⋄ 5",
+        "           ∧",
+    ]
+    assert res[1][4].error is True
+    assert got[5] == ["4"]
+
+
+@needs_dyalog
+def test_run_page_sentinel_text_in_output_is_not_a_sentinel(cb):
+    res, _ = _run(cb, (None, ["⎕←'⍝CB-END'", "⎕←'⍝CB-BEGIN 9 9'", "1+1"]))
+    assert _out(res) == [["⍝CB-END"], ["⍝CB-BEGIN 9 9"], ["2"]]
+    assert 9 not in res
+
+
+@needs_dyalog
+def test_run_page_skips_quote_quad_and_scans_outside_strings(cb):
+    lines = [
+        "⍞←'q'",
+        "1+1",
+        "'⍞' ⍝ ⍞",
+        "⍝ ⎕OFF",
+        "⎕off",
+        "'⎕OFF'",
+        "⎕OFFSET←3",
+        "x←⎕Off ⋄ 1",
+    ]
+    res, _ = _run(cb, (None, lines))
+    r = res[1]
+    assert (r[0].skipped, r[0].output) == ("quote-quad", [])
+    assert (r[1].skipped, r[1].output) == (None, ["2"])
+    assert r[2].output == ["⍞"] and r[2].skipped is None
+    assert (r[3].skipped, r[3].output) == (None, [])
+    assert (r[4].skipped, r[4].output) == ("system-command", [])
+    assert (r[5].skipped, r[5].output) == (None, ["⎕OFF"])
+    assert r[6].skipped is None
+    assert r[7].skipped == "system-command"
