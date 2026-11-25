@@ -176,10 +176,11 @@ src←⊃⎕NGET(⊃⌽args/⍨'.apls'∘≡¨¯5↑¨args)1
 ⍝|          :EndIf
 ⍝|          cur←stmt
 ⍝|          :Trap 0
-⍝|              :If 0<≢('⎕TRAP\s*←'⎕S 0⍠'IC' 1)stmt
-⍝|                  ⍝ Assigning ⎕TRAP under 85⌶ ends the interpreter (Dyalog 21.0):
-⍝|                  ⍝ run it plainly. The assignment does not outlive the statement,
-⍝|                  ⍝ so the harness's :Trap still catches later errors.
+⍝|              :If 0<≢('^\s*⎕TRAP\b[^''←]*←'⎕S 0⍠'IC' 1)stmt
+⍝|                  ⍝ A statement that assigns ⎕TRAP (also ⎕TRAP f←) can end the
+⍝|                  ⍝ interpreter under 85⌶ (Dyalog 21.0). Its value is shy, so run it
+⍝|                  ⍝ plainly. The assignment does not outlive the statement, so the
+⍝|                  ⍝ harness's :Trap still catches later errors.
 ⍝|                  #.⍎cur
 ⍝|              :Else
 ⍝|                  Show #.⍎'1(85⌶)⎕SE.CB.cur'

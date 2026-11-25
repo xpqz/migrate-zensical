@@ -368,9 +368,11 @@ following indented lines continue a unit, display of the values the lines
 neither assign nor send to `⎕` (today, as in a function called by `⍎`,
 they are not displayed at all), and error display in session form.
 
-**`⎕TRAP`.** In Dyalog 21.0, assigning `⎕TRAP` in a statement run under
-`85⌶` ends the interpreter. The harness runs a statement that assigns
-`⎕TRAP` with plain `⍎` instead; the assignment does not outlive the
+**`⎕TRAP`.** In Dyalog 21.0, a statement that assigns `⎕TRAP` (for example
+`⎕TRAP←0 'S'`, or `⎕TRAP⍴⍨←0`), run under `85⌶`, can end the interpreter.
+The harness runs a statement that is wholly such an assignment (its value
+is shy) with plain `⍎` instead; one that uses the assignment's value, such
+as `≡⎕TRAP←…`, still runs under `85⌶` and displays it; the assignment does not outlive the
 statement, so the harness's own trapping stays in charge and the page keeps
 running (examples that rely on a trap firing then show the error instead).
 

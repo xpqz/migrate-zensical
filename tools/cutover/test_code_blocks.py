@@ -1995,6 +1995,16 @@ def test_run_page_trap_assignment_does_not_end_the_run(cb):
     assert res[1][2].error and res[1][2].output[0].startswith("DOMAIN ERROR")
 
 
+@needs_docker
+def test_run_page_trap_assignment_forms(cb):
+    # A modified assignment does not end the run either; an assignment
+    # inside a larger statement still displays the statement's value.
+    lines = ["⎕TRAP⍴⍨←0", "≡⎕TRAP←0 'C' '''Eh?'''", "1+1"]
+    res, stop = _run(cb, (None, lines))
+    assert stop is None
+    assert _out(res) == [[], ["¯2"], ["2"]]
+
+
 def test_shown_candidates_output_mentioning_the_name_is_unsupported(cb):
     # symbols/down-shoe.md: an input line at five spaces reads as output.
     md = (
