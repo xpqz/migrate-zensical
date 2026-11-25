@@ -545,49 +545,86 @@ _HEADER = (
 _TEXT_KEYS = ("original", "proposed", "actual")
 
 
+# Characters a literal block keeps verbatim: newline plus the emitter's
+# printable set, minus the unicode line breaks the loader would turn into
+# newlines. (No tab, no CR.)
+_LITERAL_OK = re.compile("[\n\x20-\x7e\xa0-\ud7ff\ue000-\ufffd\U00010000-\U0010ffff]*")
+
+
 class _LogDumper(yaml.SafeDumper):
-    pass
+    quoted: frozenset = frozenset()
+
+    def analyze_scalar(self, scalar):
+        analysis = super().analyze_scalar(scalar)
+        # PyYAML refuses literal blocks for trailing spaces and
+        # whitespace-only lines; the loader keeps them, so allow it.
+        if (
+            "\n" in scalar
+            and not scalar.endswith(" ")
+            and _LITERAL_OK.fullmatch(scalar)
+            and not any(c in scalar for c in "\u2028\u2029")
+        ):
+            analysis.allow_block = True
+        return analysis
 
 
-def _represent_str(dumper: yaml.SafeDumper, value: str) -> yaml.ScalarNode:
-    # PyYAML itself falls back to double quotes when a literal block cannot
-    # hold the text (trailing spaces, CR, whitespace-only lines, ...).
-    style = "|" if "\n" in value else None
+def _represent_str(dumper: _LogDumper, value: str) -> yaml.ScalarNode:
+    if "\n" not in value:
+        style = None
+    elif value in dumper.quoted:
+        style = '"'
+    else:
+        style = "|"
     return dumper.represent_scalar("tag:yaml.org,2002:str", value, style=style)
 
 
 _LogDumper.add_representer(str, _represent_str)
 
 
-def write_log(path: Path, meta: dict, entries: list[dict]) -> None:
-    """Write the review log, then read it back and check the text is exact."""
-    body = yaml.dump(
-        {"meta": meta, "entries": entries},
-        Dumper=_LogDumper,
-        allow_unicode=True,
-        sort_keys=False,
-        width=10**9,
+def _dump(data: dict, quoted: frozenset) -> str:
+    dumper = type("_Dumper", (_LogDumper,), {"quoted": quoted})
+    return _HEADER + yaml.dump(
+        data, Dumper=dumper, allow_unicode=True, sort_keys=False, width=10**9
     )
-    text = _HEADER + body
-    path.write_text(text, encoding="utf-8", newline="\n")
 
-    back = yaml.safe_load(path.read_text(encoding="utf-8"))
-    root = yaml.compose(text)
-    nodes = next(
-        (v.value for k, v in root.value if k.value == "entries"), []
-    )
-    got = back.get("entries", []) if isinstance(back, dict) else []
+
+def _mismatches(text: str, entries: list[dict]) -> list[tuple[int, str]]:
+    got = yaml.safe_load(text)
+    got = got.get("entries", []) if isinstance(got, dict) else []
     if len(got) != len(entries):
-        raise LogError(f"{path}: wrote {len(entries)} entries, read back {len(got)}")
-    for i, (want, have) in enumerate(zip(entries, got)):
-        for key in _TEXT_KEYS:
-            if have.get(key) != want.get(key):
-                line = nodes[i].start_mark.line + 1 if i < len(nodes) else "?"
-                raise LogError(
-                    f"{path}: {want.get('page')} (block at page line "
-                    f"{want.get('line')}, log line {line}): {key} did not "
-                    "survive the round trip"
-                )
+        raise LogError(f"wrote {len(entries)} entries, read back {len(got)}")
+    return [
+        (i, key)
+        for i, (want, have) in enumerate(zip(entries, got))
+        for key in _TEXT_KEYS
+        if have.get(key) != want.get(key)
+    ]
+
+
+def write_log(path: Path, meta: dict, entries: list[dict]) -> None:
+    """Write the review log, then read it back and check the text is exact.
+
+    Multi-line strings use literal blocks; any string that does not survive
+    the round trip is rewritten in double-quoted style (per string).
+    """
+    data = {"meta": meta, "entries": entries}
+    text = _dump(data, frozenset())
+    bad = _mismatches(text, entries)
+    if bad:
+        quoted = frozenset(entries[i][k] for i, k in bad)
+        text = _dump(data, quoted)
+        bad = _mismatches(text, entries)
+    path.write_text(text, encoding="utf-8", newline="\n")
+    if bad:
+        root = yaml.compose(text)
+        nodes = next((v.value for k, v in root.value if k.value == "entries"), [])
+        i, key = bad[0]
+        line = nodes[i].start_mark.line + 1 if i < len(nodes) else "?"
+        raise LogError(
+            f"{path}: {entries[i].get('page')} (block at page line "
+            f"{entries[i].get('line')}, log line {line}): {key} did not "
+            "survive the round trip"
+        )
 
 
 def read_log(path: Path) -> tuple[dict, list[dict]]:

@@ -700,3 +700,30 @@ def test_carry_decisions_drops_vanished_blocks(cb):
     out = cb.carry_decisions(old, new)
     assert [e["sha256"] for e in out] == ["new", "abc"]
     assert [e["decision"] for e in out] == ["pending", "skip"]
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "a\nb  \nc\n",
+        "a\n   \nb\n",
+        "  lead\nx\n",
+        "a b\n⍳⍴ ⎕ ∇ ⍝ ┌→┐\n",
+    ],
+)
+def test_log_keeps_awkward_text_as_literal_blocks(cb, tmp_path, text):
+    path = tmp_path / "log.yaml"
+    cb.write_log(path, META, [_entry(original=text, proposed=None, actual=None)])
+    raw = path.read_text(encoding="utf-8")
+    line = next(ln for ln in raw.splitlines() if ln.lstrip(" -").startswith("original:"))
+    assert re.match(r"\s+original: \|\d?$", line), line
+    assert cb.read_log(path)[1][0]["original"] == text
+
+
+def test_log_quotes_only_strings_with_cr(cb, tmp_path):
+    path = tmp_path / "log.yaml"
+    cb.write_log(path, META, [_entry(original="a\r\nb\r\n")])
+    raw = path.read_text(encoding="utf-8")
+    assert 'original: "a\\r\\nb\\r\\n"' in raw
+    assert "proposed: |" in raw
+    assert cb.read_log(path)[1][0]["original"] == "a\r\nb\r\n"
