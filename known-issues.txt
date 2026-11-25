@@ -2,14 +2,19 @@
 # for the flattened corpus and that pre-date the migration. The flatten must
 # introduce no issue outside this set (tools/check.py enforces this).
 #
-# Composition (1 entry): a broken relative link already present in the
-# monorepo source, unrelated to the flatten. The rest of the July 2026
-# baseline (20 entries) was resolved upstream between July and September
-# 2026, or by mounting the .NET guides at their live-site aliases
+# Composition (8 entries): broken relative links already present in the
+# monorepo source, unrelated to the flatten. Seven are on the system
+# functions by category page, restructured upstream in 379cb56dfe (#1250):
+# its "../../dotnet-interface-guide/index.md" links name the source
+# directory rather than the guide's mount point and are broken on the live
+# site too.
+#
+# The rest of the July 2026 baseline (20 entries) was resolved upstream
+# between July and September 2026, or by mounting the .NET guides at their live-site aliases
 # (net-interface-guide/, net-framework-interface-guide/). Three more, links
 # of the form `page.md/#anchor`, stopped being reported with Zensical 0.1.1,
-# which resolves that form. The entry here is the survivor, at its September
-# line number.
+# which resolves that form. The first entry below is the survivor, at its
+# September line number.
 #
 # Not covered here: Zensical does not validate site-root-absolute links
 # (`](/...)`), so its checker never reports them; guarding against those is a
@@ -22,3 +27,10 @@
 # Format: <type> @ <file>:<line>:<col>, one per line.
 
 page does not exist @ programming-reference-guide/object-oriented-programming/class-members/properties/keyed-properties-print.md:23:197
+page does not exist @ language-reference-guide/system-functions/system-functions-by-category.md:389:131
+page does not exist @ language-reference-guide/system-functions/system-functions-by-category.md:390:134
+page does not exist @ language-reference-guide/system-functions/system-functions-by-category.md:391:134
+page does not exist @ language-reference-guide/system-functions/system-functions-by-category.md:392:138
+page does not exist @ language-reference-guide/system-functions/system-functions-by-category.md:393:117
+page does not exist @ language-reference-guide/system-functions/system-functions-by-category.md:394:117
+page does not exist @ language-reference-guide/system-functions/system-functions-by-category.md:395:117
