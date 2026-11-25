@@ -5,14 +5,19 @@ validates examples against Dyalog APL. This module holds the block finder.
 The tool only reads the corpus; it never writes to it.
 """
 
+import argparse
+import datetime
+import fnmatch
 import hashlib
 import json
 import os
+import platform
 import re
 import secrets
 import shutil
 import signal
 import subprocess
+import sys
 import tempfile
 from collections import Counter
 from dataclasses import dataclass
@@ -659,3 +664,154 @@ def carry_decisions(old: list[dict], new: list[dict]) -> list[dict]:
         entry["decision"] = before["decision"] if same else "pending"
         out.append(entry)
     return out
+
+
+# --- Command line -----------------------------------------------------------
+
+_BOX_RE = re.compile(r"\]box(ing)?\b", re.I)
+
+
+def _process_page(
+    page: str, markdown: str, dyalogscript: str | None, timeout: float
+) -> tuple[list[dict], int, int]:
+    """Entries for one page, plus (block count, listing count)."""
+    blocks = find_blocks(page, markdown)
+    classes = {
+        i: classify(b) for i, b in enumerate(blocks) if not b.nested
+    }
+    results: dict[int, list[LineResult]] = {}
+    early_exit = False
+    if dyalogscript:
+        boxed = False
+        to_run: list[RunBlock] = []
+        for i, b in enumerate(blocks):
+            cls = classes.get(i)
+            if cls is None or not cls.runnable:
+                continue
+            lines = _input_texts(b, cls)
+            to_run.append(RunBlock(i, None if boxed else cls.style, lines))
+            boxed = boxed or any(_BOX_RE.match(t) for t in lines)
+        if to_run:
+            results, early_exit = run_page(to_run, dyalogscript, timeout)
+
+    entries: list[dict] = []
+    listings = 0
+    prior_unrun = False
+    for i, b in enumerate(blocks):
+        cls = classes.get(i)
+        if cls is None:
+            prior_unrun = True
+            entries.append(_entry(b, "not-run", "nested", "none", False, None, None))
+            continue
+        if cls.kind == "listing":
+            listings += 1
+            continue
+        if dyalogscript:
+            verdict, reason, actual = judge(
+                b, cls, results.get(i), prior_unrun, early_exit
+            )
+        else:
+            verdict, reason, actual = judge(b, cls, None, prior_unrun, False)
+        if reason is None and cls.kind == "ambiguous":
+            reason = cls.reason
+        split = split_kind(cls, verdict, reason)
+        proposed = None
+        if split in ("confirmed", "unambiguous"):
+            try:
+                proposed = split_block(b, cls)
+            except SplitError:
+                split, reason, proposed = "ambiguous", "split-check", None
+        if (cls.kind == "ambiguous" and not cls.runnable) or verdict == "not-run":
+            prior_unrun = True
+        entries.append(_entry(b, verdict, reason, split, cls.nbsp, proposed, actual))
+    return entries, len(blocks), listings
+
+
+def _entry(
+    b: Block,
+    verdict: str,
+    reason: str | None,
+    split: str,
+    nbsp: bool,
+    proposed: str | None,
+    actual: str | None,
+) -> dict:
+    return {
+        "page": b.page,
+        "line": b.line,
+        "sha256": b.sha256,
+        "verdict": verdict,
+        "reason": reason,
+        "split": split,
+        "nbsp": nbsp,
+        "decision": "pending",
+        "original": b.text,
+        "proposed": proposed,
+        "actual": actual,
+    }
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(
+        description="Review `apl` code fences: propose splits and run them."
+    )
+    ap.add_argument("--guide", default="language-reference-guide")
+    ap.add_argument("--log", default="code-blocks.yml")
+    ap.add_argument("--page", help="glob matched against the path inside the guide")
+    ap.add_argument("--no-run", action="store_true", help="do not run examples")
+    ap.add_argument("--timeout", type=float, default=60)
+    ap.add_argument("--docs", default="zensical/docs")
+    args = ap.parse_args(argv)
+
+    dyalogscript = None if args.no_run else find_dyalogscript()
+    if not args.no_run and dyalogscript is None:
+        print("note: dyalogscript not found; not running examples", file=sys.stderr)
+
+    docs = Path(args.docs)
+    root = docs / args.guide
+    pages = sorted(
+        (p for p in root.rglob("*.md") if p.is_file()),
+        key=lambda p: p.relative_to(root).as_posix(),
+    )
+    if args.page:
+        pages = [
+            p for p in pages
+            if fnmatch.fnmatch(p.relative_to(root).as_posix(), args.page)
+        ]
+
+    entries: list[dict] = []
+    total = listings = 0
+    for p in pages:
+        found, n, lst = _process_page(
+            p.relative_to(docs).as_posix(),
+            p.read_text(encoding="utf-8"),
+            dyalogscript,
+            args.timeout,
+        )
+        entries += found
+        total += n
+        listings += lst
+
+    log = Path(args.log)
+    if log.exists():
+        entries = carry_decisions(read_log(log)[1], entries)
+    meta = {
+        "guide": args.guide,
+        "dyalog": dyalog_version(dyalogscript) if dyalogscript else None,
+        "platform": platform.platform(),
+        "generated": datetime.datetime.now(datetime.timezone.utc).strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        ),
+    }
+    write_log(log, meta, entries)
+
+    print(f"Blocks: {total} total, {listings} listing (not logged)")
+    print(f"Entries: {len(entries)} in {log}")
+    for key in ("verdict", "split"):
+        counts = Counter(e[key] for e in entries)
+        print(f"By {key}: " + ", ".join(f"{k} {v}" for k, v in sorted(counts.items())))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

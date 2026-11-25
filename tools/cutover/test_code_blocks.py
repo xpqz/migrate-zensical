@@ -753,3 +753,116 @@ def test_write_log_failure_leaves_existing_log_untouched(cb, tmp_path, monkeypat
         cb.write_log(path, META, [_entry()])
     assert path.read_text(encoding="utf-8") == "old contents\n"
     assert [p.name for p in tmp_path.iterdir()] == ["log.yaml"]
+
+
+# --- main ---------------------------------------------------------------
+
+import shutil as _shutil
+
+_PAGE = (
+    "# T\n\n```apl\n      1+1\n3\n```\n\n```apl\nplain listing\n```\n\n"
+    "```apl\n      2+2\n4\n```\n"
+)
+
+
+def _docs(tmp_path, pages):
+    docs = tmp_path / "docs"
+    for rel, text in pages.items():
+        p = docs / "g" / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(text, encoding="utf-8")
+    return docs
+
+
+def _snapshot(root):
+    return {str(p): p.read_bytes() for p in sorted(root.rglob("*")) if p.is_file()}
+
+
+def _main(cb, tmp_path, *extra):
+    log = tmp_path / "log.yml"
+    rc = cb.main(
+        ["--docs", str(tmp_path / "docs"), "--guide", "g", "--log", str(log), *extra]
+    )
+    return rc, log
+
+
+def test_main_no_run_writes_log_and_leaves_docs_untouched(cb, tmp_path, capsys):
+    docs = _docs(tmp_path, {"a.md": _PAGE, "sub/b.md": _PAGE})
+    before = _snapshot(docs)
+    rc, log = _main(cb, tmp_path, "--no-run")
+    assert rc == 0
+    assert _snapshot(docs) == before
+    meta, entries = cb.read_log(log)
+    assert meta["guide"] == "g" and meta["dyalog"] is None
+    assert [e["page"] for e in entries] == ["g/a.md"] * 2 + ["g/sub/b.md"] * 2
+    assert {e["verdict"] for e in entries} == {"not-run"}
+    assert {e["reason"] for e in entries} == {"not-run"}
+    assert entries[0]["split"] == "unambiguous"
+    assert entries[0]["decision"] == "pending"
+    assert entries[0]["original"] == "```apl\n      1+1\n3\n```\n"
+    assert "total" in capsys.readouterr().out.lower()
+
+
+def test_main_listing_blocks_are_counted_not_logged(cb, tmp_path, capsys):
+    _docs(tmp_path, {"a.md": _PAGE})
+    _, log = _main(cb, tmp_path, "--no-run")
+    _, entries = cb.read_log(log)
+    assert len(entries) == 2
+    assert all("plain listing" not in e["original"] for e in entries)
+    out = capsys.readouterr().out
+    assert "3" in out and "1 listing" in out
+
+
+def test_main_logs_nested_blocks_as_not_run(cb, tmp_path):
+    md = "- item\n\n    ```apl\n          1+1\n    2\n    ```\n"
+    _docs(tmp_path, {"a.md": md})
+    _, log = _main(cb, tmp_path, "--no-run")
+    _, entries = cb.read_log(log)
+    assert len(entries) == 1
+    e = entries[0]
+    assert (e["verdict"], e["reason"], e["split"]) == ("not-run", "nested", "none")
+    assert e["proposed"] is None and e["actual"] is None and e["nbsp"] is False
+
+
+def test_main_carries_decisions_on_rerun(cb, tmp_path):
+    _docs(tmp_path, {"a.md": _PAGE})
+    _, log = _main(cb, tmp_path, "--no-run")
+    meta, entries = cb.read_log(log)
+    entries[0]["decision"] = "apply"
+    cb.write_log(log, meta, entries)
+    _main(cb, tmp_path, "--no-run")
+    _, again = cb.read_log(log)
+    assert [e["decision"] for e in again] == ["apply", "pending"]
+
+
+def test_main_page_glob_is_relative_to_guide(cb, tmp_path):
+    _docs(tmp_path, {"a.md": _PAGE, "sub/b.md": _PAGE})
+    _, log = _main(cb, tmp_path, "--no-run", "--page", "sub/*.md")
+    _, entries = cb.read_log(log)
+    assert {e["page"] for e in entries} == {"g/sub/b.md"}
+
+
+def test_main_split_error_becomes_ambiguous_split_check(cb, tmp_path, monkeypatch):
+    _docs(tmp_path, {"a.md": _PAGE})
+
+    def boom(block, cls):
+        raise cb.SplitError("x")
+
+    monkeypatch.setattr(cb, "split_block", boom)
+    _, log = _main(cb, tmp_path, "--no-run")
+    _, entries = cb.read_log(log)
+    assert {(e["split"], e["reason"], e["proposed"]) for e in entries} == {
+        ("ambiguous", "split-check", None)
+    }
+
+
+@pytest.mark.skipif(_shutil.which("dyalogscript") is None, reason="no dyalogscript")
+def test_main_end_to_end_match_and_differs(cb, tmp_path):
+    _docs(tmp_path, {"a.md": "```apl\n      1+1\n2\n```\n\n```apl\n      2+2\n5\n```\n"})
+    rc, log = _main(cb, tmp_path)
+    assert rc == 0
+    meta, entries = cb.read_log(log)
+    assert meta["dyalog"]
+    assert [e["verdict"] for e in entries] == ["match", "differs"]
+    assert [e["split"] for e in entries] == ["confirmed", "unambiguous"]
+    assert entries[1]["actual"] == "      2+2\n4\n"
