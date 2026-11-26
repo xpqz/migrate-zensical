@@ -296,6 +296,59 @@ A block whose verdict is `differs` still gets its split proposed (from the
 printed output, not the actual output); the two are separate decisions for
 the reviewer.
 
+### Normalising input: shy results and line numbers
+
+User decisions (2026-11-26). Two rewrites always apply (no option); they
+change only input lines, run in place of the original, and their result is
+what `proposed` shows. `original` and `sha256` stay the original block's.
+An entry lists the rewrites in `rewrites` (with `aplan` from
+`--define-shown`).
+
+**Shy results (`shy`).** An input line that displays a shy result with a
+monadic `+`, `⊢` or `⊣` applied to an assignment uses `⎕←` instead:
+`+A←⍳5` becomes `⎕←A←⍳5`. The line must start (after the six-space
+indent) with one of the three, optional spaces, then an assignment target:
+a name, a name with an index (`A[2 4]`), or names in parentheses, then an
+optional one-character function (modified assignment) and `←`. Other uses
+(`+⎕EX'A'`, `+/A←…`) are left alone. `⊢` and `⊣` are identities, so their
+rewrite always applies. `+` is conjugate: it differs for complex numbers
+and fails on characters, so its rewrite needs proof: the rewritten line
+ran and displayed exactly the printed output. Unproved `+` rewrites
+(including lines that did not run) are reverted and the page runs again;
+the entry's `rewrite_rejected` says why, keyed by the original line.
+
+**Line numbers (`unnumbered`).** A `∇` definition typed into the session
+(a header line `∇…` at any indent, numbered lines `[1]`, `[2]`, … in
+order, and a closing `∇`, alone or at the end of the last numbered line)
+loses its numbers (layout A, chosen by the user):
+
+```
+      ∇ R←A DIVIDE B;⎕TRAP
+        ⎕TRAP←11 'E' '→ERR'
+        R←A÷B ⋄ →0
+      ERR:'DIVISION ERROR' ⎕SIGNAL 11
+      ∇
+```
+
+The header and closing `∇` sit at the six-space indent, the header text
+unchanged after the `∇`; body lines at eight spaces, label lines
+(`NAME:…`) at six. A definition is output, not typed, when it follows
+(blank lines aside) an input line that uses `⎕VR`, `⎕NR`, `⎕CR` or `⎕OR`,
+or another such definition: Dyalog prints those numbers, so they stay. A
+definition keeps its numbers, with reason `line-numbers` (not-run), when
+its text refers to them: a branch whose expression contains a number
+other than 0 (`→4`), the function's name followed by `[n]` in the body
+(`'F[1]'`), or any input line of the block using `⎕STOP`, `⎕TRACE`,
+`⎕MONITOR` or `⎕LC`. Numbered lines without a header (a fragment), or
+numbers that do not run 1, 2, 3, …, stay as they are (`del-definition`).
+
+**Running typed definitions.** A typed definition without numbers
+(rewritten, or so in the guide) is one input unit: its header, body and
+closing lines. The harness fixes it in `#` with `⎕FX` and displays nothing,
+as the session does; a definition that does not fix displays `DEFN ERROR`.
+Its lines are input in the split (the body keeps its two extra spaces).
+Blocks with such definitions are no longer `del-definition` and run.
+
 ### Defining shown values
 
 Off by default; `--define-shown` turns it on (user decision). Pages often
