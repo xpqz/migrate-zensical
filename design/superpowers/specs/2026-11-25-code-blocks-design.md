@@ -507,7 +507,13 @@ accepted, R rejected, U unsupported".
 User request (2026-11-26): the tool applies proposals itself. `--apply`
 reads `--log` and replaces each selected entry's block (fence to fence)
 in its page under `--docs` with `proposed`: input in an `apl` fence,
-output in a `text` fence. Selected: entries with a proposal, not marked
+output in a `text` fence, written with Zensical's attribute-list syntax as
+```` ``` { .apl .session } ```` and ```` ``` { .text .no-copy } ```` (user
+request, 2026-11-26): `no-copy` removes the copy button from output, and
+the house style (`dyalog.css`) pads `.session` input 6ch further in than
+output, like the session's six-space prompt, and shows copy buttons only
+on hover or keyboard focus. Fences are compared by language, so a split
+block whose only difference is its info strings needs no proposal. Selected: entries with a proposal, not marked
 `skip`, and marked `apply`; with `--match-only`, every such entry whose
 verdict is `match`, whatever its decision. `--page` narrows it; `--dry-run`
 writes nothing. A block is replaced only if the page still has a block at

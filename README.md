@@ -77,8 +77,9 @@ its printed value) is proposed with an array-notation definition in its place, s
 displays the printed value and the block matches.
 
 Set each entry's `decision` to `apply` or `skip`; reruns keep decisions whose proposal is
-unchanged. Then apply the reviewed entries to `zensical/docs` (input in an `apl` fence, output in a
-`text` fence), or, with `--match-only`, every entry whose verdict is `match` (never one marked
+unchanged. Then apply the reviewed entries to `zensical/docs` (input in an `apl` fence marked `.session`,
+which the house style pads 6ch like the session prompt; output in a `text` fence marked `.no-copy`,
+so only input has a copy button), or, with `--match-only`, every entry whose verdict is `match` (never one marked
 `skip`); `--dry-run` reports without writing, and a block changed since the log is left alone:
 
 ```

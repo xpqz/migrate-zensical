@@ -193,6 +193,12 @@ def test_classify_bare_error_message_is_a_triple(cb):
     assert c.roles == ["input", "output", "output", "output"]
 
 
+
+def _plain(text):
+    """A proposal with --apply's info strings written plainly (apl, text)."""
+    return (text or "").replace("``` { .apl .session }\n", "```apl\n").replace(
+        "``` { .text .no-copy }\n", "```text\n")
+
 def _block(cb, *lines):
     md = "```apl\n" + "\n".join(lines) + "\n```\n"
     (b,) = cb.find_blocks("a.md", md)
@@ -201,12 +207,12 @@ def _block(cb, *lines):
 
 def test_split_simple_example(cb):
     b, c = _block(cb, "      ⍳5", "1 2 3 4 5")
-    assert cb.split_block(b, c) == "```apl\n⍳5\n```\n\n```text\n1 2 3 4 5\n```\n"
+    assert _plain(cb.split_block(b, c)) == "```apl\n⍳5\n```\n\n```text\n1 2 3 4 5\n```\n"
 
 
 def test_split_groups_consecutive_inputs(cb):
     b, c = _block(cb, "      a←1", "", "      a+1", "2", "      a+2", "3")
-    assert cb.split_block(b, c) == (
+    assert _plain(cb.split_block(b, c)) == (
         "```apl\na←1\na+1\n```\n\n```text\n2\n```\n"
         "\n```apl\na+2\n```\n\n```text\n3\n```\n"
     )
@@ -214,39 +220,39 @@ def test_split_groups_consecutive_inputs(cb):
 
 def test_split_keeps_error_triple_in_text_block(cb):
     b, c = _block(cb, "      1÷0", "DOMAIN ERROR", "      1÷0", "       ∧")
-    assert cb.split_block(b, c) == (
+    assert _plain(cb.split_block(b, c)) == (
         "```apl\n1÷0\n```\n\n```text\nDOMAIN ERROR\n      1÷0\n       ∧\n```\n"
     )
 
 
 def test_split_strips_nbsp_indent(cb):
     b, c = _block(cb, "      ⍳2", "1 2")
-    assert cb.split_block(b, c).startswith("```apl\n⍳2\n```\n")
+    assert _plain(cb.split_block(b, c)).startswith("```apl\n⍳2\n```\n")
 
 
 def test_split_drops_trailing_blank_output_lines(cb):
     b, c = _block(cb, "      ⍳2", "1 2", "", "3", "", "")
-    assert cb.split_block(b, c) == "```apl\n⍳2\n```\n\n```text\n1 2\n\n3\n```\n"
+    assert _plain(cb.split_block(b, c)) == "```apl\n⍳2\n```\n\n```text\n1 2\n\n3\n```\n"
 
 
 def test_split_keeps_trailing_whitespace_and_drops_cr(cb):
     b, c = _block(cb, "      ⍳2\r", "1 2 \r")
-    assert cb.split_block(b, c) == "```apl\n⍳2\n```\n\n```text\n1 2 \n```\n"
+    assert _plain(cb.split_block(b, c)) == "```apl\n⍳2\n```\n\n```text\n1 2 \n```\n"
 
 
 def test_split_input_only_has_no_text_block(cb):
     b, c = _block(cb, "      a←1", "      a+1")
-    assert cb.split_block(b, c) == "```apl\na←1\na+1\n```\n"
+    assert _plain(cb.split_block(b, c)) == "```apl\na←1\na+1\n```\n"
 
 
 def test_split_rejects_listing_and_unrunnable(cb):
     b, c = _block(cb, "R←⍳Y")
     with pytest.raises(ValueError):
-        cb.split_block(b, c)
+        _plain(cb.split_block(b, c))
     b, c = _block(cb, "      ∇ foo", "      x")
     assert not c.runnable
     with pytest.raises(ValueError):
-        cb.split_block(b, c)
+        _plain(cb.split_block(b, c))
 
 
 def test_check_no_lost_lines_rejects_dropped_line(cb):
@@ -288,14 +294,14 @@ def test_split_fence_longer_than_backtick_content(cb):
     b, _ = _block(cb, "      x", "1")
     b = cb.Block(b.page, b.line, b.sha256, b.text, ["      x", "```", "``` y"], False)
     c = cb.classify(b)
-    got = cb.split_block(b, c)
+    got = _plain(cb.split_block(b, c))
     assert got == "```apl\nx\n```\n\n````text\n```\n``` y\n````\n"
     cb.check_no_lost_lines(b, got)
 
 
 def test_split_output_before_input(cb):
     b, c = _block(cb, "1 2", "      x", "3")
-    assert cb.split_block(b, c) == (
+    assert _plain(cb.split_block(b, c)) == (
         "```text\n1 2\n```\n\n```apl\nx\n```\n\n```text\n3\n```\n"
     )
 
@@ -1971,7 +1977,7 @@ def test_define_shown_indexing_example(cb, tmp_path, capsys):
     assert (e["verdict"], e["split"], e["rewrites"], e["defines"]) == (
         "match", "confirmed", ["aplan"], ["M"])
     assert e["original"] == _INDEXING
-    assert e["proposed"] == (
+    assert _plain(e["proposed"]) == (
         "```apl\nM←[10 20 30 40\n   50 60 70 80]\nM[⊂1 2]\n```\n\n"
         "```text\n20\n```\n\n"
         "```apl\nM[2 2⍴⊂2 4]\n```\n\n```text\n80 80\n80 80\n```\n\n"
@@ -2012,7 +2018,7 @@ def test_define_shown_char_matrix_with_short_rows_and_diamonds(cb, tmp_path):
     _, log = _main(cb, tmp_path, "--define-shown")
     _, (e,) = cb.read_log(log)
     assert e["rewrites"] == ["aplan"] and e["verdict"] == "match"
-    assert e["proposed"].startswith("```apl\nC←['a⋄b'\n   'cd']\n⍴C\n```\n")
+    assert _plain(e["proposed"]).startswith("```apl\nC←['a⋄b'\n   'cd']\n⍴C\n```\n")
 
 
 def test_shown_candidates_annotation_in_the_output_is_unsupported(cb):
@@ -2306,7 +2312,7 @@ def test_classify_typed_definition_is_one_runnable_unit(cb):
     assert c.runnable and c.kind == "session" and c.reason is None
     assert cb._input_texts(b, c) == ["∇ R←F X\n  R←X+1\nL:\n∇", "F 1"]
     assert cb.expected_outputs(b, c) == [[], ["2"]]
-    assert cb.split_block(b, c) == (
+    assert _plain(cb.split_block(b, c)) == (
         "```apl\n∇ R←F X\n  R←X+1\nL:\n∇\nF 1\n```\n\n```text\n2\n```\n"
     )
 
@@ -2362,13 +2368,13 @@ def test_main_shy_and_unnumbered_end_to_end(cb, tmp_path):
     _, log = _main(cb, tmp_path)
     _, (a, c, f) = cb.read_log(log)
     assert (a["verdict"], a["split"], a["rewrites"]) == ("match", "confirmed", ["shy"])
-    assert "```apl\n⎕←A←⍳5\n```" in a["proposed"] and "⎕←B←2 2⍴⍳4" in a["proposed"]
+    assert "```apl\n⎕←A←⍳5\n```" in _plain(a["proposed"]) and "⎕←B←2 2⍴⍳4" in _plain(a["proposed"])
     # conjugate shows 1J¯2; ⎕← would not: the + stays and the block matches
     assert (c["verdict"], c.get("rewrites")) == ("match", None)
     assert c["rewrite_rejected"]["+C←1J2"] == "shy: + kept: conjugate changes the value"
     assert "+C←1J2" in c["proposed"]
     assert (f["verdict"], f["rewrites"]) == ("match", ["unnumbered", "shy"])
-    assert f["proposed"].startswith("```apl\n∇R←MEAN X\n  R←(+/X)÷⍴X\n∇\n⎕←F←MEAN 2 4\n```")
+    assert _plain(f["proposed"]).startswith("```apl\n∇R←MEAN X\n  R←(+/X)÷⍴X\n∇\n⎕←F←MEAN 2 4\n```")
 
 
 def test_classify_style_ignores_display_command_output(cb):
@@ -2496,7 +2502,7 @@ def test_main_reindents_a_differing_block_only_when_it_then_matches(cb, tmp_path
     _, log = _main(cb, tmp_path)
     _, (a, b) = cb.read_log(log)
     assert (a["verdict"], a["split"], a["rewrites"]) == ("match", "confirmed", ["reindented"])
-    assert a["proposed"] == "```apl\nMAT←2 2⍴⍳4\nMAT[1;1]←9\nMAT\n```\n\n```text\n9 2\n3 4\n```\n"
+    assert _plain(a["proposed"]) == "```apl\nMAT←2 2⍴⍳4\nMAT[1;1]←9\nMAT\n```\n\n```text\n9 2\n3 4\n```\n"
     assert a["original"].count("     MAT[1;1]←9\n") == 1
     assert (b["verdict"], b.get("rewrites")) == ("differs", None)
 
@@ -2543,7 +2549,7 @@ def test_main_reindent_proved_by_the_moved_lines(cb, tmp_path):
     _, log = _main(cb, tmp_path)
     _, (a, b) = cb.read_log(log)
     assert (a["verdict"], a["split"], a["rewrites"]) == ("differs", "unambiguous", ["reindented"])
-    assert "```apl\n⍳3\n```" in a["proposed"]
+    assert "```apl\n⍳3\n```" in _plain(a["proposed"])
     assert (b["verdict"], b["reason"], b["split"], b["proposed"]) == (
         "differs", "odd-indent", "ambiguous", None)
 
@@ -2590,7 +2596,7 @@ def test_apply_decision_apply_only(cb, tmp_path, capsys):
     rc, text = _applied(cb, tmp_path, ["apply", "pending", "skip"], ["differs"] * 3)
     assert rc == 0
     assert text == (
-        "# T\n\nText.\n\n```apl\n1+1\n```\n\n```text\n2\n```\n\nMore.\n\n"
+        "# T\n\nText.\n\n``` { .apl .session }\n1+1\n```\n\n``` { .text .no-copy }\n2\n```\n\nMore.\n\n"
         "```apl\n      2+2\n4\n```\n\n```apl\n      3+3\n6\n```\n"
     )
     assert "Apply (decision apply): 1 applied, 0 stale, 2 not selected" in capsys.readouterr().out
@@ -2601,7 +2607,7 @@ def test_apply_match_only_ignores_decisions_but_not_skip(cb, tmp_path):
         cb, tmp_path, ["pending", "pending", "skip"], ["match", "differs", "match"], "--match-only"
     )
     assert rc == 0
-    assert "```apl\n1+1\n```\n\n```text\n2\n```" in text
+    assert "```apl\n1+1\n```\n\n```text\n2\n```" in _plain(text)
     assert "```apl\n      2+2\n4\n```" in text and "```apl\n      3+3\n6\n```" in text
 
 
@@ -2625,7 +2631,7 @@ def test_apply_leaves_a_changed_block_alone(cb, tmp_path, capsys):
     capsys.readouterr()
     rc, _ = _main(cb, tmp_path, "--apply")
     assert rc == 1
-    text = page.read_text(encoding="utf-8")
+    text = _plain(page.read_text(encoding="utf-8"))
     assert "```apl\n      2+2\n5\n```" in text  # unchanged
     assert "```apl\n1+1\n```" in text and "```apl\n3+3\n```" in text
     out = capsys.readouterr()
@@ -2675,7 +2681,7 @@ def test_find_blocks_split_run_stops_at_a_session_block(cb):
 
 def test_applied_page_reads_back_as_already_split(cb, tmp_path):
     rc, text = _applied(cb, tmp_path, ["apply"] * 3, ["match"] * 3)
-    assert rc == 0 and "```text" in text
+    assert rc == 0 and "``` { .text .no-copy }" in text
     _, log = _main(cb, tmp_path, "--no-run")
     _, entries = cb.read_log(log)
     # the last two blocks had only a blank line between them: one split run now
@@ -2689,4 +2695,22 @@ def test_split_block_rewrite_still_proposed(cb, tmp_path):
     _, log = _main(cb, tmp_path, "--no-run")
     _, (e,) = cb.read_log(log)
     assert e["rewrites"] == ["shy"] and e["split"] == "unambiguous"
-    assert e["proposed"] == "```apl\n⎕←A←1\n```\n\n```text\n1\n```\n"
+    assert _plain(e["proposed"]) == "```apl\n⎕←A←1\n```\n\n```text\n1\n```\n"
+
+
+def test_split_block_multi_line_array_notation_is_one_unit(cb):
+    md = "```apl\nmat←[1 2\n     3 4]\n⍴ mat\n```\n\n```text\n2 2\n```\n"
+    (b,) = cb.find_blocks("a.md", md)
+    c = cb.classify(b)
+    assert c.roles == ["input", "cont", "input", "output"]
+    assert cb._input_texts(b, c) == ["mat←[1 2\n     3 4]", "⍴ mat"]
+    assert cb._units(cb._input_texts(b, c), []) == [["mat←[1 2", "     3 4]"], "⍴ mat"]
+
+
+@needs_docker
+def test_split_block_with_array_notation_runs(cb, tmp_path):
+    md = "```apl\nmat←[1 2\n     3 4]\n⍴ mat\n```\n\n```text\n2 2\n```\n"
+    _docs(tmp_path, {"a.md": md})
+    _, log = _main(cb, tmp_path)
+    _, (e,) = cb.read_log(log)
+    assert (e["verdict"], e["split"]) == ("match", "already")

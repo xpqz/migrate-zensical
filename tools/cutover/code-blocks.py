@@ -28,8 +28,10 @@ with status 2, leaving the log alone, if the guide does not exist or no
 page matches.
 
 Applying (--apply): reads --log and replaces each selected entry's block in
-its page under --docs, fence to fence, with `proposed` (input in an `apl`
-fence, output in a `text` fence, any rewrites included). Selected: entries
+its page under --docs, fence to fence, with `proposed` (input in an apl
+fence marked session, ``` { .apl .session }, output in a text fence
+without the copy button, ``` { .text .no-copy }; any rewrites included).
+The theme pads session input 6ch, like the session's prompt. Selected: entries
 with a proposal that are not marked `skip` and are marked `apply`; with
 --match-only, instead every such entry whose verdict is `match`, whatever
 its decision. --page limits it to matching pages. A block is replaced only
@@ -308,7 +310,7 @@ def _split_run(lines: list[str], i: int, end: int) -> list[tuple[int, int, str]]
         while k < len(lines) and not lines[k].strip():
             k += 1
         found = _fence_at(lines, k) if k < len(lines) else None
-        if found is None or found[0] or found[1] != expect:
+        if found is None or found[0] or fence_lang(found[1]) != expect:
             break
         if expect == "apl" and _session_style(lines[k + 1 : found[2]]):
             break  # an unsplit session block next to it
@@ -342,7 +344,8 @@ def find_blocks(page: str, markdown: str) -> list[Block]:
         if end is None:
             i += 1
             continue
-        run = _split_run(lines, i, end) if info == "apl" and not indent else []
+        lang = fence_lang(info)
+        run = _split_run(lines, i, end) if lang == "apl" and not indent else []
         if run:
             last = run[-1][1]
             text = "\n".join(lines[i : last + 1]) + "\n"
@@ -365,7 +368,7 @@ def find_blocks(page: str, markdown: str) -> list[Block]:
             )
             i = last + 1
             continue
-        if info == "apl":
+        if lang == "apl":
             text = "\n".join(lines[i : end + 1]) + "\n"
             blocks.append(
                 Block(
@@ -455,6 +458,8 @@ def classify(block: Block) -> Classification:
             roles[i] = "input"
         prev = roles[i]
     typed = _mark_definitions(lines, roles)
+    if split:
+        _mark_open_brackets(lines, roles)
     inputs = [i for i, r in enumerate(roles) if r == "input"]
     style: Literal["max", "min", "off"] = "off"
     # The display style comes from the output of ordinary lines: ]display
@@ -503,6 +508,26 @@ def classify(block: Block) -> Classification:
         reason = "indented-output"
     kind = "session" if reason is None else "ambiguous"
     return Classification(kind, reason, roles, nbsp, runnable, style, annotation)
+
+
+def _bracket_depth(text: str) -> int:
+    """Net count of [ ( { over ] ) } outside strings and comments."""
+    code = _code_only(text)
+    return sum(code.count(c) for c in "[({") - sum(code.count(c) for c in "])}")
+
+
+def _mark_open_brackets(lines: list[str], roles: list[Role]) -> None:
+    """In a split block, an input line that leaves a bracket open (a
+    multi-line array-notation definition, say) continues on the following
+    input lines until it closes: they become "cont" (one input unit)."""
+    depth = 0
+    for i, ln in enumerate(lines):
+        if roles[i] not in ("input", "cont"):
+            depth = 0
+            continue
+        if roles[i] == "input" and depth > 0:
+            roles[i] = "cont"
+        depth = max(0, depth + _bracket_depth(strip_indent(ln)))
 
 
 def _mark_definitions(lines: list[str], roles: list[Role]) -> set[int]:
@@ -558,13 +583,32 @@ def split_kind(
     return "unambiguous"
 
 
+# The info strings --apply writes (attribute-list syntax, which Zensical
+# documents for code blocks): input is apl marked `session` (the theme pads
+# it like the session's six-space prompt); output is text without the copy
+# button (`no-copy`).
+INPUT_INFO = "{ .apl .session }"
+OUTPUT_INFO = "{ .text .no-copy }"
+
+
+def fence_lang(info: str) -> str:
+    """The language of a fence's info string: `apl`, or the first class of
+    an attribute list (`{ .apl .session }` → apl)."""
+    info = info.strip()
+    if info.startswith("{") and info.endswith("}"):
+        first = next((t for t in info[1:-1].split() if t.startswith(".")), "")
+        return first[1:]
+    return info
+
+
 def _fence(tag: str, lines: list[str]) -> str:
     longest = max(
         (len(m.group()) for ln in lines if (m := re.match(r"`+", ln.lstrip()))),
         default=0,
     )
     ticks = "`" * max(3, longest + 1)
-    return f"{ticks}{tag}\n" + "".join(ln + "\n" for ln in lines) + f"{ticks}\n"
+    sep = " " if tag.startswith("{") else ""
+    return f"{ticks}{sep}{tag}\n" + "".join(ln + "\n" for ln in lines) + f"{ticks}\n"
 
 
 def split_block(block: Block, cls: Classification) -> str:
@@ -593,9 +637,9 @@ def split_block(block: Block, cls: Classification) -> str:
         pending_blank = 0
     parts = []
     for inputs, outputs in groups:
-        text = _fence("apl", inputs) if inputs else ""
+        text = _fence(INPUT_INFO, inputs) if inputs else ""
         if outputs:
-            text += ("\n" if inputs else "") + _fence("text", outputs)
+            text += ("\n" if inputs else "") + _fence(OUTPUT_INFO, outputs)
         parts.append(text)
     result = "\n".join(parts)
     check_no_lost_lines(block, result)
@@ -625,6 +669,13 @@ def _fences(text: str) -> list[tuple[str, list[str]]]:
     return out
 
 
+def _same_fences(a: str, b: str) -> bool:
+    """The same fences by language and content (info strings aside)."""
+    def norm(text: str) -> list[tuple[str, list[str]]]:
+        return [(fence_lang(info), lines) for info, lines in _fences(text)]
+    return norm(a) == norm(b)
+
+
 def check_no_lost_lines(original: Block, proposed: str) -> None:
     """Every non-blank line must survive, on the same side (apl vs text)."""
     cls = classify(original)
@@ -638,7 +689,7 @@ def check_no_lost_lines(original: Block, proposed: str) -> None:
             before[side][ln] += 1
     after = {"input": Counter[str](), "output": Counter[str]()}
     for info, lines in _fences(proposed):
-        side = "input" if info == "apl" else "output"
+        side = "input" if fence_lang(info) == "apl" else "output"
         after[side].update(ln for ln in lines if ln.strip())
     for side in before:
         if before[side] != after[side]:
@@ -2316,7 +2367,9 @@ def _judge_page(
                 proposed = _proposal(jb, jcls, shown)
             except SplitError:
                 split, reason, proposed = "ambiguous", "split-check", None
-        if b.roles is not None and (proposed is None or _fences(proposed) == _fences(b.text)):
+        if b.roles is not None and (
+            proposed is None or _same_fences(proposed, b.text)
+        ):
             split, proposed = "already", None
         if (cls.kind == "ambiguous" and not cls.runnable) or verdict == "not-run":
             prior_unrun = True
