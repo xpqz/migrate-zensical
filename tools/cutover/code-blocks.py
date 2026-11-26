@@ -135,8 +135,9 @@ Splits:
 Normalising input (always on; see the design): an input line showing a shy
 result with monadic +, ⊢ or ⊣ on an assignment (+A←⍳5) uses ⎕← instead
 (⎕←A←⍳5); a + rewrite is kept only if the rewritten line ran and displayed
-the printed output, else the + stays and rewrite_rejected says why, keyed
-by the original line. A ∇ definition typed into the session loses its [n]
+the printed output, or a hidden check shows conjugate leaves the assigned
+name's value unchanged (or fails on it); else the + stays and
+rewrite_rejected says why, keyed by the original line. A ∇ definition typed into the session loses its [n]
 line numbers: header and closing ∇ at the six-space indent, body lines at
 eight (control-structure nesting kept), labels at six. A definition that
 follows an input line is that line's output (⎕VR and the like) and stays.

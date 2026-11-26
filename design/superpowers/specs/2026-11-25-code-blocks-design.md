@@ -312,10 +312,18 @@ a name, a name with an index (`A[2 4]`), or names in parentheses, then an
 optional one-character function (modified assignment) and `←`. Other uses
 (`+⎕EX'A'`, `+/A←…`) are left alone. `⊢` and `⊣` are identities, so their
 rewrite always applies. `+` is conjugate: it differs for complex numbers
-and fails on characters, so its rewrite needs proof: the rewritten line
-ran and displayed exactly the printed output. Unproved `+` rewrites
-(including lines that did not run) are reverted and the page runs again;
-the entry's `rewrite_rejected` says why, keyed by the original line.
+and may fail on some values, so its rewrite needs proof: the rewritten
+line ran without error and either displayed exactly the printed output or,
+when the target is a plain name N, a hidden check run after it,
+`{0::¯1 ⋄ ⍵≡+⍵}N`, gives 1 (conjugate leaves the value unchanged) or ¯1
+(conjugate fails on it); either way `⎕←` displays what `+` was meant to
+show. 0 (complex numbers) keeps the `+`. Unproved `+` rewrites (including
+lines that did not run) are reverted, and the page runs again without the
+hidden checks; the entry's `rewrite_rejected` says why, keyed by the
+original line.
+
+The display style (`]box` setting) is taken from the output of ordinary
+lines only: `]display` and `]disp` draw their own boxes.
 
 **Line numbers (`unnumbered`).** A `∇` definition typed into the session
 (a header line `∇…` at any indent, numbered lines `[1]`, `[2]`, … in
