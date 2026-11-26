@@ -159,9 +159,9 @@ A block is:
 
 ### Running a page
 
-One `dyalogscript DYALOG_INITSESSION=1` process per page, in its own
-Docker container (see "Execution in Docker"), under a hard timeout that
-kills and removes the container. The page's session blocks are passed in order; state persists across
+One `dyalogscript DYALOG_INITSESSION=1` process per page, in the run's one
+Docker container (see "Execution in Docker"), under a hard timeout; after
+the page, everything it started is killed and its files are removed. The page's session blocks are passed in order; state persists across
 the blocks of a page and is fresh for each page (`⎕IO←1`, `⎕ML←1`,
 `⎕PW←80` unless the page sets them).
 
@@ -197,30 +197,45 @@ Examples never run on the host. User decisions (2026-11-25):
 4. Shell commands (`⎕SH`, `⎕CMD`, `⎕SHELL`) and `⎕NA` may run inside the
    jail too.
 
-Each page runs in one fresh container:
+A run uses one container (user decision, 2026-11-26: the tool must run a
+single container and tidy up after itself). It starts with the first page
+that runs anything:
 
 ```
-docker run --rm -i --name cb-<run token> --network none --read-only \
+docker run -d --rm --init --name cb-<token> --network none --read-only \
   --cap-drop ALL --security-opt no-new-privileges --pids-limit 64 \
   --memory 512m --cpus 1 \
   --tmpfs /work:rw,size=16m,mode=1777 --tmpfs /tmp:rw,size=64m \
   --tmpfs /home/dyalog:rw,size=16m,uid=1000,gid=1000 --user 1000:1000 \
-  -w /work -v <temp dir with harness + request>:/cb:ro \
-  --entrypoint timeout <image> --signal=KILL <page timeout + 15>s \
-  dyalogscript DYALOG_INITSESSION=1 /cb/code-blocks-harness.apls /cb/request.json
+  -w /work -v <temp dir with harness + requests>:/cb:ro \
+  --entrypoint sh <image> -c <keeper> cb-keeper 30
 ```
 
-The container has its own deadline (coreutils `timeout` inside it), so it
-ends even if the tool dies without cleaning up. The tool also turns
-SIGTERM and SIGHUP into an orderly exit, so its cleanup runs.
+and each page runs in it as
+
+```
+docker exec -w /work cb-<token> timeout --signal=KILL <page timeout + 15>s \
+  dyalogscript DYALOG_INITSESSION=1 /cb/code-blocks-harness.apls /cb/request-<page token>.json
+```
+
+After every page (also after a time-out or an exception) a reset script
+kills every process in the container except docker-init and the keeper,
+so a page's background jobs die with it, and empties /work, /tmp and the
+home directory. Each page thus starts as in a fresh container, at the cost
+of one container start per run instead of per page. If the reset fails, or
+the container dies, the next page starts a new one; there is never more
+than one.
+
+The container goes when the run ends: the tool removes it on a normal
+end, an exception, Ctrl-C, SIGTERM or SIGHUP (the last two are turned
+into an orderly exit), and checks that it is gone (a failing `docker ps`
+counts as "still there"). If the tool is killed outright, the keeper
+(PID 2, under docker-init) sees the heartbeat file the tool touches every
+5 s in /cb stop changing and exits within 30 s, and the container goes
+with it. The next run deletes /cb directories such runs left behind.
 
 The interpreter runs as uid 1000 with no network and can write only to
-/work, /tmp (64 MB, which the .NET runtime needs) and its home directory,
-all of which vanish with the container. Files a page writes persist across
-its blocks and never reach another page. On a time-out or any exception
-the tool kills and removes the container and the local docker client, and
-checks that the container is gone (each cleanup step runs even if an
-earlier one fails, and a failing `docker ps` counts as "still there").
+/work, /tmp (64 MB, which the .NET runtime needs) and its home directory.
 `--image` overrides the image. Without
 Docker the tool runs as `--no-run` and says so. The log's `meta` records the
 image tag, its id and the container's platform (e.g. `linux/arm64`).
@@ -451,8 +466,9 @@ as `--no-run` and says so.
   the log records the Dyalog version, the image and the container's
   platform.
 - Examples never run on the host, only in the locked-down container.
-- Leaves nothing running: every container runs under a hard timeout, and
-  is killed and removed on a time-out or any error.
+- Leaves nothing running: one container per run, removed when the run
+  ends however it ends; every page's interpreter runs under a hard
+  timeout, and whatever a page starts is killed after it.
 
 ## Testing
 
@@ -461,7 +477,9 @@ classification, the split rules, the no-lost-lines check and YAML
 round-tripping, using small fixture pages. Harness tests that need
 Docker are skipped when Docker or the image is not available; they include
 checks of the jail (no network, no writes outside /work, files persist
-within a page and not across pages, no container left after a time-out). The tool is then run
+within a page and not across pages, background jobs killed between pages,
+one container per run, no container left after a time-out, an exception,
+a signal or a killed tool). The tool is then run
 over the whole guide, and a sample of each verdict and split kind is
 checked by hand.
 

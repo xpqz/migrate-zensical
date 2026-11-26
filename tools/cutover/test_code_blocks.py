@@ -7,6 +7,7 @@ import subprocess
 import sys
 import os
 import signal
+import tempfile
 import time
 from pathlib import Path
 
@@ -334,10 +335,16 @@ needs_docker = pytest.mark.skipif(
 )
 
 
-def _run(cb, *blocks, timeout=60.0):
-    """Run (style, lines) blocks, numbered from 1."""
+def _run(cb, *blocks, timeout=60.0, box=None):
+    """Run (style, lines) blocks, numbered from 1, as one page.
+
+    Without `box`, in a sandbox of its own that is closed afterwards.
+    """
     rb = [cb.RunBlock(i, st, ln) for i, (st, ln) in enumerate(blocks, 1)]
-    return cb.run_page(rb, IMAGE, timeout=timeout)
+    if box is not None:
+        return cb.run_page(rb, box, timeout=timeout)
+    with cb.Sandbox(IMAGE) as own:
+        return cb.run_page(rb, own, timeout=timeout)
 
 
 def _containers(name="cb-"):
@@ -426,18 +433,27 @@ def test_run_page_input_does_not_hang(cb):
 
 
 @needs_docker
-def test_run_page_timeout_kills_process(cb, monkeypatch):
-    monkeypatch.setattr(cb.secrets, "token_hex", lambda n: "feedc0dedeadbeef")
-    res, stop = _run(cb, (None, ["1+1", "⎕DL 1000"]), timeout=5)
-    assert stop == "timeout"
-    assert _out(res) == [["2"]]  # the finished line is kept
-    assert _containers("cb-feedc0dedeadbeef") == []
+def test_run_page_timeout_kills_the_interpreter_and_keeps_the_container(cb):
+    with cb.Sandbox(IMAGE) as box:
+        res, stop = _run(cb, (None, ["1+1", "⎕DL 1000"]), timeout=5, box=box)
+        assert stop == "timeout"
+        assert _out(res) == [["2"]]  # the finished line is kept
+        name = box.name
+        assert name and _containers(name)
+        res, stop = _run(cb, (None, ["⎕SH 'grep -l unicode/dyalo[g] /proc/[0-9]*/cmdline | wc -l'"]),
+                         box=box)
+        assert stop is None
+        assert _out(res) == [["1"]]  # only this page's interpreter
+        assert box.name == name
+    assert _containers(name) == []
 
 
 @needs_docker
 def test_dyalog_version(cb):
-    assert re.fullmatch(r"\d+\.\d+\.\d+(\.\d+)?", cb.dyalog_version(IMAGE))
-    assert _containers() == []
+    with cb.Sandbox(IMAGE) as box:
+        assert re.fullmatch(r"\d+\.\d+\.\d+(\.\d+)?", cb.dyalog_version(box))
+        name = box.name
+    assert name and _containers(name) == []
 
 
 @needs_docker
@@ -1437,11 +1453,28 @@ def test_docker_files_persist_between_blocks_of_a_page(cb):
 
 @needs_docker
 def test_docker_nothing_persists_between_pages(cb):
-    _run(cb, (None, ["(⊂'hello') ⎕NPUT '/work/a.txt'", "(⊂'x') ⎕NPUT '/tmp/b.txt'"]))
-    res, _ = _run(cb, (None, ["⎕NEXISTS '/work/a.txt' '/tmp/b.txt'", "x"]))
-    assert _out(res) == [["0 0"], _out(res)[1]]
-    assert res[1][1].error  # no name from the earlier page
-    assert _containers() == []
+    with cb.Sandbox(IMAGE) as box:
+        _run(cb, (None, [
+            "x←1",
+            "(⊂'hello') ⎕NPUT '/work/a.txt'",
+            "(⊂'x') ⎕NPUT '/tmp/b.txt'",
+            "(⊂'x') ⎕NPUT '/home/dyalog/.c'",
+            "⎕SH 'sleep 299.5 >/dev/null 2>&1 &'",
+        ]), box=box)
+        name = box.name
+        res, _ = _run(cb, (None, [
+            "⎕NEXISTS '/work/a.txt' '/tmp/b.txt' '/home/dyalog/.c'",
+            "x",
+            "⎕SH 'grep -l 29[9].5 /proc/[0-9]*/cmdline | wc -l'",
+            "⎕SH 'grep -l cb-keepe[r] /proc/[0-9]*/cmdline | wc -l'",
+        ]), box=box)
+        assert box.name == name  # the same container
+    r = res[1]
+    assert r[0].output == ["0 0 0"]
+    assert r[1].error  # no name from the earlier page
+    assert r[2].output == ["0"]  # the background job was killed
+    assert r[3].output == ["2"]  # the keeper (and docker-init) were not
+    assert _containers(name) == []
 
 
 @needs_docker
@@ -1498,41 +1531,49 @@ def test_default_image_is_tagged_by_the_dockerfile(cb):
 
 
 def test_container_argv_is_locked_down(cb):
-    argv = cb._container_argv("img", "cb-x", "/host/dir", ["a", "b"], timeout=60)
+    argv = cb._container_argv("img", "cb-x", "/host/dir")
     assert argv[:2] == [cb.DOCKER, "run"]
     for flag in (
-        "--rm", "-i", "--read-only", "--network none", "--cap-drop ALL",
+        "-d", "--rm", "--init", "--read-only", "--network none", "--cap-drop ALL",
         "--security-opt no-new-privileges", "--pids-limit 64", "--memory 512m",
         "--cpus 1", "--name cb-x", "-w /work", "--user 1000:1000",
-        "--entrypoint timeout",
+        "--entrypoint sh",
         "--tmpfs /work:rw,size=16m,mode=1777", "--tmpfs /tmp:rw,size=64m",
         "--tmpfs /home/dyalog:rw,size=16m,uid=1000,gid=1000",
         "-v /host/dir:/cb:ro",
     ):
         assert f" {flag} " in " " + " ".join(argv) + " ", flag
-    # The container's own deadline: the page's time-out plus a grace period.
-    assert argv[-6:] == ["img", "--signal=KILL", "75s", "dyalogscript", "a", "b"]
-    assert cb._container_argv("i", "n", "/m", [], timeout=2.5)[-3:] == [
+    assert argv[-5:] == ["img", "-c", cb._KEEPER, "cb-keeper", str(cb.KEEPER_STALE)]
+
+
+def test_exec_argv_has_its_own_deadline(cb):
+    # The interpreter's own deadline: the page's time-out plus a grace period.
+    assert cb._exec_argv("cb-x", ["a", "b"], timeout=60) == [
+        cb.DOCKER, "exec", "-w", "/work", "cb-x",
+        "timeout", "--signal=KILL", "75s", "dyalogscript", "a", "b"]
+    assert cb._exec_argv("n", [], timeout=2.5)[-3:] == [
         "--signal=KILL", "18s", "dyalogscript"]
 
 
 @needs_docker
 def test_run_page_exception_leaves_no_container(cb, monkeypatch):
-    monkeypatch.setattr(cb.secrets, "token_hex", lambda n: "0ddba11c0ffee000")
     real = subprocess.Popen
 
     class Boom(real):
         def communicate(self, *a, **k):
-            if self.args[1:2] == ["run"]:
-                time.sleep(2)  # the container is up
+            if self.args[1:2] == ["exec"]:
+                time.sleep(2)  # the interpreter is up
                 raise RuntimeError("interrupted")
             return super().communicate(*a, **k)
 
     monkeypatch.setattr(cb.subprocess, "Popen", Boom)
+    box = cb.Sandbox(IMAGE)
     with pytest.raises(RuntimeError, match="interrupted"):
-        _run(cb, (None, ["⎕DL 1000"]))
+        with box:
+            _run(cb, (None, ["⎕DL 1000"]), box=box)
     monkeypatch.setattr(cb.subprocess, "Popen", real)
-    assert _containers("cb-0ddba11c0ffee000") == []
+    assert box.name is None and box._dir is None
+    assert _containers() == []
 
 
 @needs_docker
@@ -1582,20 +1623,47 @@ def test_main_reports_carried_decisions_that_now_differ(cb, tmp_path, monkeypatc
 
 
 @needs_docker
-def test_run_page_container_name_carries_the_run_token(cb, monkeypatch):
-    tokens = iter(["1111111111111111", "2222222222222222"])
-    monkeypatch.setattr(cb.secrets, "token_hex", lambda n: next(tokens))
-    names = []
+def test_a_sandbox_whose_container_died_starts_one_new_container(cb):
+    with cb.Sandbox(IMAGE) as box:
+        _run(cb, (None, ["1+1"]), box=box)
+        first = box.name
+        assert first is not None
+        subprocess.run(["docker", "rm", "-f", first], capture_output=True)
+        res, _ = _run(cb, (None, ["1+1"]), box=box)
+        assert _out(res) == [["2"]]
+        assert box.name not in (None, first)
+        assert set(_containers()) == set(_containers(box.name))
+    assert _containers() == []
+
+
+def test_sweep_removes_only_stale_dirs(cb, tmp_path, monkeypatch):
+    monkeypatch.setattr(cb.tempfile, "gettempdir", lambda: str(tmp_path))
+    old, new = tmp_path / "code-blocks-old", tmp_path / "code-blocks-new"
+    for d in (old, new):
+        d.mkdir()
+        (d / "alive").touch()
+    stale = time.time() - 5 * cb.KEEPER_STALE
+    os.utime(old / "alive", (stale, stale))
+    cb._sweep_stale_dirs()
+    assert not old.exists() and new.exists()
+
+
+@needs_docker
+def test_main_runs_every_page_in_one_container_and_removes_it(cb, tmp_path, monkeypatch):
+    _docs(tmp_path, {"a.md": _PAGE, "b.md": _PAGE, "c.md": _PAGE})
+    runs = []
     real = cb._container_argv
 
-    def spy(image, name, mount, args, timeout):
-        names.append(name)
-        return real(image, name, mount, args, timeout)
+    def spy(image, name, mount):
+        runs.append(name)
+        return real(image, name, mount)
 
     monkeypatch.setattr(cb, "_container_argv", spy)
-    res, _ = _run(cb, (None, ["1+1"]))
-    assert _out(res) == [["2"]]  # the sentinels carry the first token
-    assert names == ["cb-1111111111111111"]
+    rc, _ = _main(cb, tmp_path)
+    assert rc == 0
+    assert len(runs) == 1
+    assert _containers() == []
+    assert not list(Path(tempfile.gettempdir()).glob("code-blocks-*"))
 
 
 @needs_docker
@@ -1616,28 +1684,35 @@ def test_main_end_to_end_dotnet_file_and_shell_blocks_match(cb, tmp_path):
 
 
 @needs_docker
-def test_container_dies_at_its_own_deadline_without_the_client(cb, tmp_path, monkeypatch):
-    monkeypatch.setattr(cb, "CONTAINER_GRACE", 2)
-    name = "cb-deadline0000000"
-    (tmp_path / "hang.apls").write_text("⎕DL 1000\n", encoding="utf-8")
-    os.chmod(tmp_path, 0o755)
-    os.chmod(tmp_path / "hang.apls", 0o644)
-    argv = cb._container_argv(IMAGE, name, str(tmp_path), ["/cb/hang.apls"], timeout=1)
-    proc = subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                            stderr=subprocess.DEVNULL, start_new_session=True)
+def test_killed_tool_leaves_no_container_for_long(cb, tmp_path):
+    # SIGKILL: Python cannot clean up; the keeper sees the heartbeat stop.
+    _docs(tmp_path, {"a.md": "```apl\n      ⎕DL 1000\n```\n"})
+    before = set(_containers())
+    proc = subprocess.Popen(
+        [sys.executable, str(Path(cb.__file__)), "--docs", str(tmp_path / "docs"),
+         "--guide", "g", "--log", str(tmp_path / "log.yml"), "--timeout", "300"],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
+    started: set = set()
+    dirs = set(Path(tempfile.gettempdir()).glob("code-blocks-*"))
     try:
-        deadline = time.monotonic() + 20
-        while not _containers(name) and time.monotonic() < deadline:
+        deadline = time.monotonic() + 60
+        while not started and time.monotonic() < deadline:
             time.sleep(0.2)
-        assert _containers(name)
-        os.killpg(proc.pid, signal.SIGKILL)  # the client is gone; Python cannot clean up
+            started = set(_containers()) - before
+        assert started
+        proc.kill()
         proc.wait()
-        deadline = time.monotonic() + 20
-        while _containers(name) and time.monotonic() < deadline:
-            time.sleep(0.5)
-        assert _containers(name) == []
+        deadline = time.monotonic() + cb.KEEPER_STALE + 30
+        while set(_containers()) & started and time.monotonic() < deadline:
+            time.sleep(1)
+        assert set(_containers()) & started == set()
     finally:
-        subprocess.run(["docker", "rm", "-f", name], capture_output=True)
+        proc.kill()
+        for c in started:
+            subprocess.run(["docker", "rm", "-f", c], capture_output=True)
+        for d in set(Path(tempfile.gettempdir()).glob("code-blocks-*")) - dirs:
+            _shutil.rmtree(d, ignore_errors=True)  # the killed run's /cb
 
 
 @needs_docker
@@ -1673,34 +1748,7 @@ def test_left_counts_a_failing_docker_ps_as_still_there(cb, monkeypatch):
     monkeypatch.setattr(cb.time, "sleep", lambda s: None)
     assert cb._left("cb-x") is True
     with pytest.raises(cb.ContainerError):
-        cb._remove_container("cb-x", force=True)
-
-
-def test_cleanup_steps_run_even_when_one_fails(cb, monkeypatch):
-    calls = []
-
-    def docker(*args, **k):
-        calls.append(args[0])
-        if args[0] == "kill":
-            raise subprocess.TimeoutExpired("docker kill", 30)
-        return subprocess.CompletedProcess([], 0, "", "")
-
-    class Proc:
-        pid = 999999999
-
-        def poll(self):
-            return None
-
-        def wait(self, timeout=None):
-            calls.append("wait")
-            return 0
-
-    monkeypatch.setattr(cb, "_docker", docker)
-    monkeypatch.setattr(cb, "_kill_group", lambda pid: calls.append("killpg"))
-    with pytest.raises(subprocess.TimeoutExpired):
-        cb._cleanup(Proc(), "cb-x", clean=False)
-    assert calls[:3] == ["kill", "killpg", "wait"]
-    assert "rm" in calls and "ps" in calls
+        cb._remove_container("cb-x")
 
 
 @pytest.mark.parametrize(

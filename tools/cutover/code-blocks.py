@@ -7,8 +7,8 @@
 The `apl` fences mix session input (the six-space indent) with output. For
 each fence of the guide under --docs, the tool proposes splitting it into an
 `apl` block of input followed by a `text` block of output, runs the input
-in Docker (one locked-down container and interpreter per page, through
-code-blocks-harness.apls) and compares what Dyalog prints with the printed
+in Docker (one locked-down container for the run, one interpreter per
+page, through code-blocks-harness.apls) and compares what Dyalog prints with the printed
 output. Examples never run on the host. It writes a YAML log for people to review entry by entry; the
 approved entries are applied later, during the cutover. The tool only reads
 the corpus; it never writes to it. Design:
@@ -19,7 +19,7 @@ existing one is copied to <log>.bak first), --page a glob, relative to the
 guide, that limits the run to matching pages (their entries replace those
 pages' entries in an existing log; other pages' entries are kept),
 --no-run proposes splits without running anything, --timeout is the limit
-in seconds for each page's container, --image the Docker image to run in,
+in seconds for each page's interpreter, --image the Docker image to run in,
 --define-shown proposes definitions for shown values (below).
 The tool exits
 with status 2, leaving the log alone, if the guide does not exist or no
@@ -30,15 +30,20 @@ runs as --no-run. The default image is built from docker/Dockerfile next to
 this file (Dyalog 21.0, pinned by digest, plus the .NET runtime) and tagged
 code-blocks-dyalog:<first 12 hex of the Dockerfile's sha256> and built when
 missing; an --image is pulled when missing. Building or pulling an image is
-the only time the network is used. Each page runs in a fresh container with no network, no
-capabilities, no new privileges, a read-only root, at most 64 processes,
-512 MB and one CPU, as uid 1000, under its own deadline (the page's
-time-out plus CONTAINER_GRACE seconds, so it ends even if the tool is
-killed); only /work (the working directory), /tmp and the home
-directory are writable, as small tmpfs mounts, and the harness and request
-are mounted read-only. Files a page writes persist across its blocks and
-vanish with the container. A timed-out or interrupted container is killed
-and removed. Results are those of Linux Dyalog in that image.
+the only time the network is used. A run starts one container (none if
+nothing runs), with no network, no capabilities, no new privileges, a
+read-only root, at most 64 processes, 512 MB and one CPU, as uid 1000;
+only /work (the working directory), /tmp and the home directory are
+writable, as small tmpfs mounts, and the harness and requests are mounted
+read-only. Each page runs in it with `docker exec`, in a fresh interpreter
+under its own deadline (the page's time-out plus CONTAINER_GRACE seconds).
+After each page, time-out or error included, every process the page
+started is killed and the writable mounts are emptied: files a page writes
+persist across its blocks and never reach another page. The container is
+removed when the run ends (also on an error, Ctrl-C, SIGTERM or SIGHUP);
+if the tool is killed outright, the container's keeper notices the tool's
+heartbeat stop and the container goes within KEEPER_STALE seconds.
+Results are those of Linux Dyalog in that image.
 
 Side effects: inside the container, files, workspaces (⎕CY, ⎕FIX,
 ⎕EXPORT), .NET, shell commands (⎕SH, ⎕CMD, ⎕SHELL) and ⎕NA may run. An
@@ -170,6 +175,7 @@ how many were carried onto a block that matched before and does not now
 """
 
 import argparse
+import contextlib
 import datetime
 import fnmatch
 import hashlib
@@ -183,6 +189,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from collections import Counter
 from dataclasses import dataclass
@@ -541,27 +548,62 @@ def image_meta(image: str) -> dict:
     return {"image": image, "image_id": image_id, "platform": plat}
 
 
-# Seconds the container may outlive the page's time-out. The container's own
-# deadline (coreutils timeout inside it) ends it even if this process dies
-# without cleaning up.
+# Seconds the interpreter may outlive the page's time-out. Its own deadline
+# (coreutils timeout inside the container) ends it even if the tool hangs.
 CONTAINER_GRACE = 15
+# The container's keeper exits, taking the container with it, once the
+# heartbeat file in the run's /cb directory has not changed for this many
+# seconds (or is gone): a tool killed outright leaves nothing running for
+# long. The tool touches the file every HEARTBEAT seconds.
+KEEPER_STALE = 30
+HEARTBEAT = 5
+
+# PID 2 under docker-init: exits when /cb/alive stops changing or vanishes.
+# Comparing mtimes with each other, not with the clock, is immune to skew
+# between the host and Docker's VM.
+_KEEPER = (
+    'n=0; old=; while :; do m=$(stat -c %Y /cb/alive) || exit 0; '
+    'if [ "$m" = "$old" ]; then n=$((n+2)); else n=0; old=$m; fi; '
+    '[ "$n" -ge "$1" ] && exit 0; sleep 2; done'
+)
+
+# Between pages: kill every process but docker-init, the keeper (whose
+# command line carries cb-keeper), this script and their children (not
+# docker-init's: a page's orphaned background jobs end up there); then
+# empty the writable mounts. Each page thus starts as in a fresh container.
+_RESET = r"""
+parents="$$"
+for d in /proc/[0-9]*; do
+  [ "$d" = /proc/1 ] && continue  # docker-init's command line names it too
+  case "$(tr '\0' ' ' < "$d/cmdline" 2>/dev/null)" in
+    *" cb-keeper "*) parents="$parents ${d#/proc/}";;
+  esac
+done
+for d in /proc/[0-9]*; do
+  p=${d#/proc/}
+  pp=$(sed -n 's/^PPid:[[:space:]]*//p' "$d/status" 2>/dev/null) || continue
+  case " 1 $parents " in *" $p "*) continue;; esac
+  case " $parents " in *" $pp "*) continue;; esac
+  kill -9 "$p" 2>/dev/null
+done
+for m in /work /tmp /home/dyalog; do
+  find "$m" -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null
+done
+exit 0
+"""
 
 
-def _container_argv(
-    image: str, name: str, mount: str, args: list[str], timeout: float
-) -> list[str]:
-    """docker run argv: one locked-down, throw-away container.
+def _container_argv(image: str, name: str, mount: str) -> list[str]:
+    """docker run argv: the run's one locked-down container, detached.
 
     No network, no capabilities, a read-only root; only /work (the working
     directory), /tmp and the home directory are writable, as small tmpfs
-    mounts that vanish with the container. `mount` (the harness and the
-    request) is read-only at /cb. dyalogscript runs as uid 1000 under
-    `timeout --signal=KILL`, so the container ends by itself after the
-    page's time-out plus CONTAINER_GRACE seconds.
+    mounts. `mount` (the harness and each page's request) is read-only at
+    /cb. Everything runs as uid 1000. docker-init (--init) is PID 1 and
+    reaps; the keeper (_KEEPER) is what keeps the container alive.
     """
-    deadline = math.ceil(timeout) + CONTAINER_GRACE
     return [
-        DOCKER, "run", "--rm", "-i", "--name", name,
+        DOCKER, "run", "-d", "--rm", "--init", "--name", name,
         "--network", "none", "--read-only", "--cap-drop", "ALL",
         "--security-opt", "no-new-privileges", "--pids-limit", "64",
         "--memory", "512m", "--cpus", "1",
@@ -569,13 +611,22 @@ def _container_argv(
         "--tmpfs", "/tmp:rw,size=64m",  # the .NET runtime needs room here
         "--tmpfs", "/home/dyalog:rw,size=16m,uid=1000,gid=1000",
         "--user", "1000:1000", "-w", "/work", "-v", f"{mount}:/cb:ro",
-        "--entrypoint", "timeout", image,
-        "--signal=KILL", f"{deadline}s", "dyalogscript", *args,
+        "--entrypoint", "sh", image,
+        "-c", _KEEPER, "cb-keeper", str(KEEPER_STALE),
+    ]
+
+
+def _exec_argv(name: str, args: list[str], timeout: float) -> list[str]:
+    """docker exec argv: dyalogscript `args` under its own deadline."""
+    deadline = math.ceil(timeout) + CONTAINER_GRACE
+    return [
+        DOCKER, "exec", "-w", "/work", name,
+        "timeout", "--signal=KILL", f"{deadline}s", "dyalogscript", *args,
     ]
 
 
 class ContainerError(RuntimeError):
-    """A container outlived its run."""
+    """The run's container could not be started, reset or removed."""
 
 
 def _kill_group(pgid: int) -> None:
@@ -594,30 +645,15 @@ def _left(name: str) -> bool:
     return out.returncode != 0 or bool(out.stdout.strip())
 
 
-def _steps(*steps) -> None:
-    """Run every step, even after one fails; then raise the first error."""
-    errors: list[Exception] = []
-    for step in steps:
-        try:
-            step()
-        except Exception as e:  # noqa: BLE001 - re-raised below
-            errors.append(e)
-    if errors:
-        raise errors[0]
-
-
-def _remove_container(name: str, force: bool) -> None:
+def _remove_container(name: str) -> None:
     """Make sure the container `name` is gone; raise ContainerError if not.
 
     --rm removes a container asynchronously, so poll for a while.
     """
-    if force:
+    for args in (("kill", name), ("rm", "-f", name)):
         try:
-            _steps(
-                lambda: _docker("kill", name, timeout=30),
-                lambda: _docker("rm", "-f", name, timeout=30),
-            )
-        except Exception:  # noqa: BLE001 - the polling below decides
+            _docker(*args, timeout=30)
+        except (OSError, subprocess.TimeoutExpired):
             pass
     for _ in range(50):
         if not _left(name):
@@ -631,71 +667,162 @@ def _remove_container(name: str, force: bool) -> None:
         raise ContainerError(f"container {name} is still there")
 
 
-def _cleanup(proc: subprocess.Popen, name: str, clean: bool) -> None:
-    """Stop the docker client and make sure the container is gone.
+def _sweep_stale_dirs() -> None:
+    """Delete /cb directories that runs killed outright left behind.
 
-    Every step runs even if an earlier one fails.
+    A directory is stale once its heartbeat is older than KEEPER_STALE
+    seconds by a wide margin: its container's keeper has exited by then.
     """
-    running = proc.poll() is None
-    _steps(
-        lambda: _docker("kill", name, timeout=30) if running else None,
-        lambda: _kill_group(proc.pid),
-        lambda: proc.wait(timeout=30),
-        lambda: _remove_container(name, force=not clean or running),
-    )
+    limit = time.time() - 4 * KEEPER_STALE
+    for d in Path(tempfile.gettempdir()).glob("code-blocks-*"):
+        try:
+            if (d / "alive").stat().st_mtime < limit:
+                shutil.rmtree(d, ignore_errors=True)
+        except OSError:
+            pass
 
 
-def _in_container(
-    image: str, token: str, files: dict[str, str], args: list[str], timeout: float
-) -> tuple[str, bool]:
-    """Run dyalogscript `args` in a fresh container, `files` mounted at /cb.
+class Sandbox:
+    """The run's one container, named cb-<token>; pages run in it in turn.
 
-    The container is named cb-<token>.
-
-    Returns (stdout with CR/CRLF turned into LF, timed_out). On a time-out or
-    any exception the container is killed and removed and the local docker
-    client's process group is killed; either way the container is gone when
-    this returns.
+    Use it as a context manager: on leaving (normally, on an exception, or
+    on SIGTERM/SIGHUP, which main() turns into SystemExit) the container is
+    removed and the host directory mounted at /cb deleted. The container
+    starts on the first page, so a run that executes nothing starts none. If
+    it dies (an example killed its keeper, say), the next page starts a new
+    one; there is never more than one.
     """
-    name = f"cb-{token}"
-    with tempfile.TemporaryDirectory() as tmp:
-        tmp = os.path.realpath(tmp)
-        os.chmod(tmp, 0o755)  # the container's user is uid 1000
+
+    def __init__(self, image: str) -> None:
+        self.image = image
+        self.name: str | None = None
+        self._dir: str | None = None
+        self._stop = threading.Event()
+        self._beat: threading.Thread | None = None
+
+    def __enter__(self) -> "Sandbox":
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        self.close()
+
+    def _touch(self) -> None:
+        if self._dir:
+            Path(self._dir, "alive").touch()
+
+    def _heartbeat(self) -> None:
+        while not self._stop.wait(HEARTBEAT):
+            try:
+                self._touch()
+            except OSError:
+                return
+
+    def _running(self) -> bool:
+        if self.name is None:
+            return False
+        try:
+            out = _docker("inspect", "-f", "{{.State.Running}}", self.name, timeout=30)
+        except (OSError, subprocess.TimeoutExpired):
+            return False
+        return out.returncode == 0 and out.stdout.strip() == "true"
+
+    def _start(self) -> None:
+        if self._dir is None:
+            _sweep_stale_dirs()
+            self._dir = os.path.realpath(tempfile.mkdtemp(prefix="code-blocks-"))
+            os.chmod(self._dir, 0o755)  # the container's user is uid 1000
+            Path(self._dir, HARNESS.name).write_text(
+                HARNESS.read_text(encoding="utf-8"), encoding="utf-8"
+            )
+            os.chmod(Path(self._dir, HARNESS.name), 0o644)
+            self._touch()
+            os.chmod(Path(self._dir, "alive"), 0o644)
+            self._beat = threading.Thread(target=self._heartbeat, daemon=True)
+            self._beat.start()
+        if self.name is not None:
+            _remove_container(self.name)
+        self.name = f"cb-{secrets.token_hex(8)}"
+        out = _docker(*_container_argv(self.image, self.name, self._dir)[1:], timeout=120)
+        if out.returncode:
+            name, self.name = self.name, None
+            _remove_container(name)
+            raise ContainerError(f"docker run {self.image}: {out.stderr.strip()}")
+
+    def _reset(self) -> None:
+        """Kill what the last page left running and empty the writable mounts."""
+        assert self.name is not None
+        try:
+            out = _docker("exec", self.name, "sh", "-c", _RESET, timeout=30)
+            ok = out.returncode == 0
+        except (OSError, subprocess.TimeoutExpired):
+            ok = False
+        if not ok:  # start afresh on the next page
+            name, self.name = self.name, None
+            _remove_container(name)
+
+    def run(
+        self, files: dict[str, str], args: list[str], timeout: float
+    ) -> tuple[str, bool]:
+        """Run dyalogscript `args` with `files` at /cb; returns (stdout, timed_out).
+
+        CR and CRLF in stdout become LF. On a time-out, an exception or a
+        normal end the container is reset, so nothing the page started is
+        left running.
+        """
+        if not self._running():
+            self._start()
+        assert self.name is not None and self._dir is not None
+        self._touch()
         for fname, text in files.items():
-            Path(tmp, fname).write_text(text, encoding="utf-8")
-            os.chmod(Path(tmp, fname), 0o644)
+            Path(self._dir, fname).write_text(text, encoding="utf-8")
+            os.chmod(Path(self._dir, fname), 0o644)
         proc = subprocess.Popen(
-            _container_argv(image, name, tmp, args, timeout),
+            _exec_argv(self.name, args, timeout),
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
             start_new_session=True,
         )
         timed_out = False
-        clean = False
+        out = b""
         try:
             try:
                 out, _ = proc.communicate(timeout=timeout)
             except subprocess.TimeoutExpired:
                 timed_out = True
-                _docker("kill", name, timeout=30)
+                self._reset()  # ends the interpreter, so the client ends too
                 try:
                     out, _ = proc.communicate(timeout=10)
                 except subprocess.TimeoutExpired:
                     _kill_group(proc.pid)
                     out, _ = proc.communicate()
-            clean = not timed_out
         finally:
-            _cleanup(proc, name, clean)
-    text = out.decode("utf-8", errors="replace")
-    return text.replace("\r\n", "\n").replace("\r", "\n"), timed_out
+            if proc.poll() is None:
+                _kill_group(proc.pid)
+                proc.wait()
+            for fname in files:
+                Path(self._dir, fname).unlink(missing_ok=True)
+            if self.name is not None:
+                self._reset()
+        text = out.decode("utf-8", errors="replace")
+        return text.replace("\r\n", "\n").replace("\r", "\n"), timed_out
+
+    def close(self) -> None:
+        """Remove the container and the /cb directory. Safe to call twice."""
+        self._stop.set()
+        try:
+            if self.name is not None:
+                name, self.name = self.name, None
+                _remove_container(name)
+        finally:
+            if self._dir is not None:
+                shutil.rmtree(self._dir, ignore_errors=True)
+                self._dir = None
 
 
-def dyalog_version(image: str) -> str:
+def dyalog_version(box: Sandbox) -> str:
     """The container interpreter's version field, e.g. "21.0.54424.0"."""
-    out, _ = _in_container(
-        image,
-        secrets.token_hex(8),
+    out, _ = box.run(
         {"version.apls": "⎕←2⊃#⎕WG'APLVersion'\n⎕OFF\n"},
         ["/cb/version.apls"],
         timeout=60,
@@ -704,9 +831,9 @@ def dyalog_version(image: str) -> str:
 
 
 def run_page(
-    blocks: list[RunBlock], image: str, timeout: float = 60.0
+    blocks: list[RunBlock], box: Sandbox, timeout: float = 60.0
 ) -> tuple[dict[int, list[LineResult]], str | None]:
-    """Run each block's input lines in one fresh container (one interpreter).
+    """Run each block's input lines in `box` with one fresh interpreter.
 
     Results are keyed by block id; blocks not reached are absent. The second
     value is "timeout" if the run timed out, "exited" if the interpreter
@@ -720,14 +847,10 @@ def run_page(
             {"id": b.id, "style": b.style, "lines": b.lines} for b in blocks
         ],
     }
-    out, timed_out = _in_container(
-        image,
-        token,
-        {
-            HARNESS.name: HARNESS.read_text(encoding="utf-8"),
-            "request.json": json.dumps(request, ensure_ascii=False),
-        },
-        ["DYALOG_INITSESSION=1", f"/cb/{HARNESS.name}", "/cb/request.json"],
+    req = f"request-{token}.json"
+    out, timed_out = box.run(
+        {req: json.dumps(request, ensure_ascii=False)},
+        ["DYALOG_INITSESSION=1", f"/cb/{HARNESS.name}", f"/cb/{req}"],
         timeout,
     )
     results, done = _parse_output(out, token)
@@ -1650,20 +1773,20 @@ _BOX_RE = re.compile(r"\]box(ing)?\b", re.I)
 def _run_plan(
     blocks: list[Block],
     classes: dict[int, Classification],
-    image: str | None,
+    box: "Sandbox | None",
     timeout: float,
     applied: dict[int, list["Shown"]],
 ) -> tuple[dict[int, list[LineResult]], str | None, set[int], dict[int, int]]:
     """Run a page: (results, stop, side-effect blocks, units sent per block).
 
     `applied` maps a block index to the shown names whose definitions replace
-    their bare-name lines (see _units). Without an image nothing runs.
+    their bare-name lines (see _units). Without a container nothing runs.
     """
     results: dict[int, list[LineResult]] = {}
     stop: str | None = None
     side: set[int] = set()
     sent: dict[int, int] = {}  # block index -> number of units sent
-    if not image:
+    if not box:
         return results, stop, side, sent
     boxed = False
     to_run: list[RunBlock] = []
@@ -1680,14 +1803,14 @@ def _run_plan(
         to_run.append(RunBlock(i, None if boxed else cls.style, units))
         sent[i] = len(units)
     if to_run:
-        results, stop = run_page(to_run, image, timeout)
+        results, stop = run_page(to_run, box, timeout)
     return results, stop, side, sent
 
 
 def _judge_page(
     blocks: list[Block],
     classes: dict[int, Classification],
-    image: str | None,
+    box: "Sandbox | None",
     run: tuple[dict[int, list[LineResult]], str | None, set[int], dict[int, int]],
     applied: dict[int, list["Shown"]],
 ) -> tuple[list[dict], int, dict[tuple[int, str], str]]:
@@ -1723,7 +1846,7 @@ def _judge_page(
             verdict, reason, actual = "not-run", "side-effect", None
         elif stop and i in sent and len(results.get(i, [])) < sent[i] and hung_seen:
             verdict, reason, actual = "not-run", "unreached", None
-        elif image:
+        elif box:
             if stop and i in sent and len(results.get(i, [])) < sent[i]:
                 hung_seen = True  # the first block with a missing line
             verdict, reason, actual = judge(jb, jcls, res, prior_unrun, stop)
@@ -1791,14 +1914,14 @@ def _later_uses(
 def _process_page(
     page: str,
     markdown: str,
-    image: str | None,
+    box: "Sandbox | None",
     timeout: float,
     define_shown: bool = False,
     stats: Counter | None = None,
 ) -> tuple[list[dict], int, int]:
     """Entries for one page, plus (block count, listing count).
 
-    With `define_shown` (and an image), shown-but-undefined names get their
+    With `define_shown` (and a container), shown-but-undefined names get their
     definitions proved by further runs (see "Defining shown values" in the
     design); `stats`, if given, counts accepted, rejected and unsupported.
     """
@@ -1806,11 +1929,11 @@ def _process_page(
     classes = {
         i: classify(b) for i, b in enumerate(blocks) if not b.nested
     }
-    run = _run_plan(blocks, classes, image, timeout, {})
+    run = _run_plan(blocks, classes, box, timeout, {})
     applied: dict[int, list[Shown]] = {}
     rejected: dict[int, dict[str, str]] = {}
-    if define_shown and image:
-        plain = _judge_page(blocks, classes, image, run, {})[0]
+    if define_shown and box:
+        plain = _judge_page(blocks, classes, box, run, {})[0]
         at = {b.line: i for i, b in enumerate(blocks)}
         suspect = frozenset(
             at[e["line"]] for e in plain if e["reason"] == "suspect-input"
@@ -1827,8 +1950,8 @@ def _process_page(
         for _ in range(2):
             if not applied:
                 break
-            trial = _run_plan(blocks, classes, image, timeout, applied)
-            failed = _judge_page(blocks, classes, image, trial, applied)[2]
+            trial = _run_plan(blocks, classes, box, timeout, applied)
+            failed = _judge_page(blocks, classes, box, trial, applied)[2]
             if not failed:
                 run = trial
                 break
@@ -1846,7 +1969,7 @@ def _process_page(
                         "not proved: another definition on the page failed"
                     )
             applied = {}
-    entries, listings, _ = _judge_page(blocks, classes, image, run, applied)
+    entries, listings, _ = _judge_page(blocks, classes, box, run, applied)
     lines = {b.line: i for i, b in enumerate(blocks)}
     for e in entries:
         why = rejected.get(lines[e["line"]])
@@ -1938,7 +2061,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = ap.parse_args(argv)
     # SIGTERM and SIGHUP would end Python without running `finally`, leaving
-    # a page's container running: turn them into SystemExit instead.
+    # the run's container running: turn them into SystemExit instead.
     old = {
         sig: signal.signal(sig, _exit_on_signal)
         for sig in (signal.SIGTERM, signal.SIGHUP)
@@ -1985,18 +2108,23 @@ def _main(args: argparse.Namespace) -> int:
     entries: list[dict] = []
     total = listings = 0
     shown: Counter = Counter()
-    for p in pages:
-        found, n, lst = _process_page(
-            p.relative_to(docs).as_posix(),
-            p.read_text(encoding="utf-8"),
-            image,
-            args.timeout,
-            args.define_shown,
-            shown,
-        )
-        entries += found
-        total += n
-        listings += lst
+    # One container for the whole run, removed when the run ends however
+    # it ends.
+    with contextlib.ExitStack() as stack:
+        box = stack.enter_context(Sandbox(image)) if image else None
+        for p in pages:
+            found, n, lst = _process_page(
+                p.relative_to(docs).as_posix(),
+                p.read_text(encoding="utf-8"),
+                box,
+                args.timeout,
+                args.define_shown,
+                shown,
+            )
+            entries += found
+            total += n
+            listings += lst
+        version = dyalog_version(box) if box else None
 
     log = Path(args.log)
     stats: Counter = Counter()
@@ -2018,7 +2146,7 @@ def _main(args: argparse.Namespace) -> int:
         by_page.setdefault(e["page"], Counter())[e["verdict"]] += 1
     meta = {
         "guide": args.guide,
-        "dyalog": dyalog_version(image) if image else None,
+        "dyalog": version,
         # The container's image and platform; null without a run.
         **(image_meta(image) if image else dict.fromkeys(("image", "image_id", "platform"))),
         "generated": datetime.datetime.now(datetime.timezone.utc).strftime(
