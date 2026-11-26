@@ -365,7 +365,8 @@ it reads as output. For a block that differs, or fails with an error it
 does not show, the candidates are lines read as output that are indented
 1 to 8 spaces but not 6 and either form a run between two input lines
 (blank lines aside, no other output between) or are indented 4 to 8
-spaces and look like code: a glyph displayed output rarely shows (`←`,
+spaces and look like code (lines starting `∇`, function listings, never
+count): a glyph displayed output rarely shows (`←`,
 `⍝`, `{`, `⎕`, `⍳`, `⍴`, `⊃`, …) or a leading quote, and no box drawing.
 They move to the six-space indent and the page runs again with all such
 trials. A trial is kept if its block then matches, or if every moved line

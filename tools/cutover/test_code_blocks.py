@@ -2546,3 +2546,8 @@ def test_main_reindent_proved_by_the_moved_lines(cb, tmp_path):
     assert "```apl\n⍳3\n```" in a["proposed"]
     assert (b["verdict"], b["reason"], b["split"], b["proposed"]) == (
         "differs", "odd-indent", "ambiguous", None)
+
+
+def test_reindent_candidates_skip_function_listings(cb):
+    b, c = _block(cb, "      ⎕VR'FOO'", "     ∇ R←FOO", "[1]    R←10", "     ∇", "      1", "1")
+    assert cb._reindent_candidates(b, c) == ([], False)

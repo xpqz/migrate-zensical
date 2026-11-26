@@ -2478,7 +2478,11 @@ def _reindent_candidates(b: Block, cls: Classification) -> tuple[list[int], bool
     after_input = False
     for k, raw, role in seq:
         lead = _leading(raw)
-        odd = role == "output" and 1 <= lead <= 8 and lead != 6
+        # ∇ lines are function listings (⎕VR and the like): output.
+        odd = (
+            role == "output" and 1 <= lead <= 8 and lead != 6
+            and not raw.lstrip(_WS).startswith("∇")
+        )
         if odd and 4 <= lead and _looks_like_code(raw):
             out.add(k)
             code = True
