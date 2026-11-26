@@ -2362,7 +2362,43 @@ def test_main_shy_and_unnumbered_end_to_end(cb, tmp_path):
     assert "```apl\n⎕←A←⍳5\n```" in a["proposed"] and "⎕←B←2 2⍴⍳4" in a["proposed"]
     # conjugate shows 1J¯2; ⎕← would not: the + stays and the block matches
     assert (c["verdict"], c.get("rewrites")) == ("match", None)
-    assert c["rewrite_rejected"]["+C←1J2"].startswith("shy: + kept: ⎕← displays otherwise")
+    assert c["rewrite_rejected"]["+C←1J2"] == "shy: + kept: conjugate changes the value"
     assert "+C←1J2" in c["proposed"]
     assert (f["verdict"], f["rewrites"]) == ("match", ["unnumbered", "shy"])
     assert f["proposed"].startswith("```apl\n∇R←MEAN X\n  R←(+/X)÷⍴X\n∇\n⎕←F←MEAN 2 4\n```")
+
+
+def test_classify_style_ignores_display_command_output(cb):
+    _, c = _block(cb, "      ]Display 1 2", "┌→──┐", "│1 2│", "└~──┘", "      ⍴1 2", "2")
+    assert c.style == "off"
+    _, c = _block(cb, "      ]disp ⊂1 2", "┌→──┐", "│1 2│", "└~──┘", "      ⊂1 2", "┌→──┐",
+                  "│1 2│", "└~──┘")
+    assert c.style == "max"
+
+
+def test_plus_checks_only_for_plain_names(cb):
+    md = "```apl\n      +A←1\n1\n      +A[1]+←1\n1\n      +(a b)←1 2\n1 2\n```\n"
+    (b,) = cb.find_blocks("a.md", md)
+    n = cb.normalise(b)
+    blocks, classes = cb._normalised_page([b], [n], set())
+    assert cb._plus_checks(blocks, classes, [n]) == {0: {0: "{0::¯1 ⋄ ⍵≡+⍵}A"}}
+
+
+@needs_docker
+def test_main_plus_rewrite_proved_by_the_hidden_check(cb, tmp_path):
+    # The printed output is out of date (no leading space) but + leaves the
+    # character matrix as it is, so ⎕← shows what + showed: the rewrite stays.
+    md = (
+        "```apl\n      ∇R←MEAN X\n        R←X\n      ∇\n      +F←⎕CR'MEAN'\n"
+        "R←MEAN X\nR←X\n```\n\n"
+        "```apl\n      +C←1J2 3\n1J¯2 3\n      +D←1J2\n1J2\n```\n"
+    )
+    _docs(tmp_path, {"a.md": md})
+    _, log = _main(cb, tmp_path)
+    _, (f, c) = cb.read_log(log)
+    assert f["rewrites"] == ["shy"] and "⎕←F←⎕CR'MEAN'" in f["proposed"]
+    assert f["verdict"] == "differs" and "rewrite_rejected" not in f
+    # a complex value: +C shows the conjugate, so + stays; +D's printed
+    # output was not the conjugate, and ⎕← shows it: proved by display
+    assert c["rewrite_rejected"] == {"+C←1J2 3": "shy: + kept: conjugate changes the value"}
+    assert "+C←1J2 3" in c["proposed"] and "⎕←D←1J2" in c["proposed"]

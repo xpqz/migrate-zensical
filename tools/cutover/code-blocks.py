@@ -279,6 +279,7 @@ _DEL_LINE_RE = re.compile(r"^\[\d+\]")
 _SCRIPT_RE = re.compile(r"^:(Class|Namespace|Interface)")
 _MAX_RE = re.compile(r"┌→|┌↓|^(└∊|↓)", re.M)
 _MIN_RE = re.compile(r"[┌┬┐├┼┤└┴┘]")
+_DISPLAY_CMD_RE = re.compile(r"\s*\]\s*(display|disp)\b", re.I)
 
 
 @dataclass
@@ -327,7 +328,16 @@ def classify(block: Block) -> Classification:
     typed = _mark_definitions(lines, roles)
     inputs = [i for i, r in enumerate(roles) if r == "input"]
     style: Literal["max", "min", "off"] = "off"
-    out = "\n".join(ln for ln, r in zip(lines, roles) if r == "output")
+    # The display style comes from the output of ordinary lines: ]display
+    # and ]disp draw their own boxes whatever the style.
+    own: list[str] = []
+    drawn = False
+    for ln, r in zip(lines, roles):
+        if r == "input":
+            drawn = bool(_DISPLAY_CMD_RE.match(strip_indent(ln)))
+        elif r == "output" and not drawn:
+            own.append(ln)
+    out = "\n".join(own)
     if _MAX_RE.search(out):
         style = "max"
     elif _MIN_RE.search(out):
@@ -1926,10 +1936,13 @@ def shown_candidates(
     return found
 
 
-def _units(inputs: list[str], shown: list[Shown]) -> list[str | list[str]]:
+def _units(
+    inputs: list[str], shown: list[Shown], checks: dict[int, str] | None = None
+) -> list[str | list[str]]:
     """Input units to send: each shown name's line becomes its definition as
     proposed (a multi-line unit if it spans lines), followed by a hidden
-    check, the bare name."""
+    check, the bare name; `checks` adds a hidden line after the given input
+    lines. A typed definition (lines joined by newlines) is one unit."""
     at = {s.line: s for s in shown}
     units: list[str | list[str]] = []
     for k, text in enumerate(inputs):
@@ -1939,6 +1952,8 @@ def _units(inputs: list[str], shown: list[Shown]) -> list[str | list[str]]:
         else:
             units.append(s.lines[0] if len(s.lines) == 1 else list(s.lines))
             units.append(s.name)
+        if checks and k in checks:
+            units.append(checks[k])
     return units
 
 
@@ -2021,11 +2036,14 @@ def _run_plan(
     box: "Sandbox | None",
     timeout: float,
     applied: dict[int, list["Shown"]],
+    checks: dict[int, dict[int, str]] | None = None,
 ) -> tuple[dict[int, list[LineResult]], str | None, set[int], dict[int, int]]:
     """Run a page: (results, stop, side-effect blocks, units sent per block).
 
     `applied` maps a block index to the shown names whose definitions replace
-    their bare-name lines (see _units). Without a container nothing runs.
+    their bare-name lines (see _units). `checks` maps a block index to hidden
+    lines to run after given input lines ({input index: line}); their
+    results are among the block's. Without a container nothing runs.
     """
     results: dict[int, list[LineResult]] = {}
     stop: str | None = None
@@ -2039,7 +2057,7 @@ def _run_plan(
         cls = classes.get(i)
         if cls is None or cls.kind == "listing" or not cls.runnable:
             continue
-        units = _units(_input_texts(b, cls), applied.get(i, []))
+        units = _units(_input_texts(b, cls), applied.get(i, []), (checks or {}).get(i))
         flat = [ln for u in units for ln in ([u] if isinstance(u, str) else u)]
         if any(has_side_effect(t) for t in flat):
             side.add(i)
@@ -2173,16 +2191,17 @@ def _process_page(
     originals = find_blocks(page, markdown)
     norms = [normalise(b) for b in originals]
     blocks, classes = _normalised_page(originals, norms, set())
-    run = _run_plan(blocks, classes, box, timeout, {})
-    # Prove the + rewrites (see "Normalising input" in the design): revert
-    # the ones whose line did not display the printed output, and run again.
-    reverted = _unproved_plus(blocks, classes, norms, run[0]) if box else {
-        (i, k): "not run" for i, n in enumerate(norms) for k in n.plus
-    }
-    if reverted:
+    checks = _plus_checks(blocks, classes, norms)
+    run = _run_plan(blocks, classes, box, timeout, {}, checks)
+    # Prove the + rewrites (see "Normalising input" in the design), revert
+    # the unproved ones, and run again without the hidden checks.
+    reverted: dict[tuple[int, int], str] = {}
+    if any(n.plus for n in norms):
+        reverted = _unproved_plus(blocks, classes, norms, run[0], checks) if box else {
+            (i, k): "not run" for i, n in enumerate(norms) for k in n.plus
+        }
         blocks, classes = _normalised_page(originals, norms, set(reverted))
-        if box:
-            run = _run_plan(blocks, classes, box, timeout, {})
+        run = _run_plan(blocks, classes, box, timeout, {})
     applied: dict[int, list[Shown]] = {}
     rejected: dict[int, dict[str, str]] = {}
     if define_shown and box:
@@ -2273,30 +2292,74 @@ def _normalised_page(
     return blocks, classes
 
 
+_PLAIN_TARGET_RE = re.compile(r"^⎕←([A-Za-z_∆⍙][A-Za-z0-9_∆⍙¯]*) *←")
+# Hidden check after a + rewrite of NAME←…: 1 if conjugate leaves the value
+# unchanged, 0 if it changes it (complex numbers), ¯1 if it fails.
+_PLUS_CHECK = "{{0::¯1 ⋄ ⍵≡+⍵}}{}"
+
+
+def _plus_checks(
+    blocks: list[Block], classes: dict[int, Classification], norms: list[Normalised]
+) -> dict[int, dict[int, str]]:
+    """Hidden checks for + rewrites whose target is a plain name, by block
+    and input index."""
+    out: dict[int, dict[int, str]] = {}
+    for i, n in enumerate(norms):
+        cls = classes.get(i)
+        for k in n.plus:
+            if cls is None or cls.roles[k] != "input":
+                continue
+            m = _PLAIN_TARGET_RE.match(strip_indent(blocks[i].body[k]))
+            if m:
+                idx = sum(1 for r in cls.roles[:k] if r == "input")
+                out.setdefault(i, {})[idx] = _PLUS_CHECK.format(m.group(1))
+    return out
+
+
 def _unproved_plus(
     blocks: list[Block],
     classes: dict[int, Classification],
     norms: list[Normalised],
     results: dict[int, list[LineResult]],
+    checks: dict[int, dict[int, str]],
 ) -> dict[tuple[int, int], str]:
-    """The + rewrites (block, body line) not proved, with why: the rewritten
-    line must have run without error and displayed its printed output."""
+    """The + rewrites (block, body line) not proved, with why.
+
+    The rewritten line must have run without error, and either displayed
+    its printed output or, for a plain name, its hidden check shows that
+    conjugate leaves the value as it is (1) or fails on it (¯1): then
+    `⎕←` displays what `+` was meant to show.
+    """
     out: dict[tuple[int, int], str] = {}
     for i, n in enumerate(norms):
         cls = classes.get(i)
+        hidden = sorted((checks.get(i) or {}))
         for k in n.plus:
             if cls is None or cls.roles[k] != "input":
                 out[(i, k)] = "not an input line"
                 continue
             idx = sum(1 for r in cls.roles[:k] if r == "input")
+            pos = idx + sum(1 for h in hidden if h < idx)  # earlier checks shift it
             res = results.get(i, [])
             printed = expected_outputs(blocks[i], cls)[idx]
-            if idx >= len(res):
+            if pos >= len(res):
                 out[(i, k)] = "not run"
-            elif res[idx].error or _normalise(res[idx].output) != _normalise(printed):
-                out[(i, k)] = "⎕← displays otherwise: " + " / ".join(
-                    _normalise(res[idx].output)
-                )
+                continue
+            line = res[pos]
+            shown = _normalise(line.output)
+            if line.error:
+                out[(i, k)] = "the ⎕← line fails: " + " / ".join(shown)
+                continue
+            if shown == _normalise(printed):
+                continue
+            check = res[pos + 1] if idx in hidden and pos + 1 < len(res) else None
+            got = _normalise(check.output) if check and not check.error else None
+            if got in (["1"], ["¯1"]):
+                continue
+            out[(i, k)] = (
+                "conjugate changes the value" if got == ["0"]
+                else "⎕← displays otherwise: " + " / ".join(shown)
+            )
     return out
 
 
