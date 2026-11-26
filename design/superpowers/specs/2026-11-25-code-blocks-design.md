@@ -444,7 +444,7 @@ as `≡⎕TRAP←…`, still runs under `85⌶` and displays it; the assignment 
 statement, so the harness's own trapping stays in charge and the page keeps
 running (examples that rely on a trap firing then show the error instead).
 
-**Log.** The entry gains `rewrite: aplan` and `defines: [N, …]`;
+**Log.** The entry gains `aplan` in `rewrites` and `defines: [N, …]`;
 `proposed` is the rewritten split, `actual` follows the usual rules.
 `original` and `sha256` stay the original block's (the apply step replaces
 it). Names not defined are listed as `rewrite_rejected: {N: why}`, and the

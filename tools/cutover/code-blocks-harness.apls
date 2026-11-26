@@ -5,7 +5,8 @@
 ⍝ "⍝CB-<t>-BEGIN <id> <index>" before each input line, then "⍝CB-<t>-END" (plain),
 ⍝ "⍝CB-<t>-END ERROR", "⍝CB-<t>-END SKIP" (system command) or "⍝CB-<t>-END SKIP QQ" (⍞).
 ⍝ A request line is an input unit: a string (one session line) or a list of strings
-⍝ (several lines run as source, see Unit); each unit gets one BEGIN/END pair.
+⍝ (several lines run as source, or a typed ∇ definition: see Unit, Define); each unit
+⍝ gets one BEGIN/END pair.
 ⍝ The harness code is the ⍝| lines below, fixed into ⎕SE.CB (out of reach of user code);
 ⍝ user lines execute in #.
 args←2⎕NQ'.' 'GetCommandLineArgs'
@@ -60,6 +61,9 @@ src←⊃⎕NGET(⊃⌽args/⍨'.apls'∘≡¨¯5↑¨args)1
 ⍝|    ⍝ command or uses ⎕OFF skips the unit (2), as does ⍞ (3). Only output the lines send
 ⍝|    ⍝ to ⎕ (or ⍞) is displayed: other values, as in a function called by ⍎, are not.
 ⍝|    ∇ state←Unit src;t;r;sc
+⍝|      :If '∇'=⊃{(∨\⍵≠' ')/⍵}(⊃src),' '
+⍝|          state←Define src ⋄ :Return
+⍝|      :EndIf
 ⍝|      sc←Scan¨src
 ⍝|      t←{(∨\⍵≠' ')/⍵}¨src
 ⍝|      :If ∨/(')'=⊃¨t,¨' ')∨3⊃¨sc
@@ -84,6 +88,22 @@ src←⊃⎕NGET(⊃⌽args/⍨'.apls'∘≡¨¯5↑¨args)1
 ⍝|          ⎕←⎕DMX.EM,(0<≢⎕DMX.Message)/': ',⎕DMX.Message
 ⍝|      :EndTrap
 ⍝|      {}#.⎕EX unitfn
+⍝|    ∇
+⍝|
+⍝|    ⍝ A typed ∇ definition (header, body lines, closing ∇) is fixed in # with ⎕FX and,
+⍝|    ⍝ as in the session, displays nothing; one that does not fix displays DEFN ERROR.
+⍝|    ⍝ Defining runs none of its lines.
+⍝|    ∇ state←Define src;r
+⍝|      r←(⊂{(∨\⍵≠' ')/⍵}1↓{(∨\⍵≠' ')/⍵}⊃src),1↓¯1↓src
+⍝|      state←0
+⍝|      :Trap 0
+⍝|          r←#.⎕FX r
+⍝|      :Else
+⍝|          r←⍬
+⍝|      :EndTrap
+⍝|      :If ~(0<≢r)∧0=2|⎕DR r
+⍝|          ⎕←'DEFN ERROR' ⋄ state←1
+⍝|      :EndIf
 ⍝|    ∇
 ⍝|
 ⍝|    ⍝ Scan a line outside quoted strings and comments. Result: seps qq off, where seps are

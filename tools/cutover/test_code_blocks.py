@@ -1940,11 +1940,11 @@ def test_main_define_shown_logs_unsupported_only_with_the_option(cb, tmp_path, m
     calls = _fake_run(cb, monkeypatch, lambda bs: {b.id: [_ve(cb, "M")] for b in bs})
     _, log = _main(cb, tmp_path)
     _, (e,) = cb.read_log(log)
-    assert "rewrite" not in e and "rewrite_rejected" not in e
+    assert "rewrites" not in e and "rewrite_rejected" not in e
     _, log = _main(cb, tmp_path, "--define-shown")
     _, (e,) = cb.read_log(log)
     assert e["rewrite_rejected"]["M"].startswith("define-shown: unsupported")
-    assert e.get("rewrite") is None
+    assert e.get("rewrites") is None
     assert len(calls) == 2  # one run each: nothing to prove
 
 
@@ -1965,8 +1965,8 @@ def test_define_shown_indexing_example(cb, tmp_path, capsys):
     _docs(tmp_path, {"a.md": _INDEXING + "\n```apl\n      M[1;]\n10 20 30 40\n```\n"})
     _, log = _main(cb, tmp_path, "--define-shown")
     _, (e, later) = cb.read_log(log)
-    assert (e["verdict"], e["split"], e["rewrite"], e["defines"]) == (
-        "match", "confirmed", "aplan", ["M"])
+    assert (e["verdict"], e["split"], e["rewrites"], e["defines"]) == (
+        "match", "confirmed", ["aplan"], ["M"])
     assert e["original"] == _INDEXING
     assert e["proposed"] == (
         "```apl\nM←[10 20 30 40\n   50 60 70 80]\nM[⊂1 2]\n```\n\n"
@@ -1984,7 +1984,7 @@ def test_define_shown_without_the_option_leaves_entries_alone(cb, tmp_path):
     _docs(tmp_path, {"a.md": _INDEXING})
     _, log = _main(cb, tmp_path)
     _, (e,) = cb.read_log(log)
-    assert e["verdict"] == "not-run" and "rewrite" not in e
+    assert e["verdict"] == "not-run" and "rewrites" not in e
 
 
 @needs_docker
@@ -1994,7 +1994,7 @@ def test_define_shown_wrong_guess_is_rejected(cb, tmp_path, capsys):
     _docs(tmp_path, {"a.md": md})
     _, log = _main(cb, tmp_path, "--define-shown")
     _, (e,) = cb.read_log(log)
-    assert e.get("rewrite") is None
+    assert e.get("rewrites") is None
     assert "differs" in e["rewrite_rejected"]["M"]
     assert e["verdict"] == "not-run" and e["original"] == md
     assert e["proposed"] == cb.split_block(*(lambda b: (b, cb.classify(b)))(
@@ -2008,7 +2008,7 @@ def test_define_shown_char_matrix_with_short_rows_and_diamonds(cb, tmp_path):
     _docs(tmp_path, {"a.md": md})
     _, log = _main(cb, tmp_path, "--define-shown")
     _, (e,) = cb.read_log(log)
-    assert e["rewrite"] == "aplan" and e["verdict"] == "match"
+    assert e["rewrites"] == ["aplan"] and e["verdict"] == "match"
     assert e["proposed"].startswith("```apl\nC←['a⋄b'\n   'cd']\n⍴C\n```\n")
 
 
@@ -2124,7 +2124,7 @@ def test_define_shown_later_use_that_errs_rejects(cb, tmp_path, monkeypatch):
     _, log = _main(cb, tmp_path, "--define-shown")
     _, entries = cb.read_log(log)
     e = entries[1]
-    assert e.get("rewrite") is None
+    assert e.get("rewrites") is None
     assert "later use" in e["rewrite_rejected"]["v"]
     assert "DOMAIN ERROR" in e["rewrite_rejected"]["v"]
 
@@ -2139,7 +2139,7 @@ def test_define_shown_later_use_with_shown_error_is_fine(cb, tmp_path, monkeypat
     _shown_run(cb, monkeypatch, ["1 2"], {"v[3]": err})
     _, log = _main(cb, tmp_path, "--define-shown")
     _, entries = cb.read_log(log)
-    assert entries[1]["rewrite"] == "aplan" and entries[2]["verdict"] == "match"
+    assert entries[1]["rewrites"] == ["aplan"] and entries[2]["verdict"] == "match"
 
 
 def test_define_shown_unused_value_is_rejected(cb, tmp_path, monkeypatch):
@@ -2148,7 +2148,7 @@ def test_define_shown_unused_value_is_rejected(cb, tmp_path, monkeypatch):
     _shown_run(cb, monkeypatch, ["1 2"], {})
     _, log = _main(cb, tmp_path, "--define-shown")
     _, entries = cb.read_log(log)
-    assert entries[1].get("rewrite") is None
+    assert entries[1].get("rewrites") is None
     assert "nothing" in entries[1]["rewrite_rejected"]["v"]
 
 
@@ -2156,3 +2156,213 @@ def test_define_shown_without_docker_says_so(cb, tmp_path, capsys):
     _docs(tmp_path, {"a.md": _PAGE})
     _main(cb, tmp_path, "--no-run", "--define-shown")
     assert "--define-shown" in capsys.readouterr().err
+
+
+# --- normalising input: shy results, line numbers -----------------------------
+
+
+def _norm(cb, *lines):
+    md = "```apl\n" + "\n".join(lines) + "\n```\n"
+    (b,) = cb.find_blocks("a.md", md)
+    return cb.normalise(b)
+
+
+@pytest.mark.parametrize(
+    "line, want",
+    [
+        ("      +A←⍳5", "      ⎕←A←⍳5"),
+        ("      ⊢A←2 4⍴'MAINEXIT'", "      ⎕←A←2 4⍴'MAINEXIT'"),
+        ("      ⊣ x←1", "      ⎕←x←1"),
+        ("      ⊢ A←5 5⍴0", "      ⎕←A←5 5⍴0"),
+        ("      +A[2 4]+←1", "      ⎕←A[2 4]+←1"),
+        ("      +(a b)←1 2", "      ⎕←(a b)←1 2"),
+        ("      +B←⍕A←2 6⍴'HELLO'", "      ⎕←B←⍕A←2 6⍴'HELLO'"),
+        ("      ⊢mat← myJSON JSON", "      ⎕←mat← myJSON JSON"),
+    ],
+)
+def test_normalise_shy_display(cb, line, want):
+    n = _norm(cb, line, "x")
+    assert n.block.body[0] == want
+    assert n.rewrites == ("shy",)
+    assert n.plus == ((0,) if line.lstrip().startswith("+") else ())
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "      +⎕EX'A'",  # not an assignment
+        "      +/A←1 2",  # not monadic + on the assignment
+        "      +A",
+        "      x←+A←1",  # not at the start
+        "      ⊢⎕IO←0",  # a system name
+        "      +'A'←1",
+        "+A←⍳5",  # output, not input
+        "       +A←⍳5",  # seven spaces
+    ],
+)
+def test_normalise_leaves_other_lines(cb, line):
+    n = _norm(cb, line, "x")
+    assert n.rewrites == () and n.block.body[0] == line
+
+
+def test_normalise_unnumbers_a_typed_definition(cb):
+    n = _norm(
+        cb,
+        "     ∇ R←A DIVIDE B;⎕TRAP",
+        "[1]   ⍝ Divide",
+        "[2]    ⎕TRAP←11 'E' '→ERR'",
+        "[3]    :If A>0",
+        "[4]        R←A÷B ⋄ →0",
+        "[5]    :EndIf",
+        "[6]   ERR:'DIVISION ERROR' ⎕SIGNAL 11",
+        "     ∇",
+        "      2 DIVIDE 1",
+        "2",
+    )
+    assert n.rewrites == ("unnumbered",) and n.keep is None
+    assert n.block.body == [
+        "      ∇ R←A DIVIDE B;⎕TRAP",
+        "        ⍝ Divide",
+        "        ⎕TRAP←11 'E' '→ERR'",
+        "        :If A>0",
+        "            R←A÷B ⋄ →0",
+        "        :EndIf",
+        "      ERR:'DIVISION ERROR' ⎕SIGNAL 11",
+        "      ∇",
+        "      2 DIVIDE 1",
+        "2",
+    ]
+    assert n.block.text == _norm(cb, "x").block.text.replace("x", "\n".join([
+        "     ∇ R←A DIVIDE B;⎕TRAP", "[1]   ⍝ Divide", "[2]    ⎕TRAP←11 'E' '→ERR'",
+        "[3]    :If A>0", "[4]        R←A÷B ⋄ →0", "[5]    :EndIf",
+        "[6]   ERR:'DIVISION ERROR' ⎕SIGNAL 11", "     ∇", "      2 DIVIDE 1", "2",
+    ]))  # text and sha256 stay the original's
+
+
+def test_normalise_numbered_closing_two_digit_numbers_and_no_space_header(cb):
+    lines = ["      ∇R←MEAN X"] + [f"[{k}]  R←{k}" if k < 10 else f"[{k}] R←{k}" for k in range(1, 11)]
+    n = _norm(cb, *lines, "[11] ∇")
+    assert n.block.body[0] == "      ∇R←MEAN X"
+    assert n.block.body[1:11] == [f"        R←{k}" for k in range(1, 11)]
+    assert n.block.body[11] == "      ∇"
+
+
+@pytest.mark.parametrize(
+    "lines",
+    [
+        # output of ⎕VR (any input line right before it), and a second listing
+        ["      ⎕VR'F'", "     ∇ F", "[1]    1", "     ∇"],
+        ["       F", "      ∇ R←FOO", "[1]     R←10", "      ∇"],
+        ["      ⎕∘←∘⎕VR¨↓⎕NL 3", "     ∇ F", "[1]    1", "     ∇", "     ∇ G", "[1]    2", "     ∇"],
+        # a fragment, numbers out of order, an empty numbered line, unclosed
+        ["[5]   →NEXT⍴⍨TEST", "[6]  NEXT:"],
+        ["     ∇ F", "[1]    1", "[3]    3", "     ∇"],
+        ["     ∇ F", "[1]    1", "[2]", "     ∇"],
+        ["     ∇ F", "[1]    1"],
+    ],
+)
+def test_normalise_leaves_listings_and_odd_definitions(cb, lines):
+    n = _norm(cb, *lines)
+    assert n.rewrites == () and n.keep is None and n.block.body == lines
+
+
+@pytest.mark.parametrize(
+    "lines",
+    [
+        ["     ∇ TEST", "[1]    1", "[2]    →4", "[3]    3", "[4]    4", "     ∇"],
+        ["     ∇ R←F", "[1]    R←1", "[2]    →(R>0)/3", "     ∇"],
+        ["      ∇ F", "[1]    'F[1]'", "      ∇"],
+        ["     ∇ F", "[1]   1", "     ∇", "      2 ⎕STOP'F'", "      F", "1"],
+    ],
+)
+def test_normalise_keeps_numbers_the_text_refers_to(cb, lines):
+    n = _norm(cb, *lines)
+    assert n.rewrites == () and n.keep == "line-numbers" and n.block.body == lines
+
+
+def test_normalise_branch_to_zero_and_labels_are_not_line_numbers(cb):
+    n = _norm(cb, "     ∇ F", "[1]    →0", "[2]    →END", "[3]   END:", "     ∇")
+    assert n.rewrites == ("unnumbered",) and n.keep is None
+
+
+@pytest.mark.parametrize(
+    "header, name",
+    [("R←A DIVIDE B;⎕TRAP", "DIVIDE"), ("TEST", "TEST"), ("foo n;⎕TRAP", "foo"),
+     ("R←CONDITION (FN1 ELSE FN2) X", "ELSE"), ("r←{left}foo right", "foo"),
+     ("R←(F OP) X", "OP")],
+)
+def test_function_name(cb, header, name):
+    assert cb._function_name(header) == name
+
+
+def test_classify_typed_definition_is_one_runnable_unit(cb):
+    b, c = _block(
+        cb, "      ∇ R←F X", "        R←X+1", "      L:", "      ∇", "      F 1", "2"
+    )
+    assert c.roles == ["input", "cont", "cont", "cont", "input", "output"]
+    assert c.runnable and c.kind == "session" and c.reason is None
+    assert cb._input_texts(b, c) == ["∇ R←F X\n  R←X+1\nL:\n∇", "F 1"]
+    assert cb.expected_outputs(b, c) == [[], ["2"]]
+    assert cb.split_block(b, c) == (
+        "```apl\n∇ R←F X\n  R←X+1\nL:\n∇\nF 1\n```\n\n```text\n2\n```\n"
+    )
+
+
+def test_classify_numbered_or_unclosed_definitions_stay_del_definition(cb):
+    for lines in (
+        ["      ∇ F", "[1]    1", "      ∇"],
+        ["      ∇ F", "        1"],
+        ["      ∇ F", "        1", "", "      ∇"],
+    ):
+        _, c = _block(cb, *lines)
+        assert (c.reason, c.runnable) == ("del-definition", False), lines
+
+
+def test_main_no_run_keeps_plus_and_rewrites_identity(cb, tmp_path):
+    _docs(tmp_path, {"a.md": "```apl\n      +A←⍳5\n1 2 3 4 5\n      ⊢B←1\n1\n```\n"})
+    _, log = _main(cb, tmp_path, "--no-run")
+    _, (e,) = cb.read_log(log)
+    assert e["rewrites"] == ["shy"]
+    assert "+A←⍳5" in e["proposed"] and "⎕←B←1" in e["proposed"]
+    assert e["rewrite_rejected"] == {"+A←⍳5": "shy: + kept: not run"}
+    assert e["original"].count("⊢B←1") == 1
+
+
+def test_main_line_numbers_reason(cb, tmp_path):
+    md = "```apl\n     ∇ T\n[1]    →2\n[2]    1\n     ∇\n      T\n1\n```\n"
+    _docs(tmp_path, {"a.md": md})
+    _, log = _main(cb, tmp_path, "--no-run")
+    _, (e,) = cb.read_log(log)
+    assert (e["verdict"], e["reason"], e["split"]) == ("not-run", "line-numbers", "ambiguous")
+    assert "rewrites" not in e and e["proposed"] is None
+
+
+@needs_docker
+def test_run_page_typed_definition_is_fixed_silently(cb):
+    res, stop = _run(cb, (None, [
+        ["∇ R←F X", "  R←X+1", "∇"], "F 1", ["∇ 1 2", "  x", "∇"], "⎕NC'G'",
+    ]))
+    assert stop is None
+    assert _out(res) == [[], ["2"], ["DEFN ERROR"], ["0"]]
+    assert [r.error for r in res[1]] == [False, False, True, False]
+
+
+@needs_docker
+def test_main_shy_and_unnumbered_end_to_end(cb, tmp_path):
+    md = (
+        "```apl\n      +A←⍳5\n1 2 3 4 5\n      ⊢B←2 2⍴⍳4\n1 2\n3 4\n```\n\n"
+        "```apl\n      +C←1J2\n1J¯2\n```\n\n"
+        "```apl\n     ∇R←MEAN X\n[1]  R←(+/X)÷⍴X\n[2]  ∇\n      +F←MEAN 2 4\n3\n"
+        "      MEAN 1 2 3\n2\n```\n"
+    )
+    _docs(tmp_path, {"a.md": md})
+    _, log = _main(cb, tmp_path)
+    _, (a, c, f) = cb.read_log(log)
+    assert (a["verdict"], a["split"], a["rewrites"]) == ("match", "confirmed", ["shy"])
+    assert "```apl\n⎕←A←⍳5\n```" in a["proposed"] and "⎕←B←2 2⍴⍳4" in a["proposed"]
+    # conjugate shows 1J¯2; ⎕← would not: the + stays and the block matches
+    assert (c["verdict"], c.get("rewrites")) == ("match", None)
+    assert c["rewrite_rejected"]["+C←1J2"].startswith("shy: + kept: ⎕← displays otherwise")
+    assert "+C←1J2" in c["proposed"]
+    assert (f["verdict"], f["rewrites"]) == ("match", ["unnumbered", "shy"])
+    assert f["proposed"].startswith("```apl\n∇R←MEAN X\n  R←(+/X)÷⍴X\n∇\n⎕←F←MEAN 2 4\n```")

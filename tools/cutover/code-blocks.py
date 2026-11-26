@@ -87,7 +87,11 @@ Verdicts:
 
 Reasons:
 
-    del-definition  not run: a ∇ definition in session-editor notation
+    del-definition  not run: a ∇ definition the tool cannot unnumber (a
+                    fragment, numbers out of order, an empty or unclosed
+                    definition)
+    line-numbers    not run: a ∇ definition whose text refers to its line
+                    numbers (→4, 'F[1]', ⎕STOP, ...): its numbers stay
     script          not run: a :Class, :Namespace or :Interface script
     indent          not run: input at an odd indent
     nested          not run: the fence is indented (in a list, say)
@@ -128,6 +132,20 @@ Splits:
     ambiguous    the roles are uncertain; no proposal (reason says why)
     none         nothing to split (a nested block)
 
+Normalising input (always on; see the design): an input line showing a shy
+result with monadic +, ⊢ or ⊣ on an assignment (+A←⍳5) uses ⎕← instead
+(⎕←A←⍳5); a + rewrite is kept only if the rewritten line ran and displayed
+the printed output, else the + stays and rewrite_rejected says why, keyed
+by the original line. A ∇ definition typed into the session loses its [n]
+line numbers: header and closing ∇ at the six-space indent, body lines at
+eight (control-structure nesting kept), labels at six. A definition that
+follows an input line is that line's output (⎕VR and the like) and stays.
+A typed definition without numbers runs as one input unit, fixed with ⎕FX,
+displaying nothing (DEFN ERROR if it does not fix). The rewritten block is
+what runs and what `proposed` shows (as one apl block when there is no
+split); entries list the rewrites applied in `rewrites` (shy, unnumbered,
+and aplan, below).
+
 Defining shown values (--define-shown, off by default): a block often shows
 a variable's value (an input line that is just the name, then the value)
 that the page never defines. A candidate is an input line that is exactly a
@@ -157,7 +175,8 @@ dropped and the rest proved once more (if that fails too, none is applied).
 Later blocks are judged in the run with the accepted definitions. Extra
 fields, only with the option:
 
-    rewrite           aplan: `proposed` defines the names in `defines`
+    rewrites          includes aplan: `proposed` defines the names in
+                      `defines`
     defines           the names defined
     rewrite_rejected  {name: why} for names not defined: unsupported (why),
                       or why the proof failed; the entry is judged as usual
@@ -176,6 +195,7 @@ how many were carried onto a block that matched before and does not now
 
 import argparse
 import contextlib
+import dataclasses
 import datetime
 import fnmatch
 import hashlib
@@ -247,7 +267,9 @@ def find_blocks(page: str, markdown: str) -> list[Block]:
     return blocks
 
 
-Role = Literal["input", "output", "blank"]
+# "cont": a line of a typed ∇ definition after its header (body and closing
+# ∇); the definition is one input unit with the header.
+Role = Literal["input", "cont", "output", "blank"]
 
 _WS = " \u00a0"
 _SESSION_INDENT_RE = re.compile(r"^[ \u00a0]{6}(?=\S)")
@@ -302,6 +324,7 @@ def classify(block: Block) -> Classification:
             roles[i + 1] = roles[i + 2] = "output"
             triple.update((i + 1, i + 2))
 
+    typed = _mark_definitions(lines, roles)
     inputs = [i for i, r in enumerate(roles) if r == "input"]
     style: Literal["max", "min", "off"] = "off"
     out = "\n".join(ln for ln, r in zip(lines, roles) if r == "output")
@@ -320,12 +343,12 @@ def classify(block: Block) -> Classification:
     runnable = True
     del_open = False
     has_del = False
-    for ln, r in zip(lines, roles):
+    for i, (ln, r) in enumerate(zip(lines, roles)):
         if r == "input":
             text = strip_indent(ln)
-            has_del = has_del or text.startswith("∇")
+            has_del = has_del or (text.startswith("∇") and i not in typed)
             del_open = text.endswith("{") or text.startswith("∇")
-        elif _DEL_LINE_RE.match(ln) and del_open:
+        elif r == "output" and _DEL_LINE_RE.match(ln) and del_open:
             has_del = True
     first = inputs[0]
     if has_del:
@@ -341,6 +364,39 @@ def classify(block: Block) -> Classification:
         reason = "indented-output"
     kind = "session" if reason is None else "ambiguous"
     return Classification(kind, reason, roles, nbsp, runnable, style, annotation)
+
+
+def _mark_definitions(lines: list[str], roles: list[Role]) -> set[int]:
+    """Mark typed ∇ definitions without line numbers; return their headers.
+
+    A header is an input line `∇…` (not a one-line ∇…∇); its definition
+    runs to the next line that is just `∇`. Every line in between must be
+    non-blank, indented at least six spaces and unnumbered; then those lines
+    and the closing ∇ become "cont". Otherwise nothing is marked.
+    """
+    headers: set[int] = set()
+    i = 0
+    while i < len(lines):
+        text = strip_indent(lines[i]) if roles[i] == "input" else ""
+        if not (text.startswith("∇") and text.strip() != "∇" and not text.rstrip().endswith("∇")):
+            i += 1
+            continue
+        j = i + 1
+        while j < len(lines) and lines[j] and _leading(lines[j]) >= 6:
+            if _CLOSE_DEL_RE.match(lines[j]):
+                break
+            if _DEL_LINE_RE.match(lines[j].lstrip()):
+                j = len(lines)
+                break
+            j += 1
+        if j < len(lines) and _CLOSE_DEL_RE.match(lines[j]):
+            for k in range(i + 1, j + 1):
+                roles[k] = "cont"
+            headers.add(i)
+            i = j + 1
+        else:
+            i += 1
+    return headers
 
 
 class SplitError(ValueError):
@@ -384,7 +440,7 @@ def split_block(block: Block, cls: Classification) -> str:
         if role == "blank":
             pending_blank += 1
             continue
-        if role == "input":
+        if role in ("input", "cont"):
             if not groups or groups[-1][1]:
                 groups.append([[], []])
             groups[-1][0].append(strip_indent(line))
@@ -436,10 +492,11 @@ def check_no_lost_lines(original: Block, proposed: str) -> None:
     before = {"input": Counter[str](), "output": Counter[str]()}
     for raw, role in zip(original.body, cls.roles):
         ln = raw.rstrip("\r")
-        if role == "input":
+        side = "output" if role in ("output", "blank") else "input"
+        if side == "input":
             ln = strip_indent(ln)
         if ln.strip():
-            before[role][ln] += 1
+            before[side][ln] += 1
     after = {"input": Counter[str](), "output": Counter[str]()}
     for info, lines in _fences(proposed):
         side = "input" if info == "apl" else "output"
@@ -450,6 +507,187 @@ def check_no_lost_lines(original: Block, proposed: str) -> None:
             raise SplitError(
                 f"{original.page}:{original.line}: {side} lines differ: {dict(diff)}"
             )
+
+
+# --- Normalising input: shy results, line numbers ---------------------------
+
+# A shy result shown with monadic +, ⊢ or ⊣ applied to an assignment: the
+# target (a name, an indexed name, or names in parentheses), an optional
+# one-character function (modified assignment), then ←.
+_SHY_RE = re.compile(
+    r"^(?P<indent>[  ]{6})(?P<fn>[+⊢⊣]) *(?P<rest>"
+    r"(?:[A-Za-z_∆⍙][A-Za-z0-9_∆⍙¯]*(?: *\[[^\]]*\])?"
+    r"|\( *[A-Za-z_∆⍙][A-Za-z0-9_∆⍙¯ ]*\))"
+    r" *[^\sA-Za-z0-9_∆⍙¯'()\[\]←⎕⋄⍝]?←.*)$"
+)
+_HEADER_RE = re.compile(r"^[  ]*∇(?!.*∇[  ]*$)[  ]*(\S.*)$")
+_NUMBERED_RE = re.compile(r"^[  ]*\[(\d+)\](.*)$")
+_CLOSE_DEL_RE = re.compile(r"^[  ]*∇[  ]*$")
+_LABEL_RE = re.compile(r"^[A-Za-z_∆⍙][A-Za-z0-9_∆⍙¯]*:(?!:)")
+_LINE_NUMBER_QUADS_RE = re.compile(r"⎕(STOP|TRACE|MONITOR|LC)(?![A-Za-z0-9_])", re.I)
+_BRANCH_NUMBER_RE = re.compile(r"(?<![\w∆⍙¯.])(\d+(?:\.\d*)?)")
+
+
+@dataclass(frozen=True)
+class Normalised:
+    """A block with its input rewritten (see "Normalising input" in the design).
+
+    `block` stands in for the original when classifying, running, judging and
+    proposing; `rewrites` names the rewrites applied ("shy", "unnumbered");
+    `plus` holds the body-line indexes (in `block`) of `+` rewrites, which
+    need proof; `keep` is "line-numbers" if a definition keeps its numbers
+    because its text refers to them.
+    """
+
+    block: Block
+    rewrites: tuple[str, ...]
+    plus: tuple[int, ...]
+    keep: str | None
+
+
+def _function_name(header: str) -> str | None:
+    """The function or operator name in a ∇ header, e.g. "R←A DIVIDE B;X"."""
+    h = header.split(";")[0].replace("{", " ").replace("}", " ").strip()
+    if "←" in h:
+        h = h.split("←", 1)[1].strip()
+    if m := re.search(r"\(([^)]*)\)", h):  # an operator: (F OP G) or (F OP)
+        parts = m.group(1).split()
+        return parts[1] if len(parts) >= 2 else None
+    parts = h.split()
+    if len(parts) == 1:
+        return parts[0]
+    if len(parts) == 2:
+        return parts[0]
+    if len(parts) == 3:
+        return parts[1]
+    return None
+
+
+def _refers_to_numbers(header: str, body: list[str]) -> bool:
+    """The definition's text refers to its own line numbers."""
+    name = _function_name(header)
+    for text in body:
+        code = _code_only(text)
+        for stmt in code.split("⋄"):
+            if "→" in stmt:
+                expr = stmt.split("→", 1)[1]
+                if any(float(n) != 0 for n in _BRANCH_NUMBER_RE.findall(expr)):
+                    return True
+        if name and re.search(rf"(?<![\w∆⍙_.]){re.escape(name)}\[\d+\]", text):
+            return True
+    return False
+
+
+def _unnumber(
+    body: list[str], start: int, listed: bool, keep_all: bool
+) -> tuple[list[str], int, str | None] | None:
+    """Rewrite the ∇ definition whose header is body[start].
+
+    Returns (new lines, index after the definition, keep reason) or None
+    when body[start] does not begin a numbered definition. `listed` means
+    it is output (after ⎕VR and the like): its lines are returned as they
+    are. With a keep reason ("line-numbers": the text refers to its
+    numbers, or `keep_all`, the block uses ⎕STOP and the like) the lines
+    are also unchanged.
+    """
+    head = _HEADER_RE.match(body[start])
+    if not head:
+        return None
+    numbered: list[tuple[int, str]] = []  # (column of the text, text)
+    j = start + 1
+    closed = False
+    while j < len(body):
+        ln = body[j].rstrip()
+        m = _NUMBERED_RE.match(ln)
+        if m and int(m.group(1)) == len(numbered) + 1:
+            text = m.group(2)
+            if not text.strip():
+                return None  # an empty line: leave the definition alone
+            if text.strip() == "∇":
+                closed = True
+                j += 1
+                break
+            numbered.append((len(ln) - len(text.lstrip()), text.strip()))
+            j += 1
+            continue
+        if _CLOSE_DEL_RE.match(ln):
+            closed = True
+            j += 1
+        break
+    if not closed or not numbered:
+        return None
+    original = body[start:j]
+    if listed:
+        return original, j, None
+    header = head.group(1).rstrip()
+    texts = [t for _, t in numbered]
+    if keep_all or _refers_to_numbers(header, texts):
+        return original, j, "line-numbers"
+    # The body's own indent: the leftmost code line (labels and comments
+    # aside); deeper lines (control structures) keep their extra indent.
+    code = [c for c, t in numbered if not (_LABEL_RE.match(t) or t.startswith("⍝"))]
+    base = min(code or [c for c, _ in numbered])
+    lines = [f"      ∇ {header}" if body[start].lstrip().startswith("∇ ") else f"      ∇{header}"]
+    for col, text in numbered:
+        if _LABEL_RE.match(text):
+            lines.append("      " + text)
+        else:
+            lines.append("        " + " " * max(0, col - base) + text)
+    lines.append("      ∇")
+    return lines, j, None
+
+
+def normalise(block: Block) -> Normalised:
+    """Rewrite shy displays to ⎕← and remove typed definitions' line numbers."""
+    body: list[str] = []
+    rewrites: list[str] = []
+    plus: list[int] = []
+    keep: str | None = None
+    keep_all = any(
+        _SESSION_INDENT_RE.match(ln) and _LINE_NUMBER_QUADS_RE.search(_code_only(ln))
+        for ln in block.body
+    )
+    listed = False  # the previous definition was output
+    prev = ""  # the previous non-blank line
+    i = 0
+    while i < len(block.body):
+        raw = block.body[i]
+        if _HEADER_RE.match(raw):
+            if prev.lstrip().startswith("∇") or _NUMBERED_RE.match(prev):
+                is_listed = listed  # one listing after another (⎕VR¨)
+            else:
+                # Right after an input line it is that line's output (⎕VR,
+                # or a variable holding ⎕OR's result, say).
+                is_listed = _leading(prev) >= 6
+            done = _unnumber(block.body, i, is_listed, keep_all)
+            if done is not None:
+                lines, end, why = done
+                if lines != block.body[i:end]:
+                    if "unnumbered" not in rewrites:
+                        rewrites.append("unnumbered")
+                keep = keep or why
+                body.extend(lines)
+                prev, listed, i = block.body[end - 1], is_listed, end
+                continue
+        m = _SHY_RE.match(raw.rstrip("\r"))
+        if m:
+            if m.group("fn") == "+":
+                plus.append(len(body))
+            raw = f"{m.group('indent')}⎕←{m.group('rest')}"
+            if "shy" not in rewrites:
+                rewrites.append("shy")
+        body.append(raw)
+        if raw.strip():
+            prev = raw
+        i += 1
+    if not rewrites:
+        return Normalised(block, (), (), keep)
+    return Normalised(_with_body(block, body), tuple(rewrites), tuple(plus), keep)
+
+
+def _with_body(b: Block, body: list[str]) -> Block:
+    """`b` with another body; text and sha256 stay the original's."""
+    return Block(b.page, b.line, b.sha256, b.text, body, b.nested)
 
 
 # --- Running examples in Docker -----------------------------------------
@@ -1234,17 +1472,24 @@ def expected_outputs(block: Block, cls: Classification) -> list[list[str]]:
     for raw, role in zip(block.body, cls.roles):
         if role == "input":
             groups.append([])
+        elif role == "cont":
+            continue
         elif groups and not raw.startswith("⍝"):  # annotations are not output
             groups[-1].append(raw)
     return groups
 
 
 def _input_texts(block: Block, cls: Classification) -> list[str]:
-    return [
-        strip_indent(raw.rstrip("\r"))
-        for raw, role in zip(block.body, cls.roles)
-        if role == "input"
-    ]
+    """Each input's text without the session indent; a typed definition's
+    lines are joined with newlines (one input unit)."""
+    texts: list[str] = []
+    for raw, role in zip(block.body, cls.roles):
+        text = strip_indent(raw.rstrip("\r"))
+        if role == "input":
+            texts.append(text)
+        elif role == "cont":
+            texts[-1] += "\n" + text
+    return texts
 
 
 def _normalise(lines: list[str]) -> list[str]:
@@ -1257,7 +1502,7 @@ def _normalise(lines: list[str]) -> list[str]:
 def _session(inputs: list[str], results: list[LineResult]) -> list[str]:
     out: list[str] = []
     for text, res in zip(inputs, results):
-        out.append("      " + text)
+        out.extend("      " + ln for ln in text.split("\n"))
         out.extend(res.output)
     return out
 
@@ -1690,7 +1935,7 @@ def _units(inputs: list[str], shown: list[Shown]) -> list[str | list[str]]:
     for k, text in enumerate(inputs):
         s = at.get(k)
         if s is None:
-            units.append(text)
+            units.append(list(text.split("\n")) if "\n" in text else text)
         else:
             units.append(s.lines[0] if len(s.lines) == 1 else list(s.lines))
             units.append(s.name)
@@ -1870,7 +2115,7 @@ def _judge_page(
             prior_unrun = True
         entry = _entry(b, verdict, reason, split, cls.nbsp, proposed, actual)
         if shown:
-            entry["rewrite"] = "aplan"
+            entry["rewrites"] = ["aplan"]
             entry["defines"] = [s.name for s in shown]
         entries.append(entry)
     for i, shown in applied.items():
@@ -1925,11 +2170,19 @@ def _process_page(
     definitions proved by further runs (see "Defining shown values" in the
     design); `stats`, if given, counts accepted, rejected and unsupported.
     """
-    blocks = find_blocks(page, markdown)
-    classes = {
-        i: classify(b) for i, b in enumerate(blocks) if not b.nested
-    }
+    originals = find_blocks(page, markdown)
+    norms = [normalise(b) for b in originals]
+    blocks, classes = _normalised_page(originals, norms, set())
     run = _run_plan(blocks, classes, box, timeout, {})
+    # Prove the + rewrites (see "Normalising input" in the design): revert
+    # the ones whose line did not display the printed output, and run again.
+    reverted = _unproved_plus(blocks, classes, norms, run[0]) if box else {
+        (i, k): "not run" for i, n in enumerate(norms) for k in n.plus
+    }
+    if reverted:
+        blocks, classes = _normalised_page(originals, norms, set(reverted))
+        if box:
+            run = _run_plan(blocks, classes, box, timeout, {})
     applied: dict[int, list[Shown]] = {}
     rejected: dict[int, dict[str, str]] = {}
     if define_shown and box:
@@ -1972,9 +2225,19 @@ def _process_page(
     entries, listings, _ = _judge_page(blocks, classes, box, run, applied)
     lines = {b.line: i for i, b in enumerate(blocks)}
     for e in entries:
-        why = rejected.get(lines[e["line"]])
+        i = lines[e["line"]]
+        why = rejected.get(i)
         if why:
             e["rewrite_rejected"] = why
+        done = _applied_rewrites(originals[i], blocks[i], norms[i])
+        if done:
+            e["rewrites"] = done + e.get("rewrites", [])
+            if e["proposed"] is None:  # no split: the rewritten block as one
+                e["proposed"] = _fence("apl", [ln.rstrip("\r") for ln in blocks[i].body])
+        for (j, k), text in reverted.items():
+            if j == i:
+                key = originals[i].body[k].strip()
+                e.setdefault("rewrite_rejected", {})[key] = f"shy: + kept: {text}"
     if stats is not None:
         stats["accepted"] += sum(len(found) for found in applied.values())
         for why in rejected.values():
@@ -1982,6 +2245,69 @@ def _process_page(
                 unsupported = text.startswith("define-shown: unsupported")
                 stats["unsupported" if unsupported else "rejected"] += 1
     return entries, len(blocks), listings
+
+
+def _normalised_page(
+    originals: list[Block], norms: list[Normalised], reverted: set[tuple[int, int]]
+) -> tuple[list[Block], dict[int, Classification]]:
+    """The page's blocks as normalised, with the `reverted` (block, body
+    line) + rewrites undone, and their classifications. A block whose
+    definition keeps its numbers is not run (reason line-numbers)."""
+    blocks: list[Block] = []
+    for i, (b, n) in enumerate(zip(originals, norms)):
+        body = list(n.block.body)
+        for j, k in reverted:
+            if j == i:
+                body[k] = b.body[k]
+        blocks.append(_with_body(b, body) if body != b.body else b)
+    classes: dict[int, Classification] = {}
+    for i, b in enumerate(blocks):
+        if b.nested:
+            continue
+        cls = classify(b)
+        if norms[i].keep and cls.kind != "listing":
+            cls = dataclasses.replace(
+                cls, kind="ambiguous", reason=norms[i].keep, runnable=False
+            )
+        classes[i] = cls
+    return blocks, classes
+
+
+def _unproved_plus(
+    blocks: list[Block],
+    classes: dict[int, Classification],
+    norms: list[Normalised],
+    results: dict[int, list[LineResult]],
+) -> dict[tuple[int, int], str]:
+    """The + rewrites (block, body line) not proved, with why: the rewritten
+    line must have run without error and displayed its printed output."""
+    out: dict[tuple[int, int], str] = {}
+    for i, n in enumerate(norms):
+        cls = classes.get(i)
+        for k in n.plus:
+            if cls is None or cls.roles[k] != "input":
+                out[(i, k)] = "not an input line"
+                continue
+            idx = sum(1 for r in cls.roles[:k] if r == "input")
+            res = results.get(i, [])
+            printed = expected_outputs(blocks[i], cls)[idx]
+            if idx >= len(res):
+                out[(i, k)] = "not run"
+            elif res[idx].error or _normalise(res[idx].output) != _normalise(printed):
+                out[(i, k)] = "⎕← displays otherwise: " + " / ".join(
+                    _normalise(res[idx].output)
+                )
+    return out
+
+
+def _applied_rewrites(original: Block, block: Block, n: Normalised) -> list[str]:
+    """The rewrites in effect in `block` (some + rewrites may be undone)."""
+    done: list[str] = []
+    if "unnumbered" in n.rewrites:
+        done.append("unnumbered")
+    if any(a != o for a, o in zip(block.body, original.body) if _SHY_RE.match(o)):
+        done.append("shy")
+    return done
 
 
 def _entry(
