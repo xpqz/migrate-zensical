@@ -2637,3 +2637,56 @@ def test_apply_flags_need_apply(cb, tmp_path, capsys):
     assert _main(cb, tmp_path, "--match-only")[0] == 2
     assert _main(cb, tmp_path, "--dry-run")[0] == 2
     assert _main(cb, tmp_path, "--apply")[0] == 2  # no log yet
+
+
+# --- reading split blocks (apl + text fences) -------------------------------------
+
+
+def test_find_blocks_pairs_apl_and_text_fences(cb):
+    md = (
+        "```apl\nA←⍳3\nA\n```\n\n```text\n1 2 3\n      indented output\n```\n\n"
+        "```apl\n⍴A\n```\n\n```text\n3\n```\nProse.\n\n```apl\nB←1\n```\n"
+    )
+    a, b = cb.find_blocks("a.md", md)
+    assert a.line == 1 and a.text == md[: md.index("Prose.")]
+    assert a.body == ["      A←⍳3", "      A", "1 2 3", "      indented output", "      ⍴A", "3"]
+    assert a.roles == ("input", "input", "output", "output", "input", "output")
+    assert (b.roles, b.body) == (None, ["B←1"])  # no text fence: a plain block
+    c = cb.classify(a)
+    assert c.roles == ["input", "input", "output", "output", "input", "output"]
+    assert c.reason is None and c.runnable
+
+
+@pytest.mark.parametrize("md, n", [
+    ("```apl\n      ⍳3\n1 2 3\n```\n\n```text\nx\n```\n", 1),  # session style: not paired
+    ("```text\nx\n```\n", 0),  # a text fence alone is no block
+    ("- item\n\n  ```apl\n  ⍳3\n  ```\n\n  ```text\n  1 2 3\n  ```\n", 1),  # nested: not paired
+])
+def test_find_blocks_does_not_pair_others(cb, md, n):
+    blocks = cb.find_blocks("a.md", md)
+    assert len(blocks) == n and all(b.roles is None for b in blocks)
+
+
+def test_find_blocks_split_run_stops_at_a_session_block(cb):
+    md = "```apl\n⍳3\n```\n\n```text\n1 2 3\n```\n```apl\n      ⍴M\n2 3\n```\n"
+    a, b = cb.find_blocks("a.md", md)
+    assert a.roles is not None and b.roles is None and b.line == 8
+
+
+def test_applied_page_reads_back_as_already_split(cb, tmp_path):
+    rc, text = _applied(cb, tmp_path, ["apply"] * 3, ["match"] * 3)
+    assert rc == 0 and "```text" in text
+    _, log = _main(cb, tmp_path, "--no-run")
+    _, entries = cb.read_log(log)
+    # the last two blocks had only a blank line between them: one split run now
+    assert [(e["split"], e["proposed"]) for e in entries] == [("already", None)] * 2
+    rc, again = _main(cb, tmp_path, "--apply", "--match-only")
+    assert (tmp_path / "docs" / "g" / "a.md").read_text(encoding="utf-8") == text
+
+
+def test_split_block_rewrite_still_proposed(cb, tmp_path):
+    _docs(tmp_path, {"a.md": "```apl\n⊢A←1\n```\n\n```text\n1\n```\n"})
+    _, log = _main(cb, tmp_path, "--no-run")
+    _, (e,) = cb.read_log(log)
+    assert e["rewrites"] == ["shy"] and e["split"] == "unambiguous"
+    assert e["proposed"] == "```apl\n⎕←A←1\n```\n\n```text\n1\n```\n"

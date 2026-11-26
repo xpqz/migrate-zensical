@@ -86,5 +86,6 @@ uv run python tools/cutover/code-blocks.py --apply --log code-blocks.yml [--matc
 ```
 
 `zensical/docs` is regenerated from the source by `convert.py --regenerate`, which discards applied
-changes; apply as the last step of the cutover. The options, the log's fields and every verdict, reason and split value are described in
+changes; apply as the last step of the cutover. Applied pages read back: an `apl` fence followed by a `text` fence is
+one block (split `already`), so the tool can check them again. The options, the log's fields and every verdict, reason and split value are described in
 the module docstring.

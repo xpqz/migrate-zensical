@@ -515,6 +515,23 @@ the entry's line whose text has the entry's sha256; otherwise it is left
 alone and reported as stale (exit status 1). Pages are written atomically.
 `--apply` runs nothing and leaves the log alone.
 
+### Reading split blocks
+
+User request (2026-11-26): pages already split (by `--apply`) are read
+back. A top-level `apl` fence whose first non-blank line is not indented,
+followed by a `text` fence with only blank lines between, and further
+`apl`/`text` fences alternating the same way (a later `apl` fence joins
+only if it is not indented either), is one block: `apl` lines are input
+(placed at the six-space indent), `text` lines output, whatever their
+indent, and the block spans from the first fence to the last. Rules that
+read roles from indentation (`indent`, `indented-output`, comment
+continuations, re-indenting) do not apply to it. Its split is `already`
+and it has no proposal, unless a rewrite changes it. Two applied blocks
+with only blank lines between them read as one. A lone `apl` fence (an
+applied block with no output) cannot be told from a code listing; it is a
+listing and does not run, so later blocks that need its definitions may
+become `dependency`.
+
 ## The log
 
 One YAML file (`pyyaml` is already a dependency), one entry per session or

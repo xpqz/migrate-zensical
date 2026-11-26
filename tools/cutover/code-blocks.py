@@ -38,6 +38,14 @@ otherwise it is left alone and reported as stale (exit status 1). Pages are
 written atomically; --dry-run writes nothing and reports what would change.
 --apply never runs examples and does not touch the log.
 
+Split blocks: a top-level apl fence whose first line is not indented,
+followed (blank lines aside) by a text fence, and so on alternating, is
+read as one block, the form --apply writes: apl lines are input, text
+lines output, whatever their indent. Such a block is judged like any
+other; its split is `already`, unless a rewrite changes it. A lone apl
+fence (an applied block with no output) reads as a listing and does not
+run.
+
 Docker: Docker must be running; without it the tool says so on stderr and
 runs as --no-run. The default image is built from docker/Dockerfile next to
 this file (Dyalog 21.0, pinned by digest, plus the .NET runtime) and tagged
@@ -150,6 +158,8 @@ Splits:
     unambiguous  every line's role is clear without running it
     ambiguous    the roles are uncertain; no proposal (reason says why)
     none         nothing to split (a nested block)
+    already      split in the page already (below); a proposal only if a
+                 rewrite changes it
 
 Normalising input (always on; see the design): an input line showing a shy
 result with monadic +, ⊢ or ⊣ on an assignment (+A←⍳5) uses ⎕← instead
@@ -258,12 +268,62 @@ class Block:
     line: int  # 1-based line of the opening fence
     sha256: str  # hex of `text` as UTF-8
     text: str  # opening to closing fence inclusive, newline-terminated
-    body: list[str]  # lines between the fences
+    body: list[str]  # lines between the fences (a split block: see below)
     nested: bool  # opening fence is indented
+    # A split block (an apl fence followed by text fences, as --apply writes
+    # them) has a role for each body line taken from its fence ("input",
+    # "output" or "blank"); its body is the session it stands for: apl lines
+    # at the six-space indent, text lines as they are. None otherwise.
+    roles: tuple[str, ...] | None = None
+
+
+def _fence_at(lines: list[str], i: int) -> tuple[str, str, int] | None:
+    """(indent, info, closing line) of the closed fence opening at line i."""
+    m = OPEN_RE.match(lines[i])
+    if not m or (m[2][0] == "`" and "`" in m[3]):
+        return None
+    fence = m[2]
+    close = re.compile(rf"^\s*{re.escape(fence[0])}{{{len(fence)},}}\s*$")
+    end = next((j for j in range(i + 1, len(lines)) if close.match(lines[j])), None)
+    return None if end is None else (m[1], m[3].strip(), end)
+
+
+def _session_style(body: list[str]) -> bool:
+    """An apl fence in session style: its first non-blank line is indented."""
+    first = next((ln for ln in body if ln.strip()), "")
+    return first[:1].isspace()
+
+
+def _split_run(lines: list[str], i: int, end: int) -> list[tuple[int, int, str]]:
+    """The fences of a split block starting with the apl fence at i..end:
+    apl and text fences alternating, separated by blank lines only, at least
+    one text fence; the apl fence's first line is not indented (a session
+    block's input is). Empty if it is not one."""
+    if _session_style(lines[i + 1 : end]):
+        return []
+    run = [(i, end, "apl")]
+    expect, j = "text", end + 1
+    while True:
+        k = j
+        while k < len(lines) and not lines[k].strip():
+            k += 1
+        found = _fence_at(lines, k) if k < len(lines) else None
+        if found is None or found[0] or found[1] != expect:
+            break
+        if expect == "apl" and _session_style(lines[k + 1 : found[2]]):
+            break  # an unsplit session block next to it
+        run.append((k, found[2], expect))
+        expect, j = ("apl" if expect == "text" else "text"), found[2] + 1
+    return run if any(tag == "text" for _, _, tag in run) else []
 
 
 def find_blocks(page: str, markdown: str) -> list[Block]:
-    """Return every closed fence whose info string is exactly `apl`."""
+    """Return every closed fence whose info string is exactly `apl`.
+
+    A top-level apl fence followed by text fences (alternating apl and
+    text, blank lines between) is one split block spanning them all: the
+    form --apply writes. Its roles come from the fences.
+    """
     # Split on "\n" only: U+2028, \x85, \f and a lone "\r" stay inside lines,
     # so `text` and `sha256` carry the file's exact characters.
     lines = markdown.split("\n")
@@ -281,6 +341,29 @@ def find_blocks(page: str, markdown: str) -> list[Block]:
         end = next((j for j in range(i + 1, len(lines)) if close.match(lines[j])), None)
         if end is None:
             i += 1
+            continue
+        run = _split_run(lines, i, end) if info == "apl" and not indent else []
+        if run:
+            last = run[-1][1]
+            text = "\n".join(lines[i : last + 1]) + "\n"
+            body: list[str] = []
+            roles: list[str] = []
+            for start, stop, tag in run:
+                for ln in lines[start + 1 : stop]:
+                    if not ln.strip():
+                        body.append("")
+                        roles.append("blank")
+                    elif tag == "apl":
+                        body.append("      " + ln)
+                        roles.append("input")
+                    else:
+                        body.append(ln)
+                        roles.append("output")
+            blocks.append(
+                Block(page, i + 1, hashlib.sha256(text.encode()).hexdigest(), text,
+                      body, False, tuple(roles))
+            )
+            i = last + 1
             continue
         if info == "apl":
             text = "\n".join(lines[i : end + 1]) + "\n"
@@ -337,10 +420,13 @@ def _leading(line: str) -> int:
 def classify(block: Block) -> Classification:
     # "\r" (CRLF files) counts as trailing whitespace.
     lines = [ln.rstrip() for ln in block.body]
+    split = block.roles is not None
     roles: list[Role] = []
-    for ln in lines:
+    for k, ln in enumerate(lines):
         if not ln:
             roles.append("blank")
+        elif split:
+            roles.append("input" if block.roles[k] == "input" else "output")  # type: ignore[index]
         elif _SESSION_INDENT_RE.match(ln):
             roles.append("input")
         else:
@@ -362,7 +448,10 @@ def classify(block: Block) -> Classification:
     for i, ln in enumerate(lines):
         if not ln:
             continue
-        if roles[i] == "output" and prev == "input" and _leading(ln) > 6 and ln.lstrip(_WS).startswith("⍝"):
+        if (
+            not split and roles[i] == "output" and prev == "input"
+            and _leading(ln) > 6 and ln.lstrip(_WS).startswith("⍝")
+        ):
             roles[i] = "input"
         prev = roles[i]
     typed = _mark_definitions(lines, roles)
@@ -405,9 +494,9 @@ def classify(block: Block) -> Classification:
         reason, runnable = "del-definition", False
     elif any(_SCRIPT_RE.match(ln) for ln in lines):
         reason, runnable = "script", False
-    elif any(lines[i] and _leading(lines[i]) for i in range(first)):
+    elif not split and any(lines[i] and _leading(lines[i]) for i in range(first)):
         reason, runnable = "indent", False
-    elif any(
+    elif not split and any(
         r == "output" and i not in triple and _leading(ln) >= 6
         for i, (ln, r) in enumerate(zip(lines, roles))
     ):
@@ -455,7 +544,7 @@ class SplitError(ValueError):
 
 def split_kind(
     cls: Classification, verdict: str | None, reason: str | None = None
-) -> Literal["confirmed", "unambiguous", "ambiguous", "none"]:
+) -> Literal["confirmed", "unambiguous", "ambiguous", "none", "already"]:
     if cls.kind == "listing":
         return "none"
     if cls.kind == "ambiguous" and not cls.runnable:
@@ -750,7 +839,7 @@ def normalise(block: Block, page: str = "") -> Normalised:
 
 def _with_body(b: Block, body: list[str]) -> Block:
     """`b` with another body; text and sha256 stay the original's."""
-    return Block(b.page, b.line, b.sha256, b.text, body, b.nested)
+    return Block(b.page, b.line, b.sha256, b.text, body, b.nested, b.roles)
 
 
 # --- Running examples in Docker -----------------------------------------
@@ -2071,6 +2160,7 @@ def _rewritten(b: Block, cls: Classification, shown: list[Shown]) -> Block:
     rewrite when judging and splitting (_proposal restores the line breaks)."""
     at = {s.line: s for s in shown}
     body: list[str] = []
+    hint: list[str] = []
     k = -1
     drop = False
     for raw, role in zip(b.body, cls.roles):
@@ -2080,8 +2170,12 @@ def _rewritten(b: Block, cls: Classification, shown: list[Shown]) -> Block:
             body.append("      " + at[k].oneline if drop else raw)
         elif not drop:
             body.append(raw)
+        else:
+            continue
+        hint.append("input" if role in ("input", "cont") else role)
     text = "```apl\n" + "".join(ln + "\n" for ln in body) + "```\n"
-    return Block(b.page, b.line, b.sha256, text, body, b.nested)
+    roles = tuple(hint) if b.roles is not None else None
+    return Block(b.page, b.line, b.sha256, text, body, b.nested, roles)
 
 
 def _proposal(b: Block, cls: Classification, shown: list[Shown]) -> str:
@@ -2213,11 +2307,17 @@ def _judge_page(
                 failed[(i, s.name)] = why
         split = split_kind(jcls, verdict, reason)
         proposed = None
+        if b.roles is not None and jcls.runnable:
+            # Already split in the page: the fences say which line is which.
+            # A proposal remains only where a rewrite changes the block.
+            split = "confirmed" if verdict == "match" else "unambiguous"
         if split in ("confirmed", "unambiguous"):
             try:
                 proposed = _proposal(jb, jcls, shown)
             except SplitError:
                 split, reason, proposed = "ambiguous", "split-check", None
+        if b.roles is not None and (proposed is None or _fences(proposed) == _fences(b.text)):
+            split, proposed = "already", None
         if (cls.kind == "ambiguous" and not cls.runnable) or verdict == "not-run":
             prior_unrun = True
         entry = _entry(b, verdict, reason, split, cls.nbsp, proposed, actual)
@@ -2554,8 +2654,8 @@ def _try_reindent(
         tried = e["verdict"] == "differs" or (
             e["verdict"] == "not-run" and e["reason"] in ("suspect-input", "error")
         )
-        if not tried or cls is None or not cls.runnable:
-            continue
+        if not tried or cls is None or not cls.runnable or blocks[i].roles is not None:
+            continue  # (a split block's fences settle every line's role)
         idx, code = _reindent_candidates(blocks[i], cls)
         if code:
             doubtful.add(i)
