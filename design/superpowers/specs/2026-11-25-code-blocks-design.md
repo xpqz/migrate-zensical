@@ -325,7 +325,10 @@ Docker) every `+` stays, so a later run's proposal differs and resets
 decisions on those blocks. Unproved `+` rewrites (including
 lines that did not run) are reverted, and the page runs again without the
 hidden checks; the entry's `rewrite_rejected` says why, keyed by the
-original line.
+original line. With `--define-shown`, a `+` rewrite whose `⎕←` line
+failed (a name the page shows but never defines, say) is proved again in a
+run with the accepted definitions, by display alone; the definitions must
+still pass their own proof in that run.
 
 The display style (`]box` setting) is taken from the output of ordinary
 lines only: `]display` and `]disp` draw their own boxes.

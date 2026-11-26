@@ -2323,6 +2323,18 @@ def _process_page(
                         "not proved: another definition on the page failed"
                     )
             applied = {}
+    if applied and box:
+        # + rewrites that failed may only lack a value --define-shown now
+        # defines: prove them again in a run with the definitions.
+        retry = {k for k, why in reverted.items() if why.startswith("the ⎕← line fails")}
+        proved = _reprove_plus(
+            originals, norms, set(reverted), retry, box, timeout, applied
+        )
+        if proved:
+            for k in proved:
+                del reverted[k]
+            blocks, classes = _normalised_page(originals, norms, set(reverted))
+            run = _run_plan(blocks, classes, box, timeout, applied)
     entries, listings, _ = _judge_page(blocks, classes, box, run, applied)
     lines = {b.line: i for i, b in enumerate(blocks)}
     for e in entries:
@@ -2582,6 +2594,40 @@ def _moved_lines_shown(
             return False
         shown = shown or bool(_normalise(res[idx].output))
     return shown
+
+
+def _reprove_plus(
+    originals: list[Block],
+    norms: list[Normalised],
+    reverted: set[tuple[int, int]],
+    retry: set[tuple[int, int]],
+    box: "Sandbox",
+    timeout: float,
+    applied: dict[int, list["Shown"]],
+) -> set[tuple[int, int]]:
+    """The `retry` + rewrites (block, body line) proved in a run with the
+    page's accepted definitions: the ⎕← line ran without error and
+    displayed exactly its printed output. The definitions must still pass
+    their own proof in that run, else none is proved."""
+    if not retry:
+        return set()
+    blocks, classes = _normalised_page(originals, norms, reverted - retry)
+    run = _run_plan(blocks, classes, box, timeout, applied)
+    if _judge_page(blocks, classes, box, run, applied)[2]:
+        return set()
+    proved: set[tuple[int, int]] = set()
+    for i, k in retry:
+        cls = classes.get(i)
+        res = run[0].get(i)
+        if cls is None or res is None or cls.roles[k] != "input":
+            continue
+        if applied.get(i):
+            res = _unhide(res, applied[i])[0]
+        idx = sum(1 for r in cls.roles[:k] if r == "input")
+        printed = expected_outputs(blocks[i], cls)[idx]
+        if idx < len(res) and not res[idx].error and _normalise(res[idx].output) == _normalise(printed):
+            proved.add((i, k))
+    return proved
 
 
 def _applied_rewrites(original: Block, block: Block, n: Normalised) -> list[str]:

@@ -2551,3 +2551,17 @@ def test_main_reindent_proved_by_the_moved_lines(cb, tmp_path):
 def test_reindent_candidates_skip_function_listings(cb):
     b, c = _block(cb, "      ⎕VR'FOO'", "     ∇ R←FOO", "[1]    R←10", "     ∇", "      1", "1")
     assert cb._reindent_candidates(b, c) == ([], False)
+
+
+@needs_docker
+def test_define_shown_lets_a_failed_plus_rewrite_be_proved(cb, tmp_path):
+    md = "```apl\n      A\n1 2 3 4 5\n\n      +A[2 4]+←1\n1\n\n      A\n1 3 3 5 5\n```\n"
+    _docs(tmp_path, {"a.md": md})
+    _, log = _main(cb, tmp_path)
+    _, (e,) = cb.read_log(log)
+    assert "rewrites" not in e and "the ⎕← line fails" in e["rewrite_rejected"]["+A[2 4]+←1"]
+    _, log = _main(cb, tmp_path, "--define-shown")
+    _, (e,) = cb.read_log(log)
+    assert (e["verdict"], e["rewrites"], e.get("rewrite_rejected")) == (
+        "match", ["shy", "aplan"], None)
+    assert "⎕←A[2 4]+←1" in e["proposed"] and "A←1 2 3 4 5" in e["proposed"]
