@@ -316,8 +316,13 @@ and may fail on some values, so its rewrite needs proof: the rewritten
 line ran without error and either displayed exactly the printed output or,
 when the target is a plain name N, a hidden check run after it,
 `{0::¯1 ⋄ ⍵≡+⍵}N`, gives 1 (conjugate leaves the value unchanged) or ¯1
-(conjugate fails on it); either way `⎕←` displays what `+` was meant to
-show. 0 (complex numbers) keeps the `+`. Unproved `+` rewrites (including
+(conjugate fails on it, unless the printed output shows an error); either
+way `⎕←` displays what `+` was meant to show. 0 (complex numbers) keeps
+the `+`. There is no hidden check for a line with statements after a
+top-level `⋄` (they may change N). The input line repeated after an error
+message is output and is not rewritten. Without a run (`--no-run`, no
+Docker) every `+` stays, so a later run's proposal differs and resets
+decisions on those blocks. Unproved `+` rewrites (including
 lines that did not run) are reverted, and the page runs again without the
 hidden checks; the entry's `rewrite_rejected` says why, keyed by the
 original line.
@@ -341,13 +346,15 @@ loses its numbers (layout A, chosen by the user):
 The header and closing `∇` sit at the six-space indent, the header text
 unchanged after the `∇`; body lines at eight spaces, label lines
 (`NAME:…`) at six. A definition is output, not typed, when it follows
-(blank lines aside) an input line that uses `⎕VR`, `⎕NR`, `⎕CR` or `⎕OR`,
-or another such definition: Dyalog prints those numbers, so they stay. A
-definition keeps its numbers, with reason `line-numbers` (not-run), when
-its text refers to them: a branch whose expression contains a number
-other than 0 (`→4`), the function's name followed by `[n]` in the body
-(`'F[1]'`), or any input line of the block using `⎕STOP`, `⎕TRACE`,
-`⎕MONITOR` or `⎕LC`. Numbered lines without a header (a fragment), or
+(blank lines aside) any input line (`⎕VR'F'`, a variable holding `⎕OR`'s
+result, the editor line `∇F∇`) or another such definition: Dyalog prints
+those numbers, so they stay. A definition keeps its numbers, with reason
+`line-numbers` (not-run), when anything refers to them: a branch whose
+expression contains a number other than 0 (`→4`), the function's name
+followed by `[n]` anywhere on the page (`'F[1]'` in the body, `#.F[7]` in
+output, `F[2]` in the prose), or any line of the block using `⎕STOP`,
+`⎕TRACE`, `⎕MONITOR` or `⎕LC`. Nested blocks (in a list) are not
+normalised. Numbered lines without a header (a fragment), or
 numbers that do not run 1, 2, 3, …, stay as they are (`del-definition`).
 
 **Running typed definitions.** A typed definition without numbers

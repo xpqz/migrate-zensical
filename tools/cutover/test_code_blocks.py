@@ -2402,3 +2402,66 @@ def test_main_plus_rewrite_proved_by_the_hidden_check(cb, tmp_path):
     # output was not the conjugate, and ⎕← shows it: proved by display
     assert c["rewrite_rejected"] == {"+C←1J2 3": "shy: + kept: conjugate changes the value"}
     assert "+C←1J2 3" in c["proposed"] and "⎕←D←1J2" in c["proposed"]
+
+
+# --- review fixes: normalising -------------------------------------------------
+
+
+def test_normalise_definition_after_editor_line_is_left(cb):
+    lines = ["      ∇foo∇", "     ∇ foo;local", "[1]    global", "     ∇"]
+    n = _norm(cb, *lines)
+    assert n.rewrites == () and n.block.body == lines
+
+
+def test_normalise_line_count_quad_in_body_keeps_numbers(cb):
+    lines = ["     ∇ Foo", "[1]    :If 4=⍴⎕LC", "[2]        Foo", "[3]    :EndIf", "     ∇"]
+    assert _norm(cb, *lines).keep == "line-numbers"
+
+
+def test_normalise_page_citing_numbers_keeps_them(cb):
+    md = "```apl\n     ∇ NewFile\n[1]    1\n     ∇\n```\n\nThe error in `NewFile[1]` …\n"
+    (b,) = cb.find_blocks("a.md", md)
+    assert cb.normalise(b, md).keep == "line-numbers"
+    assert cb.normalise(b, md.replace("NewFile[1]", "NewFile")).rewrites == ("unnumbered",)
+    md2 = md.replace("The error in `NewFile[1]` …", "```apl\n      x\n#.NewFile[1]\n```")
+    assert cb.normalise(cb.find_blocks("a.md", md2)[0], md2).keep == "line-numbers"
+
+
+def test_normalise_skips_nested_blocks_and_echoed_error_lines(cb):
+    md = "1. item\n\n   ```apl\n         ⊢A←1\n   1\n   ```\n"
+    (b,) = cb.find_blocks("a.md", md)
+    assert b.nested and cb.normalise(b, md).rewrites == ()
+    n = _norm(cb, "      +A←⍳'a'", "DOMAIN ERROR", "      +A←⍳'a'", "       ∧")
+    assert n.block.body[2] == "      +A←⍳'a'"  # the echo stays as printed
+    assert n.block.body[0] == "      ⎕←A←⍳'a'"
+
+
+def test_function_name_strand_argument_is_not_an_operator(cb):
+    assert cb._function_name("foo(ev arg)") == "foo"
+    assert cb._function_name("R←(F OP G) X") == "OP"
+
+
+def test_classify_closing_del_must_be_at_the_session_indent(cb):
+    _, c = _block(cb, "      ∇ R←F X", "        R←X", "∇", "      F 1", "1")
+    assert (c.reason, c.runnable) == ("del-definition", False)
+
+
+def test_plus_check_skipped_for_diamond_lines(cb):
+    md = "```apl\n      +A←1J2 ⋄ A←1\n1J¯2\n```\n"
+    (b,) = cb.find_blocks("a.md", md)
+    n = cb.normalise(b, md)
+    blocks, classes = cb._normalised_page([b], [n], set())
+    assert n.plus == (0,) and cb._plus_checks(blocks, classes, [n]) == {}
+
+
+def test_unproved_plus_error_shown_on_page_is_not_hidden(cb):
+    md = "```apl\n      +A←⎕NS''\nDOMAIN ERROR\n      +A←⎕NS''\n      ∧\n```\n"
+    (b,) = cb.find_blocks("a.md", md)
+    n = cb.normalise(b, md)
+    blocks, classes = cb._normalised_page([b], [n], set())
+    checks = cb._plus_checks(blocks, classes, [n])
+    res = {0: [cb.LineResult(["#.[Namespace]"], False, None), cb.LineResult(["¯1"], False, None)]}
+    assert cb._unproved_plus(blocks, classes, [n], res, checks) == {
+        (0, 0): "⎕← displays otherwise: #.[Namespace]"}
+    res[0][1] = cb.LineResult(["1"], False, None)
+    assert cb._unproved_plus(blocks, classes, [n], res, checks) == {}

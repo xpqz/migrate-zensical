@@ -400,7 +400,7 @@ def _mark_definitions(lines: list[str], roles: list[Role]) -> set[int]:
                 j = len(lines)
                 break
             j += 1
-        if j < len(lines) and _CLOSE_DEL_RE.match(lines[j]):
+        if j < len(lines) and _CLOSE_DEL_RE.match(lines[j]) and _leading(lines[j]) >= 6:
             for k in range(i + 1, j + 1):
                 roles[k] = "cont"
             headers.add(i)
@@ -561,9 +561,11 @@ def _function_name(header: str) -> str | None:
     h = header.split(";")[0].replace("{", " ").replace("}", " ").strip()
     if "←" in h:
         h = h.split("←", 1)[1].strip()
-    if m := re.search(r"\(([^)]*)\)", h):  # an operator: (F OP G) or (F OP)
+    m = re.search(r"\(([^)]*)\)(.*)$", h)
+    if m and m.group(2).strip():  # an operator: (F OP G) X or (F OP) X
         parts = m.group(1).split()
         return parts[1] if len(parts) >= 2 else None
+    h = h.split("(")[0]  # foo(ev arg): a function taking a strand
     parts = h.split()
     if len(parts) == 1:
         return parts[0]
@@ -574,9 +576,12 @@ def _function_name(header: str) -> str | None:
     return None
 
 
-def _refers_to_numbers(header: str, body: list[str]) -> bool:
-    """The definition's text refers to its own line numbers."""
+def _refers_to_numbers(header: str, body: list[str], page: str = "") -> bool:
+    """The definition's text, or the rest of its page (prose, other
+    output), refers to its line numbers: NAME[n] anywhere on the page."""
     name = _function_name(header)
+    if name and re.search(rf"(?<![\w∆⍙_]){re.escape(name)}\[\d+\]", page):
+        return True
     for text in body:
         code = _code_only(text)
         for stmt in code.split("⋄"):
@@ -590,7 +595,7 @@ def _refers_to_numbers(header: str, body: list[str]) -> bool:
 
 
 def _unnumber(
-    body: list[str], start: int, listed: bool, keep_all: bool
+    body: list[str], start: int, listed: bool, keep_all: bool, page: str = ""
 ) -> tuple[list[str], int, str | None] | None:
     """Rewrite the ∇ definition whose header is body[start].
 
@@ -632,7 +637,7 @@ def _unnumber(
         return original, j, None
     header = head.group(1).rstrip()
     texts = [t for _, t in numbered]
-    if keep_all or _refers_to_numbers(header, texts):
+    if keep_all or _refers_to_numbers(header, texts, page):
         return original, j, "line-numbers"
     # The body's own indent: the leftmost code line (labels and comments
     # aside); deeper lines (control structures) keep their extra indent.
@@ -648,15 +653,21 @@ def _unnumber(
     return lines, j, None
 
 
-def normalise(block: Block) -> Normalised:
-    """Rewrite shy displays to ⎕← and remove typed definitions' line numbers."""
+def normalise(block: Block, page: str = "") -> Normalised:
+    """Rewrite shy displays to ⎕← and remove typed definitions' line numbers.
+
+    `page` is the page's markdown: a definition whose name appears with a
+    line number anywhere on it (NAME[n]) keeps its numbers. Nested blocks
+    are left alone.
+    """
+    if block.nested:
+        return Normalised(block, (), (), None)
     body: list[str] = []
     rewrites: list[str] = []
     plus: list[int] = []
     keep: str | None = None
     keep_all = any(
-        _SESSION_INDENT_RE.match(ln) and _LINE_NUMBER_QUADS_RE.search(_code_only(ln))
-        for ln in block.body
+        _LINE_NUMBER_QUADS_RE.search(_code_only(ln)) for ln in block.body
     )
     listed = False  # the previous definition was output
     prev = ""  # the previous non-blank line
@@ -664,13 +675,13 @@ def normalise(block: Block) -> Normalised:
     while i < len(block.body):
         raw = block.body[i]
         if _HEADER_RE.match(raw):
-            if prev.lstrip().startswith("∇") or _NUMBERED_RE.match(prev):
+            if _CLOSE_DEL_RE.match(prev) or _NUMBERED_RE.match(prev):
                 is_listed = listed  # one listing after another (⎕VR¨)
             else:
                 # Right after an input line it is that line's output (⎕VR,
                 # or a variable holding ⎕OR's result, say).
                 is_listed = _leading(prev) >= 6
-            done = _unnumber(block.body, i, is_listed, keep_all)
+            done = _unnumber(block.body, i, is_listed, keep_all, page)
             if done is not None:
                 lines, end, why = done
                 if lines != block.body[i:end]:
@@ -681,6 +692,8 @@ def normalise(block: Block) -> Normalised:
                 prev, listed, i = block.body[end - 1], is_listed, end
                 continue
         m = _SHY_RE.match(raw.rstrip("\r"))
+        if m and _ERROR_RE.match(prev):
+            m = None  # the input echoed after an error message is output
         if m:
             if m.group("fn") == "+":
                 plus.append(len(body))
@@ -2190,7 +2203,7 @@ def _process_page(
     design); `stats`, if given, counts accepted, rejected and unsupported.
     """
     originals = find_blocks(page, markdown)
-    norms = [normalise(b) for b in originals]
+    norms = [normalise(b, markdown) for b in originals]
     blocks, classes = _normalised_page(originals, norms, set())
     checks = _plus_checks(blocks, classes, norms)
     run = _run_plan(blocks, classes, box, timeout, {}, checks)
@@ -2248,7 +2261,7 @@ def _process_page(
         i = lines[e["line"]]
         why = rejected.get(i)
         if why:
-            e["rewrite_rejected"] = why
+            e["rewrite_rejected"] = dict(why)
         done = _applied_rewrites(originals[i], blocks[i], norms[i])
         if done:
             e["rewrites"] = done + e.get("rewrites", [])
@@ -2257,7 +2270,12 @@ def _process_page(
         for (j, k), text in reverted.items():
             if j == i:
                 key = originals[i].body[k].strip()
-                e.setdefault("rewrite_rejected", {})[key] = f"shy: + kept: {text}"
+                kept = e.setdefault("rewrite_rejected", {})
+                base, n = key, 1
+                while key in kept:  # the same line twice in a block
+                    n += 1
+                    key = f"{base} ({n})"
+                kept[key] = f"shy: + kept: {text}"
     if stats is not None:
         stats["accepted"] += sum(len(found) for found in applied.values())
         for why in rejected.values():
@@ -2310,8 +2328,9 @@ def _plus_checks(
         for k in n.plus:
             if cls is None or cls.roles[k] != "input":
                 continue
-            m = _PLAIN_TARGET_RE.match(strip_indent(blocks[i].body[k]))
-            if m:
+            text = strip_indent(blocks[i].body[k])
+            m = _PLAIN_TARGET_RE.match(text)
+            if m and not _top_level_diamond(text):  # NAME may change later on the line
                 idx = sum(1 for r in cls.roles[:k] if r == "input")
                 out.setdefault(i, {})[idx] = _PLUS_CHECK.format(m.group(1))
     return out
@@ -2355,7 +2374,8 @@ def _unproved_plus(
                 continue
             check = res[pos + 1] if idx in hidden and pos + 1 < len(res) else None
             got = _normalise(check.output) if check and not check.error else None
-            if got in (["1"], ["¯1"]):
+            shows_error = any(_ERROR_RE.match(ln.rstrip()) for ln in printed)
+            if got == ["1"] or (got == ["¯1"] and not shows_error):
                 continue
             out[(i, k)] = (
                 "conjugate changes the value" if got == ["0"]
