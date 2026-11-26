@@ -2465,3 +2465,32 @@ def test_unproved_plus_error_shown_on_page_is_not_hidden(cb):
         (0, 0): "⎕← displays otherwise: #.[Namespace]"}
     res[0][1] = cb.LineResult(["1"], False, None)
     assert cb._unproved_plus(blocks, classes, [n], res, checks) == {}
+
+
+# --- re-indenting likely input lines --------------------------------------------
+
+
+def test_reindent_candidates_only_between_input_lines(cb):
+    b, c = _block(
+        cb, "      A←1", "     A+←1", "", "    A+←1", "      A", " 3", "     4",
+    )
+    assert cb._reindent_candidates(b, c) == [1, 3]  # " 3" and "     4" end the block
+    b, c = _block(cb, "      ⍳3", "     1 2 3", "      2", "2")
+    assert cb._reindent_candidates(b, c) == [1]  # tried; kept only if the block matches
+    b, c = _block(cb, "      ⍳3", "1 2 3", "     x", "      2")
+    assert cb._reindent_candidates(b, c) == []  # output before it
+
+
+@needs_docker
+def test_main_reindents_a_differing_block_only_when_it_then_matches(cb, tmp_path):
+    md = (
+        "```apl\n      MAT←2 2⍴⍳4\n     MAT[1;1]←9\n      MAT\n9 2\n3 4\n```\n\n"
+        "```apl\n      ⍳3\n     1 2 3\n      2\n2\n```\n"
+    )
+    _docs(tmp_path, {"a.md": md})
+    _, log = _main(cb, tmp_path)
+    _, (a, b) = cb.read_log(log)
+    assert (a["verdict"], a["split"], a["rewrites"]) == ("match", "confirmed", ["reindented"])
+    assert a["proposed"] == "```apl\nMAT←2 2⍴⍳4\nMAT[1;1]←9\nMAT\n```\n\n```text\n9 2\n3 4\n```\n"
+    assert a["original"].count("     MAT[1;1]←9\n") == 1
+    assert (b["verdict"], b.get("rewrites")) == ("differs", None)

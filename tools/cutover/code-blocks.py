@@ -145,7 +145,12 @@ A typed definition without numbers runs as one input unit, fixed with ⎕FX,
 displaying nothing (DEFN ERROR if it does not fix). The rewritten block is
 what runs and what `proposed` shows (as one apl block when there is no
 split); entries list the rewrites applied in `rewrites` (shy, unnumbered,
-and aplan, below).
+reindented and aplan, below). Re-indenting: when a block differs, a run of
+lines read as output that sits between two input lines (blank lines aside)
+and is indented 1 to 8 spaces but not 6 may be input typed at the wrong
+indent; those lines are moved to the six-space indent and the page runs
+again, and the change is kept (reindented) only for blocks that then
+match (the kept ones are proved once more).
 
 Defining shown values (--define-shown, off by default): a block often shows
 a variable's value (an input line that is just the name, then the value)
@@ -2216,6 +2221,9 @@ def _process_page(
         }
         blocks, classes = _normalised_page(originals, norms, set(reverted))
         run = _run_plan(blocks, classes, box, timeout, {})
+    reindented: set[int] = set()
+    if box:
+        blocks, classes, run, reindented = _try_reindent(blocks, classes, box, timeout, run)
     applied: dict[int, list[Shown]] = {}
     rejected: dict[int, dict[str, str]] = {}
     if define_shown and box:
@@ -2263,6 +2271,8 @@ def _process_page(
         if why:
             e["rewrite_rejected"] = dict(why)
         done = _applied_rewrites(originals[i], blocks[i], norms[i])
+        if i in reindented:
+            done.append("reindented")
         if done:
             e["rewrites"] = done + e.get("rewrites", [])
             if e["proposed"] is None:  # no split: the rewritten block as one
@@ -2382,6 +2392,78 @@ def _unproved_plus(
                 else "⎕← displays otherwise: " + " / ".join(shown)
             )
     return out
+
+
+def _reindent_candidates(b: Block, cls: Classification) -> list[int]:
+    """Body lines read as output that may be input typed at the wrong indent:
+    a run of lines indented 1 to 8 spaces but not 6, between two input lines
+    (blank lines aside), with no other output in between."""
+    seq = [
+        (k, raw, role) for k, (raw, role) in enumerate(zip(b.body, cls.roles))
+        if role != "blank"
+    ]
+    out: list[int] = []
+    run: list[int] = []
+    after_input = False
+    for k, raw, role in seq:
+        lead = _leading(raw)
+        if role == "output" and after_input and 1 <= lead <= 8 and lead != 6:
+            run.append(k)
+            continue
+        if role in ("input", "cont"):
+            out.extend(run)  # the run is followed by input: wedged between
+            after_input = True
+        else:
+            after_input = False
+        run = []
+    return out
+
+
+def _try_reindent(
+    blocks: list[Block],
+    classes: dict[int, Classification],
+    box: "Sandbox",
+    timeout: float,
+    run: tuple[dict[int, list[LineResult]], str | None, set[int], dict[int, int]],
+) -> tuple[
+    list[Block],
+    dict[int, Classification],
+    tuple[dict[int, list[LineResult]], str | None, set[int], dict[int, int]],
+    set[int],
+]:
+    """Re-indent likely input lines of blocks that differ (see
+    _reindent_candidates) to six spaces, and keep it for the blocks that
+    then match. The page runs with all trials; blocks that do not match are
+    dropped and the rest proved once more. Returns the page's blocks,
+    classes and run (unchanged if nothing is kept) and the kept blocks."""
+    entries = _judge_page(blocks, classes, box, run, {})[0]
+    at = {b.line: i for i, b in enumerate(blocks)}
+    trial: dict[int, Block] = {}
+    for e in entries:
+        i = at[e["line"]]
+        cls = classes.get(i)
+        if e["verdict"] != "differs" or cls is None or not cls.runnable:
+            continue
+        idx = _reindent_candidates(blocks[i], cls)
+        if idx:
+            body = list(blocks[i].body)
+            for k in idx:
+                body[k] = "      " + body[k].lstrip(_WS)
+            trial[i] = _with_body(blocks[i], body)
+    for _ in range(2):
+        if not trial:
+            break
+        tb = [trial.get(i, b) for i, b in enumerate(blocks)]
+        tc = {i: (classify(trial[i]) if i in trial else c) for i, c in classes.items()}
+        tr = _run_plan(tb, tc, box, timeout, {})
+        ok = {
+            at[e["line"]] for e in _judge_page(tb, tc, box, tr, {})[0]
+            if at[e["line"]] in trial and e["verdict"] == "match"
+        }
+        if ok == set(trial):
+            return tb, tc, tr, ok
+        trial = {i: trial[i] for i in ok}
+    return blocks, classes, run, set()
 
 
 def _applied_rewrites(original: Block, block: Block, n: Normalised) -> list[str]:

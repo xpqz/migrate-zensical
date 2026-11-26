@@ -357,6 +357,16 @@ output, `F[2]` in the prose), or any line of the block using `⎕STOP`,
 normalised. Numbered lines without a header (a fragment), or
 numbers that do not run 1, 2, 3, …, stay as they are (`del-definition`).
 
+**Re-indenting likely input (`reindented`).** User request (2026-11-26):
+some input is typed at the wrong indent (`assignment-indexed.md:202` has
+an input line at five spaces), so it reads as output and the block
+differs. For a block that differs, a run of lines read as output that sits
+between two input lines (blank lines aside, no other output between) and
+is indented 1 to 8 spaces but not 6 is moved to the six-space indent, and
+the page runs again with all such trials. A trial is kept only if its
+block then matches; the kept ones are proved once more in a further run
+(if that fails, none is kept). The proposal shows the lines as input.
+
 **Running typed definitions.** A typed definition without numbers
 (rewritten, or so in the guide) is one input unit: its header, body and
 closing lines. The harness fixes it in `#` with `⎕FX` and displays nothing,
