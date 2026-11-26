@@ -3,6 +3,8 @@
     uv run python tools/cutover/code-blocks.py [--guide language-reference-guide]
         [--log code-blocks.yml] [--page GLOB] [--no-run] [--timeout SECONDS]
         [--image IMAGE] [--docs zensical/docs] [--define-shown]
+    uv run python tools/cutover/code-blocks.py --apply [--match-only]
+        [--dry-run] [--log code-blocks.yml] [--page GLOB] [--docs zensical/docs]
 
 The `apl` fences mix session input (the six-space indent) with output. For
 each fence of the guide under --docs, the tool proposes splitting it into an
@@ -10,8 +12,8 @@ each fence of the guide under --docs, the tool proposes splitting it into an
 in Docker (one locked-down container for the run, one interpreter per
 page, through code-blocks-harness.apls) and compares what Dyalog prints with the printed
 output. Examples never run on the host. It writes a YAML log for people to review entry by entry; the
-approved entries are applied later, during the cutover. The tool only reads
-the corpus; it never writes to it. Design:
+approved entries are applied later, during the cutover, with --apply.
+Without --apply the tool only reads the corpus. Design:
 design/superpowers/specs/2026-11-25-code-blocks-design.md.
 
 --guide is the guide's directory under --docs, --log the log to write (an
@@ -24,6 +26,17 @@ in seconds for each page's interpreter, --image the Docker image to run in,
 The tool exits
 with status 2, leaving the log alone, if the guide does not exist or no
 page matches.
+
+Applying (--apply): reads --log and replaces each selected entry's block in
+its page under --docs, fence to fence, with `proposed` (input in an `apl`
+fence, output in a `text` fence, any rewrites included). Selected: entries
+with a proposal that are not marked `skip` and are marked `apply`; with
+--match-only, instead every such entry whose verdict is `match`, whatever
+its decision. --page limits it to matching pages. A block is replaced only
+if the page still has a block at the entry's line with the entry's sha256;
+otherwise it is left alone and reported as stale (exit status 1). Pages are
+written atomically; --dry-run writes nothing and reports what would change.
+--apply never runs examples and does not touch the log.
 
 Docker: Docker must be running; without it the tool says so on stderr and
 runs as --no-run. The default image is built from docker/Dockerfile next to
@@ -2710,6 +2723,24 @@ def main(argv: list[str] | None = None) -> int:
         "(default: %(default)s)",
     )
     ap.add_argument(
+        "--apply",
+        action="store_true",
+        help="apply the log's proposals to the pages under --docs instead of "
+        "running: entries marked decision: apply (or, with --match-only, "
+        "every entry whose verdict is match); never entries marked skip",
+    )
+    ap.add_argument(
+        "--match-only",
+        action="store_true",
+        help="with --apply: apply every entry whose verdict is match, "
+        "whatever its decision (except skip)",
+    )
+    ap.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="with --apply: report what would change, write nothing",
+    )
+    ap.add_argument(
         "--define-shown",
         action="store_true",
         help="propose array-notation definitions for names a block shows "
@@ -2733,7 +2764,94 @@ def _exit_on_signal(signum: int, frame: object) -> None:
     raise SystemExit(128 + signum)
 
 
+def selected(e: dict, match_only: bool) -> bool:
+    """Whether --apply applies entry e: it has a proposal, is not marked
+    skip, and is marked apply (or, with match_only, its verdict is match)."""
+    if not e.get("proposed") or e.get("decision") == "skip":
+        return False
+    if match_only:
+        return e.get("verdict") == "match"
+    return e.get("decision") == "apply"
+
+
+def apply_entries(
+    docs: Path, entries: list[dict], dry_run: bool = False
+) -> tuple[Counter, list[str]]:
+    """Replace each entry's block (fence to fence) in its page under `docs`
+    with the entry's `proposed` text. A block is replaced only if the page
+    still has a block at the entry's line whose text has the entry's
+    sha256; otherwise it is left alone and reported as stale. Pages are
+    written atomically, unless `dry_run`. Returns counts (applied, stale)
+    and a line per stale entry."""
+    stats: Counter = Counter()
+    notes: list[str] = []
+    by_page: dict[str, list[dict]] = {}
+    for e in entries:
+        by_page.setdefault(e["page"], []).append(e)
+    for page, found in sorted(by_page.items()):
+        path = docs / page
+        if not path.is_file():
+            stats["stale"] += len(found)
+            notes.extend(f"{page}:{e['line']}: page not found" for e in found)
+            continue
+        text = path.read_text(encoding="utf-8")
+        blocks = {b.line: b for b in find_blocks(page, text)}
+        lines = text.split("\n")
+        changed = False
+        for e in sorted(found, key=lambda e: e["line"], reverse=True):
+            b = blocks.get(e["line"])
+            if b is None or b.sha256 != e["sha256"]:
+                stats["stale"] += 1
+                notes.append(f"{page}:{e['line']}: the block changed since the log")
+                continue
+            start = b.line - 1
+            end = start + len(b.text.rstrip("\n").split("\n"))
+            lines[start:end] = e["proposed"].rstrip("\n").split("\n")
+            stats["applied"] += 1
+            changed = True
+        if changed and not dry_run:
+            tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+            try:
+                tmp.write_text("\n".join(lines), encoding="utf-8", newline="")
+                os.replace(tmp, path)
+            finally:
+                tmp.unlink(missing_ok=True)
+    return stats, notes
+
+
+def _apply_main(args: argparse.Namespace) -> int:
+    log = Path(args.log)
+    if not log.is_file():
+        print(f"error: no log {log}", file=sys.stderr)
+        return 2
+    _, entries = read_log(log)
+    prefix = args.guide.rstrip("/") + "/"
+    chosen = [
+        e for e in entries
+        if selected(e, args.match_only)
+        and (not args.page or fnmatch.fnmatch(e["page"].removeprefix(prefix), args.page))
+    ]
+    stats, notes = apply_entries(Path(args.docs), chosen, args.dry_run)
+    for n in notes:
+        print(f"stale: {n}", file=sys.stderr)
+    how = "would apply" if args.dry_run else "applied"
+    rule = "verdict match" if args.match_only else "decision apply"
+    print(
+        f"Apply ({rule}): {stats['applied']} {how}, {stats['stale']} stale, "
+        f"{len(entries) - len(chosen)} not selected"
+    )
+    return 1 if stats["stale"] else 0
+
+
 def _main(args: argparse.Namespace) -> int:
+    if args.match_only and not args.apply:
+        print("error: --match-only needs --apply", file=sys.stderr)
+        return 2
+    if args.dry_run and not args.apply:
+        print("error: --dry-run needs --apply", file=sys.stderr)
+        return 2
+    if args.apply:
+        return _apply_main(args)
 
     image = None if args.no_run else prepare_image(args.image)
     if args.define_shown and not image:

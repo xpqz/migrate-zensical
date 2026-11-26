@@ -2565,3 +2565,75 @@ def test_define_shown_lets_a_failed_plus_rewrite_be_proved(cb, tmp_path):
     assert (e["verdict"], e["rewrites"], e.get("rewrite_rejected")) == (
         "match", ["shy", "aplan"], None)
     assert "⎕←A[2 4]+←1" in e["proposed"] and "A←1 2 3 4 5" in e["proposed"]
+
+
+# --- applying the log -------------------------------------------------------------
+
+_APPLY_PAGE = (
+    "# T\n\nText.\n\n```apl\n      1+1\n2\n```\n\nMore.\n\n```apl\n      2+2\n4\n```\n\n"
+    "```apl\n      3+3\n6\n```\n"
+)
+
+
+def _applied(cb, tmp_path, decisions, verdicts, *extra):
+    _docs(tmp_path, {"a.md": _APPLY_PAGE})
+    _, log = _main(cb, tmp_path, "--no-run")
+    meta, entries = cb.read_log(log)
+    for e, d, v in zip(entries, decisions, verdicts):
+        e["decision"], e["verdict"] = d, v
+    cb.write_log(log, meta, entries)
+    rc, _ = _main(cb, tmp_path, "--apply", *extra)
+    return rc, (tmp_path / "docs" / "g" / "a.md").read_text(encoding="utf-8")
+
+
+def test_apply_decision_apply_only(cb, tmp_path, capsys):
+    rc, text = _applied(cb, tmp_path, ["apply", "pending", "skip"], ["differs"] * 3)
+    assert rc == 0
+    assert text == (
+        "# T\n\nText.\n\n```apl\n1+1\n```\n\n```text\n2\n```\n\nMore.\n\n"
+        "```apl\n      2+2\n4\n```\n\n```apl\n      3+3\n6\n```\n"
+    )
+    assert "Apply (decision apply): 1 applied, 0 stale, 2 not selected" in capsys.readouterr().out
+
+
+def test_apply_match_only_ignores_decisions_but_not_skip(cb, tmp_path):
+    rc, text = _applied(
+        cb, tmp_path, ["pending", "pending", "skip"], ["match", "differs", "match"], "--match-only"
+    )
+    assert rc == 0
+    assert "```apl\n1+1\n```\n\n```text\n2\n```" in text
+    assert "```apl\n      2+2\n4\n```" in text and "```apl\n      3+3\n6\n```" in text
+
+
+def test_apply_dry_run_and_page_filter(cb, tmp_path, capsys):
+    rc, text = _applied(cb, tmp_path, ["apply"] * 3, ["match"] * 3, "--dry-run")
+    assert rc == 0 and text == _APPLY_PAGE
+    assert "3 would apply" in capsys.readouterr().out
+    rc, _ = _main(cb, tmp_path, "--apply", "--page", "b*.md")
+    assert "0 applied" in capsys.readouterr().out
+
+
+def test_apply_leaves_a_changed_block_alone(cb, tmp_path, capsys):
+    _docs(tmp_path, {"a.md": _APPLY_PAGE})
+    _, log = _main(cb, tmp_path, "--no-run")
+    meta, entries = cb.read_log(log)
+    for e in entries:
+        e["decision"] = "apply"
+    cb.write_log(log, meta, entries)
+    page = tmp_path / "docs" / "g" / "a.md"
+    page.write_text(_APPLY_PAGE.replace("      2+2\n4", "      2+2\n5"), encoding="utf-8")
+    capsys.readouterr()
+    rc, _ = _main(cb, tmp_path, "--apply")
+    assert rc == 1
+    text = page.read_text(encoding="utf-8")
+    assert "```apl\n      2+2\n5\n```" in text  # unchanged
+    assert "```apl\n1+1\n```" in text and "```apl\n3+3\n```" in text
+    out = capsys.readouterr()
+    assert "2 applied, 1 stale" in out.out and "g/a.md:12: the block changed" in out.err
+
+
+def test_apply_flags_need_apply(cb, tmp_path, capsys):
+    _docs(tmp_path, {"a.md": _APPLY_PAGE})
+    assert _main(cb, tmp_path, "--match-only")[0] == 2
+    assert _main(cb, tmp_path, "--dry-run")[0] == 2
+    assert _main(cb, tmp_path, "--apply")[0] == 2  # no log yet

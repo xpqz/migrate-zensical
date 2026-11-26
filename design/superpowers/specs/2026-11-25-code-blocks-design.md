@@ -502,6 +502,19 @@ it). Names not defined are listed as `rewrite_rejected: {N: why}`, and the
 entry is judged as usual. The tool prints "define-shown: K rewrites
 accepted, R rejected, U unsupported".
 
+### Applying the log
+
+User request (2026-11-26): the tool applies proposals itself. `--apply`
+reads `--log` and replaces each selected entry's block (fence to fence)
+in its page under `--docs` with `proposed`: input in an `apl` fence,
+output in a `text` fence. Selected: entries with a proposal, not marked
+`skip`, and marked `apply`; with `--match-only`, every such entry whose
+verdict is `match`, whatever its decision. `--page` narrows it; `--dry-run`
+writes nothing. A block is replaced only if the page still has a block at
+the entry's line whose text has the entry's sha256; otherwise it is left
+alone and reported as stale (exit status 1). Pages are written atomically.
+`--apply` runs nothing and leaves the log alone.
+
 ## The log
 
 One YAML file (`pyyaml` is already a dependency), one entry per session or

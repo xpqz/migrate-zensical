@@ -64,7 +64,7 @@ substitutes `{{ name }}` with the scalar of that name in `[project.extra]` inste
 `tools/cutover/code-blocks.py` proposes splitting the session examples in the language reference
 guide's `apl` blocks into input (`apl`) and output (`text`), runs them in Docker (one locked-down
 container per run, removed at the end, a fresh interpreter per page, no network; the image is built from `tools/cutover/docker/Dockerfile` when
-missing), and writes a review log (it never edits `zensical/`). Examples never run on the host;
+missing), and writes a review log (it edits `zensical/` only with `--apply`). Examples never run on the host;
 results are those of Linux Dyalog 21.0 in that image. Without Docker it only proposes splits.
 
 ```
@@ -77,5 +77,14 @@ its printed value) is proposed with an array-notation definition in its place, s
 displays the printed value and the block matches.
 
 Set each entry's `decision` to `apply` or `skip`; reruns keep decisions whose proposal is
-unchanged. The options, the log's fields and every verdict, reason and split value are described in
+unchanged. Then apply the reviewed entries to `zensical/docs` (input in an `apl` fence, output in a
+`text` fence), or, with `--match-only`, every entry whose verdict is `match` (never one marked
+`skip`); `--dry-run` reports without writing, and a block changed since the log is left alone:
+
+```
+uv run python tools/cutover/code-blocks.py --apply --log code-blocks.yml [--match-only] [--dry-run]
+```
+
+`zensical/docs` is regenerated from the source by `convert.py --regenerate`, which discards applied
+changes; apply as the last step of the cutover. The options, the log's fields and every verdict, reason and split value are described in
 the module docstring.
