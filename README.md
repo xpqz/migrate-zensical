@@ -58,3 +58,35 @@ The monorepo's `macros` plugin is not carried over: macros are not available. Th
 only for version numbers, so the `dyalog_vars` Markdown extension (`tools/dyalog_vars.py`)
 substitutes `{{ name }}` with the scalar of that name in `[project.extra]` instead, for example
 `{{ version_majmin }}`.
+
+## Reviewing code examples
+
+`tools/cutover/code-blocks.py` proposes splitting the session examples in the language reference
+guide's `apl` blocks into input (`apl`) and output (`text`), runs them in Docker (one locked-down
+container per run, removed at the end, a fresh interpreter per page, no network; the image is built from `tools/cutover/docker/Dockerfile` when
+missing), and writes a review log (it edits `zensical/` only with `--apply`). Examples never run on the host;
+results are those of Linux Dyalog 21.0 in that image. Without Docker it only proposes splits.
+
+```
+uv run python tools/cutover/code-blocks.py --log code-blocks.yml
+```
+
+With `--define-shown`, a block that shows a variable the page never defines (`      M` followed by
+its printed value) is proposed with an array-notation definition in its place, such as
+`M←[10 20 30 40` / `   50 60 70 80]`, but only when a further run proves it: the name then
+displays the printed value and the block matches.
+
+Set each entry's `decision` to `apply` or `skip`; reruns keep decisions whose proposal is
+unchanged. Then apply the reviewed entries to `zensical/docs` (input in an `apl` fence marked `.session`,
+which the house style pads 6ch like the session prompt; output in a `text` fence marked `.no-copy`,
+so only input has a copy button), or, with `--match-only`, every entry whose verdict is `match` (never one marked
+`skip`); `--dry-run` reports without writing, and a block changed since the log is left alone:
+
+```
+uv run python tools/cutover/code-blocks.py --apply --log code-blocks.yml [--match-only] [--dry-run]
+```
+
+`zensical/docs` is regenerated from the source by `convert.py --regenerate`, which discards applied
+changes; apply as the last step of the cutover. Applied pages read back: an `apl` fence followed by a `text` fence is
+one block (split `already`), so the tool can check them again. The options, the log's fields and every verdict, reason and split value are described in
+the module docstring.

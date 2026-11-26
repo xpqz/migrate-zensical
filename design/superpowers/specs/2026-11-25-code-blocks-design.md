@@ -1,0 +1,631 @@
+# Splitting and validating APL code examples — design
+
+Date: 2026-11-25. Status: approved.
+
+## Intent
+
+The `apl` code blocks in the documentation mix session input with the
+interpreter's output. Input is marked only by the session's 6-space indent;
+output is flush left. Readers cannot copy an example's input cleanly, and
+nothing checks that the printed output is what Dyalog actually produces.
+
+`tools/cutover/code-blocks.py` is a review tool. For each `apl` block it
+proposes splitting session input from output, and it runs the examples
+against Dyalog to flag those whose output is wrong. It never edits the
+corpus: it writes a log for people to review entry by entry. Approved entries are applied
+once, as a patch, during the cutover (`tools/cutover/cutover.py`), after
+which `zensical/` is the authoring home. The September ⎕CSV rewrite
+(commit 4abdc199, since discarded) is the precedent for the target format.
+
+This round is about getting the tool right. Applying the log is a later
+piece of work; the log's format must make it possible.
+
+## Goals
+
+1. Find every `apl` code block in the language reference guide
+   (`zensical/docs/language-reference-guide/`, the converted tree the cutover
+   patches).
+2. For each block that is a session transcript, propose its split: input in
+   an `apl` block without the 6-space indent, output in a `text` block
+   following it.
+3. Run each session example under `dyalogscript` and record how the actual
+   output compares with the printed output.
+4. Write a log that a reviewer can read, mark per entry, and that a later
+   apply step can apply selectively and safely.
+
+## Non-goals
+
+- Modifying anything under `zensical/` or the source monorepo.
+- Applying the log (designed for, built later).
+- Guides other than the language reference guide (the tool takes the guide
+  as a parameter so widening later is a flag, not a rewrite).
+- Fixing wrong examples. The tool flags them; people fix them.
+- Non-`apl` fences (`c`, `json`, `other`, bare fences).
+
+## Anti-goals
+
+- **Guessing.** A split that moves a line to the wrong side, drops a line or
+  invents one is worse than no split. When a line's role is uncertain, the
+  block is left alone and the log says why.
+- **Noise.** A "differs" flag must mean the example ran here and Dyalog
+  printed something else. Examples that cannot run on this machine (Windows
+  GUI, .NET, files that do not exist, timing, randomness) must not be
+  reported as differing.
+
+## What the corpus looks like
+
+Measured on the guide at 0afe7b461b:
+
+- 1,861 `apl` blocks on 515 pages; no `text` blocks yet. 11 fences are
+  indented (inside lists or admonitions).
+- First lines: 882 blocks start at column 0 (syntax lines such as `R←⍳Y`,
+  code listings, output-only blocks), 875 at the 6-space session indent, and
+  about 100 at other indents (1–5, 7, 8, 10).
+- Results appear in three display styles: plain, `]box on` (`┌─┬─┐`, 53
+  pages) and `]box on -style=max` (`┌→`, `↓`, `∊` markers, 22 pages).
+- 55 pages contain `∇`, i.e. traditional functions defined in the session
+  editor notation.
+- Examples with output that depends on the machine or the moment: `⎕AI`,
+  `⎕TS`, `?`, file paths such as `c:\Dyalog16.0\sales.csv`, `⎕NA`, `⎕WC`.
+
+## Approaches
+
+1. **A small APL harness driven by Python (chosen).** Python parses pages
+   and blocks; one `dyalogscript` run per page evaluates the input lines in
+   order, so definitions made in earlier blocks are available to later ones
+   as a reader would expect. Each line is evaluated the way the session does
+   it, with shy results suppressed and errors displayed session-style, and
+   results are rendered in the display style the printed output uses. Python
+   compares and writes the log. Execution also confirms splits.
+2. **Plain script mode.** Feed input lines as a script and parse stdout.
+   Simpler, but script mode does not display bare expressions, output cannot
+   be tied to its line, and shy results and errors behave differently. Too
+   unreliable to separate "wrong example" from "harness artefact".
+3. **A real session over RIDE (the Tauride MCP).** Exact session behaviour,
+   but needs a running interpreter and a protocol client. Kept as the
+   fallback if `dyalogscript` proves to need dirty hacks; the spike below
+   says it does not.
+
+Option 1 was picked.
+
+## Feasibility (spike, Dyalog 21.0 on macOS)
+
+- `1(85⌶)'expr'` returns the result of a non-shy expression and signals
+  error 85 for a shy one, so the harness can tell what the session would
+  display.
+- Errors are available via `⎕DMX` (`EN`, `DM`, `Message`) to rebuild the
+  session's three-line error display.
+- Passing `DYALOG_INITSESSION=1` before the script name loads the full
+  session (`⎕SE.UCMD`, `⎕SE.Dyalog.Utils`), so `]box` works, including
+  `-style=max`, and applies to `⎕←` output.
+- `dyalogscript` ends lines with CR; Python normalises to LF.
+- Script mode starts with `⎕PW` 32767; the harness sets it explicitly.
+
+## How it works
+
+### Finding blocks
+
+Python reads each page and finds fenced blocks whose info string is `apl`.
+Each block is identified by page path (relative to `zensical/docs/`), the
+line number of its opening fence, and the SHA-256 of its exact text from
+opening to closing fence. Indented (nested) fences are recorded and skipped
+in this round, with reason `nested`.
+
+### Classifying lines and blocks
+
+A line indented exactly 6 spaces is a candidate input line; any other
+non-blank line is a candidate output line. Three refinements:
+
+- **NBSP indents.** 430 lines on 54 pages are indented with non-breaking
+  spaces (typically five U+00A0 and a space). An indent of exactly six
+  characters drawn from space and U+00A0 counts as the session indent; the
+  split strips it like spaces, and the entry records `nbsp: true` so the
+  normalisation is visible in review. *(Builder's call.)*
+- **Error displays.** The session shows an error as three lines: the
+  message at column 0 (`DOMAIN ERROR…`), the failing line repeated at the
+  6-space indent, and a caret line (`∧` or `^`) indented 6 or more. When a
+  line ending in `ERROR` (optionally followed by `: …`) is followed by such
+  a repeat and caret, all three are output: the repeat is not run again,
+  and the three lines go verbatim into the `text` block. *(Builder's call:
+  no line is dropped, consistent with the anti-goals.)*
+- **Explicit display commands.** Input lines such as `]box on`,
+  `]Boxing on` or `]Display …` are run as user commands, and an explicit
+  `]box` setting overrides the style inferred from printed output for the
+  rest of the page. *(Builder's call.)*
+
+A block is:
+
+- **syntax / listing**: no candidate input lines. Not split, not run. Logged
+  as a summary count only (no per-block entry), so the log is not flooded.
+- **session**: at least one input line. Considered for splitting and run.
+- **ambiguous**: the split cannot be decided without guessing. Logged with
+  the reason, not split. There are two kinds:
+  - *Structural*, never run: a `∇` definition in session-editor notation
+    (`∇` opener, `[n]` numbered body lines, closing `∇`), including
+    multi-line dfns written that way (reason `del-definition`; decided by
+    the user: leave these alone for now and flag them); a `:Class`,
+    `:Namespace` or `:Interface` script in the same block as session lines
+    (reason `script`); input lines at an odd indent (reason `indent`).
+    *(`script` and `indent` are the builder's call.)* `∇` appearing in
+    output, such as a `⎕VR` listing, is ordinary output and not a reason.
+  - *Indent*, run: an output line indented 6 or more spaces (a
+    right-aligned number looks like input). These are run as if the
+    6-space lines were input; if the output matches, the split is
+    confirmed and the block is no longer ambiguous.
+
+  Later blocks on a page that depend on a structural-ambiguous block will
+  typically fail and get `not-run` (reason `dependency`). That loss of
+  coverage is accepted for now.
+
+### Running a page
+
+One `dyalogscript DYALOG_INITSESSION=1` process per page, in the run's one
+Docker container (see "Execution in Docker"), under a hard timeout; after
+the page, everything it started is killed and its files are removed. The page's session blocks are passed in order; state persists across
+the blocks of a page and is fresh for each page (`⎕IO←1`, `⎕ML←1`,
+`⎕PW←80` unless the page sets them).
+
+For each input line the harness:
+
+1. Chooses the display style for the block from the printed output: `┌→`,
+   `↓` or `∊` markers mean `]box on -style=max`, other box-drawing means
+   `]box on`, none means `]box off`.
+2. Evaluates the line with `85⌶`. Output written during evaluation (`⎕←`,
+   `⍞←`) is captured in order with the displayed result.
+3. On error, produces the session's error display from `⎕DMX`.
+4. Writes a sentinel after each line so Python can attribute output to the
+   line that produced it.
+
+### Execution in Docker
+
+Examples never run on the host. User decisions (2026-11-25):
+
+1. Run examples in plain Docker for now. (abrudz/sandbox, the nsjail
+   image, is x86-only today: the published amd64 image is killed under
+   emulation on arm64, and a local arm64 build fails on its seccomp
+   policy.)
+2. File-system examples may run inside the jail; side effects outside it
+   must never happen.
+3. The container must be .NET-capable, and .NET examples may run inside
+   the jail. There is no .NET tag of the Dyalog 21.0 image, so the tool
+   builds a derived image from `tools/cutover/docker/Dockerfile` (the
+   pinned base `dyalog/dyalog@sha256:d9c0dda7…ceb32` plus the .NET
+   runtime 10.0.15, installed by a dotnet-install.sh checked against a
+   pinned sha256), tagged `code-blocks-dyalog:<first 12 hex of the
+   Dockerfile's sha256>`, when it is missing. A missing `--image` is
+   pulled. Building or pulling an image is the only network use.
+4. Shell commands (`⎕SH`, `⎕CMD`, `⎕SHELL`) and `⎕NA` may run inside the
+   jail too.
+
+A run uses one container (user decision, 2026-11-26: the tool must run a
+single container and tidy up after itself). It starts with the first page
+that runs anything:
+
+```
+docker run -d --rm --init --name cb-<token> --network none --read-only \
+  --cap-drop ALL --security-opt no-new-privileges --pids-limit 64 \
+  --memory 512m --cpus 1 \
+  --tmpfs /work:rw,size=16m,mode=1777 --tmpfs /tmp:rw,size=64m \
+  --tmpfs /home/dyalog:rw,size=16m,uid=1000,gid=1000 --user 1000:1000 \
+  -w /work -v <temp dir with harness + requests>:/cb:ro \
+  --entrypoint sh <image> -c <keeper> cb-keeper 30
+```
+
+and each page runs in it as
+
+```
+docker exec -w /work cb-<token> timeout --signal=KILL <page timeout + 15>s \
+  dyalogscript DYALOG_INITSESSION=1 /cb/code-blocks-harness.apls /cb/request-<page token>.json
+```
+
+After every page (also after a time-out or an exception) a reset script
+kills every process in the container except docker-init and the keeper,
+so a page's background jobs die with it, and empties /work, /tmp and the
+home directory. Each page thus starts as in a fresh container, at the cost
+of one container start per run instead of per page. If the reset fails, or
+the container dies, the next page starts a new one; there is never more
+than one.
+
+The container goes when the run ends: the tool removes it on a normal
+end, an exception, Ctrl-C, SIGTERM or SIGHUP (the last two are turned
+into an orderly exit), and checks that it is gone (a failing `docker ps`
+counts as "still there"). If the tool is killed outright, the keeper
+(PID 2, under docker-init) sees the heartbeat file the tool touches every
+5 s in /cb stop changing and exits within 30 s, and the container goes
+with it. The next run deletes /cb directories such runs left behind.
+
+The interpreter runs as uid 1000 with no network and can write only to
+/work, /tmp (64 MB, which the .NET runtime needs) and its home directory.
+`--image` overrides the image. Without
+Docker the tool runs as `--no-run` and says so. The log's `meta` records the
+image tag, its id and the container's platform (e.g. `linux/arm64`).
+
+What still never runs, because it would break or escape the run rather
+than touch the host: `⎕SE` (any use), shared variables (`⎕SV*`), the GUI
+(`⎕W*`, `⎕NQ`, `⎕DQ`), `⎕CLEAR`, `⎕LOAD`, `⎕OFF` and system commands,
+`⎕ARBOUT`, user commands other than the display ones, impure I-beams,
+`⍎`, `⎕FX` and `85⌶` with a computed argument, `⎕CS` and `⎕PATH`, and a
+dyadic `⍎` whose left argument is not a plain name, `#` or a literal
+string. `⎕SAVE` is blocked too: after it, every later execute in the
+harness fails with error 85, so nothing more on the page would show.
+
+Residual risk, accepted: a page can read its run token from
+/cb/request.json, and a background shell job (`⎕SH 'cmd &'`) that writes
+to the interpreter's standard output can land text in a later block's
+output. Both only affect that page's own results, inside the jail.
+
+### Comparing
+
+Before comparison, trailing whitespace is removed from every line and
+trailing blank lines from each line's output; nothing else is normalised.
+Each block gets one verdict:
+
+- `match`: every input line's output equals the printed output.
+- `differs`: the example ran without error here and the output differs, or
+  the printed output shows an error and the actual one differs. This is
+  the flag the reviewer acts on.
+- `not-run`: the example could not run meaningfully here, with a reason:
+  an error that the printed output does not show (missing file, Windows-only
+  facility, .NET), the use of a volatile facility (`?`, `⎕AI`, `⎕TS`, `⎕DL`,
+  `⎕WA` and similar, from a list in the tool), or a dependency on an
+  earlier block that did not run.
+- `timeout`: the page timed out; blocks not yet reached are not judged.
+
+A `differs` block gets the reason `platform` (after `after-unrun`, before
+`diamond`) when an input line uses `⎕SH`, `⎕CMD`, `⎕SHELL`, `⎕NA`,
+`⎕USING`, `⎕NEW`, `⎕NL` on a .NET class, `⎕NINFO`, `⎕NPUT`, `⎕NAPPEND`,
+`⎕NREPLACE` or a Windows path (`X:\` or `\\`): the difference may come
+from Linux in the container rather than from the guide. These examples
+still run (user decision). `⎕NCREATE` with the `Unique` option is volatile.
+
+### Proposing splits
+
+A session block is split when either:
+
+- **confirmed**: it ran, and taking the 6-space lines as input reproduced
+  the remaining lines as their output (verdict `match`); or
+- **unambiguous**: it did not run or differs, but no output line could be
+  mistaken for input (no output line indented 6 or more spaces) and no line
+  is of uncertain role.
+
+The split writes each run of consecutive input lines, without the 6-space
+indent, as an `apl` block, and the output that follows it as a `text` block.
+Inputs with no output stay together in one `apl` block. A split never drops
+or adds a non-blank line; Python checks this before writing the proposal.
+A block whose verdict is `differs` still gets its split proposed (from the
+printed output, not the actual output); the two are separate decisions for
+the reviewer.
+
+### Normalising input: shy results and line numbers
+
+User decisions (2026-11-26). Two rewrites always apply (no option); they
+change only input lines, run in place of the original, and their result is
+what `proposed` shows. `original` and `sha256` stay the original block's.
+An entry lists the rewrites in `rewrites` (with `aplan` from
+`--define-shown`).
+
+**Shy results (`shy`).** An input line that displays a shy result with a
+monadic `+`, `⊢` or `⊣` applied to an assignment uses `⎕←` instead:
+`+A←⍳5` becomes `⎕←A←⍳5`. The line must start (after the six-space
+indent) with one of the three, optional spaces, then an assignment target:
+a name, a name with an index (`A[2 4]`), or names in parentheses, then an
+optional one-character function (modified assignment) and `←`. Other uses
+(`+⎕EX'A'`, `+/A←…`) are left alone. `⊢` and `⊣` are identities, so their
+rewrite always applies. `+` is conjugate: it differs for complex numbers
+and may fail on some values, so its rewrite needs proof: the rewritten
+line ran without error and either displayed exactly the printed output or,
+when the target is a plain name N, a hidden check run after it,
+`{0::¯1 ⋄ ⍵≡+⍵}N`, gives 1 (conjugate leaves the value unchanged) or ¯1
+(conjugate fails on it, unless the printed output shows an error); either
+way `⎕←` displays what `+` was meant to show. 0 (complex numbers) keeps
+the `+`. There is no hidden check for a line with statements after a
+top-level `⋄` (they may change N). The input line repeated after an error
+message is output and is not rewritten. Without a run (`--no-run`, no
+Docker) every `+` stays, so a later run's proposal differs and resets
+decisions on those blocks. Unproved `+` rewrites (including
+lines that did not run) are reverted, and the page runs again without the
+hidden checks; the entry's `rewrite_rejected` says why, keyed by the
+original line. With `--define-shown`, a `+` rewrite whose `⎕←` line
+failed (a name the page shows but never defines, say) is proved again in a
+run with the accepted definitions, by display alone; the definitions must
+still pass their own proof in that run.
+
+The display style (`]box` setting) is taken from the output of ordinary
+lines only: `]display` and `]disp` draw their own boxes.
+
+**Line numbers (`unnumbered`).** A `∇` definition typed into the session
+(a header line `∇…` at any indent, numbered lines `[1]`, `[2]`, … in
+order, and a closing `∇`, alone or at the end of the last numbered line)
+loses its numbers (layout A, chosen by the user):
+
+```
+      ∇ R←A DIVIDE B;⎕TRAP
+        ⎕TRAP←11 'E' '→ERR'
+        R←A÷B ⋄ →0
+      ERR:'DIVISION ERROR' ⎕SIGNAL 11
+      ∇
+```
+
+The header and closing `∇` sit at the six-space indent, the header text
+unchanged after the `∇`; body lines at eight spaces, label lines
+(`NAME:…`) at six. A definition is output, not typed, when it follows
+(blank lines aside) any input line (`⎕VR'F'`, a variable holding `⎕OR`'s
+result, the editor line `∇F∇`) or another such definition: Dyalog prints
+those numbers, so they stay. A definition keeps its numbers, with reason
+`line-numbers` (not-run), when anything refers to them: a branch whose
+expression contains a number other than 0 (`→4`), the function's name
+followed by `[n]` anywhere on the page (`'F[1]'` in the body, `#.F[7]` in
+output, `F[2]` in the prose), or any line of the block using `⎕STOP`,
+`⎕TRACE`, `⎕MONITOR` or `⎕LC`. Nested blocks (in a list) are not
+normalised. Numbered lines without a header (a fragment), or
+numbers that do not run 1, 2, 3, …, stay as they are (`del-definition`).
+
+**Re-indenting likely input (`reindented`).** User requests (2026-11-26):
+some input is typed at the wrong indent (`assignment-indexed.md:202` at
+five spaces between inputs; `mix.md`, `times.md`, `stencil.md` at seven or
+eight after output; `syntax-colour-tokens.md:29` at five after output), so
+it reads as output. For a block that differs, or fails with an error it
+does not show, the candidates are lines read as output that are indented
+1 to 8 spaces but not 6 and either form a run between two input lines
+(blank lines aside, no other output between) or are indented 4 to 8
+spaces and look like code (lines starting `∇`, function listings, never
+count): a glyph displayed output rarely shows (`←`,
+`⍝`, `{`, `⎕`, `⍳`, `⍴`, `⊃`, …) or a leading quote, and no box drawing.
+They move to the six-space indent and the page runs again with all such
+trials. A trial is kept if its block then matches, or if every moved line
+ran without error and displayed exactly the output printed under it, at
+least one displaying something (a mis-read output row run as code prints
+where the docs show nothing). The kept ones are proved once more (if that
+fails, none is kept). A block with a code-like candidate that is not kept
+gets split `ambiguous`, reason `odd-indent`: the split would put code in
+the output.
+
+**Comment continuation lines.** A comment-only line indented past six
+spaces right after an input line (`              ⍝ the hash table`)
+continues that input's comment and is input.
+
+**Unshown output.** An input line with no printed output that printed
+something makes the block `suspect-input` (it may be a folded output row).
+When every such line looks like code (as above), the docs just left the
+output out: the reason is `unshown-output` and the split stands.
+
+**Box state replies.** `]box`/`]boxing` reply `Was ON`/`Was OFF`, which
+reflects the style the tool set before the block, not the page's: that
+line is not compared.
+
+**Running typed definitions.** A typed definition without numbers
+(rewritten, or so in the guide) is one input unit: its header, body and
+closing lines. The harness fixes it in `#` with `⎕FX` and displays nothing,
+as the session does; a definition that does not fix displays `DEFN ERROR`.
+Its lines are input in the split (the body keeps its two extra spaces).
+Blocks with such definitions are no longer `del-definition` and run.
+
+### Defining shown values
+
+Off by default; `--define-shown` turns it on (user decision). Pages often
+show a variable's value without defining it:
+
+```
+      M
+10 20 30 40
+50 60 70 80
+      M[⊂1 2]
+20
+```
+
+With the option, the proposal defines it in array notation (square
+brackets build the rows of a higher-rank array; parentheses, for nested
+vectors, are out of scope) and splits as usual:
+
+````
+```apl
+M←[10 20 30 40
+   50 60 70 80]
+M[⊂1 2]
+```
+
+```text
+20
+```
+````
+
+The assignment has no output, so it joins the following input in the same
+`apl` block.
+
+**Candidates.** An input line that is exactly a name N (trailing whitespace
+aside) where no earlier line of an `apl` block on the page assigns N (`N←`,
+or a `∇` line naming it), N is not an earlier candidate on the page, the run
+gives `VALUE ERROR: Undefined name: N` for that line, and the printed output
+is not an error.
+
+**Value to array notation.**
+
+- One row, all numbers (`¯`, decimals, `E` exponents, `J` complex):
+  `N←1 2 3`, the numbers single-spaced; a scalar for one number.
+- Several rows, all numbers: a matrix, `N←[1 2 ⋄ 3 4]`, each row spaced
+  as printed, so the proposal reads like the docs.
+- One row, not numbers: a character vector, `N←'text'`, quotes doubled.
+- Several rows, not all numbers: a character matrix, `N←['abc' ⋄ 'de']`,
+  each row without its trailing spaces (array notation pads short rows).
+- Anything else is unsupported and logged as `define-shown: unsupported
+  (why)`: no output (`⍬`, say), box drawing (nested or boxed), a blank
+  line inside (rank 3 or more), numbers and text in one row, a column-0
+  `⍝` note among the output lines (the rewrite would drop it), an output
+  row that mentions N as a name (an input line at an odd indent read as
+  output, as in `symbols/down-shoe.md`), an ambiguous block, or a block
+  whose plain run is `suspect-input`.
+
+A matrix is proposed on several lines, the continuation rows aligned
+under the first element after `[`.
+
+**Proof.** The page runs again with every candidate's definition in place
+of its line, sent exactly as proposed: the harness takes a multi-line
+input unit and runs it as literal source (below). A hidden check, the bare
+name, follows each definition; it is not judged and not proposed. A
+definition is accepted only if the check displays the printed output (after
+the usual normalisation), the rewritten block's verdict is `match`, and
+the rest of the page backs it: at least one later input line that uses N
+(as a whole name) ran, and none raised an error the page does not show.
+(`system-functions/r.md` shows a vector of strings that displays exactly
+as a character matrix; only the later `⎕R` lines tell them apart.)
+Failures are dropped and the rest proved in one more run; if that fails
+too, no definition on the page is applied and the first run stands. Pages
+without candidates run once. Later blocks are judged in the run with the
+accepted definitions, so blocks that use N now run.
+
+**Multi-line units.** A request line is either a string (one session line,
+run and displayed as before) or a list of strings, run as source: the
+harness fixes the lines as the body of a niladic function with a reserved
+name in `#`, calls it (so the names it assigns are `#`'s) and expunges it.
+A unit gets one BEGIN/END pair; an error is displayed as its message and
+does not stop the run; a function that does not fix is a `DEFN ERROR`; a
+system command, `⎕OFF` or `⍞` on any line skips the unit as for single
+lines. Only `--define-shown` sends such units now. The same mechanism
+could later run multi-line dfns, traditional functions in session-editor
+notation and other multi-line inputs; that would need a rule for which
+following indented lines continue a unit, display of the values the lines
+neither assign nor send to `⎕` (today, as in a function called by `⍎`,
+they are not displayed at all), and error display in session form.
+
+**`⎕TRAP`.** In Dyalog 21.0, a statement that assigns `⎕TRAP` (for example
+`⎕TRAP←0 'S'`, or `⎕TRAP⍴⍨←0`), run under `85⌶`, can end the interpreter.
+The harness runs a statement that is wholly such an assignment (its value
+is shy) with plain `⍎` instead; one that uses the assignment's value, such
+as `≡⎕TRAP←…`, still runs under `85⌶` and displays it; the assignment does not outlive the
+statement, so the harness's own trapping stays in charge and the page keeps
+running (examples that rely on a trap firing then show the error instead).
+
+**Log.** The entry gains `aplan` in `rewrites` and `defines: [N, …]`;
+`proposed` is the rewritten split, `actual` follows the usual rules.
+`original` and `sha256` stay the original block's (the apply step replaces
+it). Names not defined are listed as `rewrite_rejected: {N: why}`, and the
+entry is judged as usual. The tool prints "define-shown: K rewrites
+accepted, R rejected, U unsupported".
+
+### Applying the log
+
+User request (2026-11-26): the tool applies proposals itself. `--apply`
+reads `--log` and replaces each selected entry's block (fence to fence)
+in its page under `--docs` with `proposed`: input in an `apl` fence,
+output in a `text` fence, written with Zensical's attribute-list syntax as
+```` ``` { .apl .session } ```` and ```` ``` { .text .no-copy } ```` (user
+request, 2026-11-26): `no-copy` removes the copy button from output, and
+the house style (`dyalog.css`) pads `.session` input 6ch further in than
+output, like the session's six-space prompt, and shows copy buttons only
+on hover or keyboard focus. Fences are compared by language, so a split
+block whose only difference is its info strings needs no proposal. Selected: entries with a proposal, not marked
+`skip`, and marked `apply`; with `--match-only`, every such entry whose
+verdict is `match`, whatever its decision. `--page` narrows it; `--dry-run`
+writes nothing. A block is replaced only if the page still has a block at
+the entry's line whose text has the entry's sha256; otherwise it is left
+alone and reported as stale (exit status 1). Pages are written atomically.
+`--apply` runs nothing and leaves the log alone.
+
+### Reading split blocks
+
+User request (2026-11-26): pages already split (by `--apply`) are read
+back. A top-level `apl` fence whose first non-blank line is not indented,
+followed by a `text` fence with only blank lines between, and further
+`apl`/`text` fences alternating the same way (a later `apl` fence joins
+only if it is not indented either), is one block: `apl` lines are input
+(placed at the six-space indent), `text` lines output, whatever their
+indent, and the block spans from the first fence to the last. Rules that
+read roles from indentation (`indent`, `indented-output`, comment
+continuations, re-indenting) do not apply to it. Its split is `already`
+and it has no proposal, unless a rewrite changes it. Two applied blocks
+with only blank lines between them read as one. A lone `apl` fence (an
+applied block with no output) cannot be told from a code listing; it is a
+listing and does not run, so later blocks that need its definitions may
+become `dependency`.
+
+## The log
+
+One YAML file (`pyyaml` is already a dependency), one entry per session or
+ambiguous block, ordered by page and line:
+
+```yaml
+- page: language-reference-guide/primitive-functions/index-generator.md
+  line: 24
+  sha256: 3f9a…
+  verdict: match            # match | differs | not-run | timeout
+  reason: null              # for not-run, timeout, ambiguous
+  split: confirmed          # confirmed | unambiguous | ambiguous | none
+  decision: pending         # reviewer sets apply | skip
+  original: |
+    ```apl
+          ⍳5
+    1 2 3 4 5
+    ```
+  proposed: |
+    ```apl
+    ⍳5
+    ```
+
+    ```text
+    1 2 3 4 5
+    ```
+  actual: null              # actual output, for differs
+```
+
+The reviewer changes `decision`. The later apply step replaces `original`
+with `proposed` for each `apply` entry, after checking `sha256` against the
+page, and refuses an entry whose block has changed. Reruns of the tool carry
+existing decisions forward by `page` and `sha256`, so review work survives
+a rerun, but only while `proposed` and `split` are unchanged: if a rerun
+proposes something different for the same block, its decision resets to
+`pending` so no unreviewed change is applied. *(Builder's call.)*
+
+YAML literal blocks keep multi-line examples readable; text that YAML cannot
+hold as a literal (for example lines with trailing spaces) may be written
+quoted. Fidelity wins over readability: the tool reads the log back after
+writing and checks every `original` and `proposed` round-trips exactly.
+
+A short summary (counts per verdict and split kind, per page and overall)
+is printed to stdout.
+
+## Interface
+
+```
+uv run python tools/cutover/code-blocks.py [--guide language-reference-guide]
+    [--log code-blocks.yml] [--page GLOB] [--no-run] [--timeout SECONDS]
+    [--image IMAGE] [--define-shown]
+```
+
+`--no-run` skips execution (splits only where unambiguous).
+`--define-shown` proposes definitions for shown values (above). `--page`
+restricts to matching pages for iteration. `--image` replaces the image
+built from `tools/cutover/docker/Dockerfile`. Without Docker the tool runs
+as `--no-run` and says so.
+
+## Constraints
+
+- Python 3.14, run with `uv`, as the rest of `tools/`.
+- Must not write under `zensical/` or the source tree.
+- Requires Docker. Dyalog 21.0 via `dyalogscript` in the pinned image;
+  results are those of Linux Dyalog in that image (not of the host), and
+  the log records the Dyalog version, the image and the container's
+  platform.
+- Examples never run on the host, only in the locked-down container.
+- Leaves nothing running: one container per run, removed when the run
+  ends however it ends; every page's interpreter runs under a hard
+  timeout, and whatever a page starts is killed after it.
+
+## Testing
+
+Unit tests (pytest, `tools/cutover/test_code_blocks.py`) for block finding,
+classification, the split rules, the no-lost-lines check and YAML
+round-tripping, using small fixture pages. Harness tests that need
+Docker are skipped when Docker or the image is not available; they include
+checks of the jail (no network, no writes outside /work, files persist
+within a page and not across pages, background jobs killed between pages,
+one container per run, no container left after a time-out, an exception,
+a signal or a killed tool). The tool is then run
+over the whole guide, and a sample of each verdict and split kind is
+checked by hand.
+
+## Left to the builder
+
+- The harness's sentinel format and how Python parses it.
+- The exact list of volatile facilities, kept as a constant in the tool.
+- How the harness reconstructs the session's error display from `⎕DMX`.
+- How `code-blocks.py` (a hyphenated name) is imported by its tests.
