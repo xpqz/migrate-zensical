@@ -1397,10 +1397,13 @@ def test_judge_suspect_input_applies_to_volatile_and_environment(cb):
     # Any verdict but match: a line with no printed output that printed
     # something may be a folded output row.
     for line in ("      ?6", "      ⎕AN"):
-        v, r, actual = _judge(cb, [line], [_lr(cb, ["3"])])
-        assert (v, r) == ("not-run", "suspect-input") and actual == f"{line}\n3\n"
-        b, c = _block(cb, line)
+        lines = [line, "x", "      1 2"]  # "1 2" may be a folded output row
+        v, r, actual = _judge(cb, lines, [_lr(cb, ["x"]), _lr(cb, ["1 2"])])
+        assert (v, r) == ("not-run", "suspect-input") and actual == f"{line}\nx\n      1 2\n1 2\n"
+        b, c = _block(cb, *lines)
         assert cb.split_kind(c, v, r) == "ambiguous"
+    # a plainly coded line that printed: the output was left out
+    assert _judge(cb, ["      ⎕AN"], [_lr(cb, ["3"])])[:2] == ("not-run", "environment")
     assert _judge(cb, ["      ?6", "3"], [_lr(cb, ["4"])])[:2] == ("not-run", "volatile")
 
 
@@ -2474,11 +2477,13 @@ def test_reindent_candidates_only_between_input_lines(cb):
     b, c = _block(
         cb, "      A←1", "     A+←1", "", "    A+←1", "      A", " 3", "     4",
     )
-    assert cb._reindent_candidates(b, c) == [1, 3]  # " 3" and "     4" end the block
+    assert cb._reindent_candidates(b, c) == ([1, 3], True)  # " 3", "     4" end the block
     b, c = _block(cb, "      ⍳3", "     1 2 3", "      2", "2")
-    assert cb._reindent_candidates(b, c) == [1]  # tried; kept only if the block matches
+    assert cb._reindent_candidates(b, c) == ([1], False)  # tried; kept only if proved
     b, c = _block(cb, "      ⍳3", "1 2 3", "     x", "      2")
-    assert cb._reindent_candidates(b, c) == []  # output before it
+    assert cb._reindent_candidates(b, c) == ([], False)  # output before it, not code
+    b, c = _block(cb, "      ⍳3", "1 2 3", "       ⍴⍳3", "3", "   ⍳2", "        'a'")
+    assert cb._reindent_candidates(b, c) == ([2, 5], True)  # code-like at 4-8 spaces
 
 
 @needs_docker
@@ -2494,3 +2499,50 @@ def test_main_reindents_a_differing_block_only_when_it_then_matches(cb, tmp_path
     assert a["proposed"] == "```apl\nMAT←2 2⍴⍳4\nMAT[1;1]←9\nMAT\n```\n\n```text\n9 2\n3 4\n```\n"
     assert a["original"].count("     MAT[1;1]←9\n") == 1
     assert (b["verdict"], b.get("rewrites")) == ("differs", None)
+
+
+
+def test_classify_comment_continuation_is_input(cb):
+    _, c = _block(cb, "      R,←5    ⍝ ,← updates", "              ⍝ the table", "      R", "5")
+    assert c.roles == ["input", "input", "input", "output"]
+    assert c.reason is None
+
+
+@pytest.mark.parametrize("text, code", [
+    ("{⍵⍳2 3 5}R", True), ("5 10 ⍪⍛⊥ 1 0 2", True), ("'Andy' 'Geoff'", True),
+    ("1 2 3", False), (" MONDAY  WEDNESDAY", False), ("┌→──┐", False), ("Hello, World", False),
+])
+def test_looks_like_code(cb, text, code):
+    assert cb._looks_like_code(text) is code
+
+
+def test_judge_unshown_output_keeps_the_split(cb):
+    lines = ["      (⍪5 10)⊥ 1 0 2", "      5 10 ⍪⍛⊥ 1 0 2", "27 102"]
+    v = _judge(cb, lines, [_lr(cb, ["27 102"]), _lr(cb, ["27 102"])])
+    assert v[:2] == ("differs", "unshown-output")
+    b, c = _block(cb, *lines)
+    assert cb.split_kind(c, "differs", "unshown-output") == "unambiguous"
+    v = _judge(cb, ["      1 2", "      3 4", "x"], [_lr(cb, ["1 2"]), _lr(cb, ["x"])])
+    assert v[:2] == ("differs", "suspect-input")  # a number row may be output
+
+
+def test_box_command_was_reply_is_not_compared(cb):
+    v = _judge(cb, ["      ]Boxing on", "Was OFF", "      1", "1"], [_lr(cb, ["Was ON"]), _lr(cb, ["1"])])
+    assert v[:2] == ("match", None)
+    v = _judge(cb, ["      ⎕←'Was OFF'", "Was OFF"], [_lr(cb, ["Was ON"])])
+    assert v[0] == "differs"
+
+
+@needs_docker
+def test_main_reindent_proved_by_the_moved_lines(cb, tmp_path):
+    md = (
+        "```apl\n      ⎕←2+2\n5\n       ⍳3\n1 2 3\n```\n\n"  # differs on 2+2; ⍳3 proved
+        "```apl\n      ⍳2\n1 2\n     ⍴⍳9\n7\n```\n"  # ⍴⍳9 prints 9, not 7: not proved
+    )
+    _docs(tmp_path, {"a.md": md})
+    _, log = _main(cb, tmp_path)
+    _, (a, b) = cb.read_log(log)
+    assert (a["verdict"], a["split"], a["rewrites"]) == ("differs", "unambiguous", ["reindented"])
+    assert "```apl\n⍳3\n```" in a["proposed"]
+    assert (b["verdict"], b["reason"], b["split"], b["proposed"]) == (
+        "differs", "odd-indent", "ambiguous", None)

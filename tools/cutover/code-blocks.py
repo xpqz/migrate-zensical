@@ -124,6 +124,12 @@ Reasons:
     indented-output an output line is indented six or more spaces; split
                     ambiguous unless the block matches
     split-check     the split would lose or move a line; split ambiguous
+    unshown-output  differs: an input line printed something the block
+                    does not show, and every such line is plainly code
+                    (its output was left out); the split stands
+    odd-indent      differs: a line read as output looks like input at an
+                    odd indent and re-indenting it was not proved; split
+                    ambiguous
 
 Splits:
 
@@ -145,12 +151,18 @@ A typed definition without numbers runs as one input unit, fixed with ⎕FX,
 displaying nothing (DEFN ERROR if it does not fix). The rewritten block is
 what runs and what `proposed` shows (as one apl block when there is no
 split); entries list the rewrites applied in `rewrites` (shy, unnumbered,
-reindented and aplan, below). Re-indenting: when a block differs, a run of
-lines read as output that sits between two input lines (blank lines aside)
-and is indented 1 to 8 spaces but not 6 may be input typed at the wrong
-indent; those lines are moved to the six-space indent and the page runs
-again, and the change is kept (reindented) only for blocks that then
-match (the kept ones are proved once more).
+reindented and aplan, below). Re-indenting: when a block differs (or
+fails with an error it does not show), lines read as output may be input
+typed at the wrong indent: a run of lines indented 1 to 8 spaces but not
+6 between two input lines (blank lines aside), or a line indented 4 to 8
+spaces that looks like code (a glyph output rarely shows, or a leading
+quote). Those lines move to the six-space indent and the page runs again;
+the change is kept (reindented) for a block that then matches, or whose
+moved lines all ran without error and displayed exactly the output
+printed under them (at least one displaying something); the kept ones
+are proved once more. A block with a code-like candidate that is not kept
+gets split ambiguous, reason odd-indent. A comment-only line indented
+past six spaces right after input continues that input: it is input.
 
 Defining shown values (--define-shown, off by default): a block often shows
 a variable's value (an input line that is just the name, then the value)
@@ -331,6 +343,15 @@ def classify(block: Block) -> Classification:
             roles[i + 1] = roles[i + 2] = "output"
             triple.update((i + 1, i + 2))
 
+    # A comment-only line indented past the session indent, right after
+    # input, continues that input's comment: it is input.
+    prev = ""
+    for i, ln in enumerate(lines):
+        if not ln:
+            continue
+        if roles[i] == "output" and prev == "input" and _leading(ln) > 6 and ln.lstrip(_WS).startswith("⍝"):
+            roles[i] = "input"
+        prev = roles[i]
     typed = _mark_definitions(lines, roles)
     inputs = [i for i, r in enumerate(roles) if r == "input"]
     style: Literal["max", "min", "off"] = "off"
@@ -1542,6 +1563,34 @@ def _uses_name(line: str, name: str) -> bool:
     )
 
 
+# Glyphs that displayed output rarely shows but code does.
+_CODE_GLYPHS_RE = re.compile(
+    "[←⍝{}⎕⍳⍴⌶↑↓⊃⊂∊⍉⌽⊖⍋⍒⍨¨⌺⍤⍥∘⌿⍀×÷⌈⌊≡≢⍪⍕⍎⊢⊣∪∩⍲⍱○⍟⌹⍸⊆⍷⌸⍣⍠⍞⍛]"
+)
+
+
+_WAS_RE = re.compile(r"^Was (ON|OFF)\s*$", re.I)
+
+
+def _comparable(text: str, lines: list[str]) -> list[str]:
+    """Output lines as compared: normalised, and for ]box or ]boxing the
+    "Was ON"/"Was OFF" reply is not compared (the tool sets the box style
+    before each block, so the earlier state is the tool's, not the page's)."""
+    out = _normalise(lines)
+    if _BOX_RE.match(text.lstrip()):
+        out = ["Was …" if _WAS_RE.match(ln) else ln for ln in out]
+    return out
+
+
+def _looks_like_code(text: str) -> bool:
+    """A line that reads as code rather than displayed output: a glyph
+    output rarely shows, or a leading quote (box drawing never counts)."""
+    t = text.strip()
+    if not t or _BOX_DRAWING_RE.search(t):
+        return False
+    return bool(_CODE_GLYPHS_RE.search(t)) or t.startswith("'")
+
+
 def judge(
     block: Block,
     cls: Classification,
@@ -1592,13 +1641,18 @@ def judge(
     actual = "".join(ln + "\n" for ln in _session(inputs, results))
     # A line with no printed output printed something: it may be a folded
     # output row read as input. (A user command line cannot be output.)
-    suspect = any(
-        not res.error
+    suspects = [
+        text
+        for text, exp, res in zip(inputs, expected, results)
+        if not res.error
         and not text.lstrip().startswith("]")
         and not _normalise(exp)
         and _normalise(res.output)
-        for text, exp, res in zip(inputs, expected, results)
-    )
+    ]
+    # If every such line is plainly code, the block just leaves its output
+    # out: no reason to doubt the split.
+    unshown = bool(suspects) and all(_looks_like_code(t) for t in suspects)
+    suspect = bool(suspects) and not unshown
     for unjudged, test in (("volatile", _is_volatile), ("environment", _is_environment)):
         if any(test(t) for t in inputs):
             return ("not-run", "suspect-input", actual) if suspect else ("not-run", unjudged, None)
@@ -1622,11 +1676,14 @@ def judge(
         return "not-run", "error", actual
 
     if len(results) == len(expected) and all(
-        _normalise(e) == _normalise(r.output) for e, r in zip(expected, results)
+        _comparable(t, e) == _comparable(t, r.output)
+        for t, e, r in zip(inputs, expected, results)
     ):
         return "match", ("annotation" if cls.annotation else None), None
     if suspect:
         reason = "suspect-input"
+    elif unshown:
+        reason = "unshown-output"
     elif prior_unrun:
         reason = "after-unrun"
     elif any(_is_platform(t) for t in inputs):
@@ -2222,8 +2279,11 @@ def _process_page(
         blocks, classes = _normalised_page(originals, norms, set(reverted))
         run = _run_plan(blocks, classes, box, timeout, {})
     reindented: set[int] = set()
+    doubtful: set[int] = set()
     if box:
-        blocks, classes, run, reindented = _try_reindent(blocks, classes, box, timeout, run)
+        blocks, classes, run, reindented, doubtful = _try_reindent(
+            blocks, classes, box, timeout, run
+        )
     applied: dict[int, list[Shown]] = {}
     rejected: dict[int, dict[str, str]] = {}
     if define_shown and box:
@@ -2273,6 +2333,11 @@ def _process_page(
         done = _applied_rewrites(originals[i], blocks[i], norms[i])
         if i in reindented:
             done.append("reindented")
+        if i in doubtful and e["split"] in ("confirmed", "unambiguous"):
+            # A line read as output looks like input at an odd indent, and
+            # re-indenting it did not make the block match.
+            e["split"], e["proposed"] = "ambiguous", None
+            e["reason"] = "odd-indent"
         if done:
             e["rewrites"] = done + e.get("rewrites", [])
             if e["proposed"] is None:  # no split: the rewritten block as one
@@ -2394,29 +2459,39 @@ def _unproved_plus(
     return out
 
 
-def _reindent_candidates(b: Block, cls: Classification) -> list[int]:
-    """Body lines read as output that may be input typed at the wrong indent:
-    a run of lines indented 1 to 8 spaces but not 6, between two input lines
-    (blank lines aside), with no other output in between."""
+def _reindent_candidates(b: Block, cls: Classification) -> tuple[list[int], bool]:
+    """Body lines read as output that may be input typed at the wrong indent,
+    and whether any is code-like.
+
+    A candidate is a line read as output, indented 1 to 8 spaces but not 6,
+    that is either in a run of such lines between two input lines (blank
+    lines aside, no other output between), or indented 4 to 8 spaces and
+    looks like code (_looks_like_code).
+    """
     seq = [
         (k, raw, role) for k, (raw, role) in enumerate(zip(b.body, cls.roles))
         if role != "blank"
     ]
-    out: list[int] = []
+    out: set[int] = set()
+    code = False
     run: list[int] = []
     after_input = False
     for k, raw, role in seq:
         lead = _leading(raw)
-        if role == "output" and after_input and 1 <= lead <= 8 and lead != 6:
+        odd = role == "output" and 1 <= lead <= 8 and lead != 6
+        if odd and 4 <= lead and _looks_like_code(raw):
+            out.add(k)
+            code = True
+        if odd and after_input:
             run.append(k)
             continue
         if role in ("input", "cont"):
-            out.extend(run)  # the run is followed by input: wedged between
+            out.update(run)  # the run is followed by input: wedged between
             after_input = True
         else:
             after_input = False
         run = []
-    return out
+    return sorted(out), code
 
 
 def _try_reindent(
@@ -2430,26 +2505,37 @@ def _try_reindent(
     dict[int, Classification],
     tuple[dict[int, list[LineResult]], str | None, set[int], dict[int, int]],
     set[int],
+    set[int],
 ]:
-    """Re-indent likely input lines of blocks that differ (see
-    _reindent_candidates) to six spaces, and keep it for the blocks that
-    then match. The page runs with all trials; blocks that do not match are
-    dropped and the rest proved once more. Returns the page's blocks,
-    classes and run (unchanged if nothing is kept) and the kept blocks."""
+    """Re-indent likely input lines of blocks that differ or fail with an
+    error the block does not show (see _reindent_candidates) to six spaces,
+    and keep it for the blocks that then match. The page runs with all
+    trials; blocks that do not match are dropped and the rest proved once
+    more. Returns the page's blocks, classes and run (unchanged if nothing
+    is kept), the kept blocks, and the blocks not kept that had a code-like
+    candidate (their split is in doubt)."""
     entries = _judge_page(blocks, classes, box, run, {})[0]
     at = {b.line: i for i, b in enumerate(blocks)}
     trial: dict[int, Block] = {}
+    moved: dict[int, list[int]] = {}  # block -> re-indented body lines
+    doubtful: set[int] = set()
     for e in entries:
         i = at[e["line"]]
         cls = classes.get(i)
-        if e["verdict"] != "differs" or cls is None or not cls.runnable:
+        tried = e["verdict"] == "differs" or (
+            e["verdict"] == "not-run" and e["reason"] in ("suspect-input", "error")
+        )
+        if not tried or cls is None or not cls.runnable:
             continue
-        idx = _reindent_candidates(blocks[i], cls)
+        idx, code = _reindent_candidates(blocks[i], cls)
+        if code:
+            doubtful.add(i)
         if idx:
             body = list(blocks[i].body)
             for k in idx:
                 body[k] = "      " + body[k].lstrip(_WS)
             trial[i] = _with_body(blocks[i], body)
+            moved[i] = idx
     for _ in range(2):
         if not trial:
             break
@@ -2458,12 +2544,40 @@ def _try_reindent(
         tr = _run_plan(tb, tc, box, timeout, {})
         ok = {
             at[e["line"]] for e in _judge_page(tb, tc, box, tr, {})[0]
-            if at[e["line"]] in trial and e["verdict"] == "match"
+            if at[e["line"]] in trial
+            and (e["verdict"] == "match" or _moved_lines_shown(tb, tc, tr[0], moved, at[e["line"]]))
         }
         if ok == set(trial):
-            return tb, tc, tr, ok
+            return tb, tc, tr, ok, doubtful - ok
         trial = {i: trial[i] for i in ok}
-    return blocks, classes, run, set()
+    return blocks, classes, run, set(), doubtful
+
+
+def _moved_lines_shown(
+    blocks: list[Block],
+    classes: dict[int, Classification],
+    results: dict[int, list[LineResult]],
+    moved: dict[int, list[int]],
+    i: int,
+) -> bool:
+    """Every re-indented line of block i ran without error and displayed
+    exactly the output printed under it, and at least one displayed
+    something: the lines are input even if the block differs elsewhere."""
+    cls = classes[i]
+    res = results.get(i, [])
+    printed = expected_outputs(blocks[i], cls)
+    texts = _input_texts(blocks[i], cls)
+    shown = False
+    for k in moved[i]:
+        if cls.roles[k] != "input":
+            return False
+        idx = sum(1 for r in cls.roles[:k] if r == "input")
+        if idx >= len(res) or res[idx].error:
+            return False
+        if _comparable(texts[idx], res[idx].output) != _comparable(texts[idx], printed[idx]):
+            return False
+        shown = shown or bool(_normalise(res[idx].output))
+    return shown
 
 
 def _applied_rewrites(original: Block, block: Block, n: Normalised) -> list[str]:

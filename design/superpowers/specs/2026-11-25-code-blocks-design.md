@@ -357,15 +357,37 @@ output, `F[2]` in the prose), or any line of the block using `⎕STOP`,
 normalised. Numbered lines without a header (a fragment), or
 numbers that do not run 1, 2, 3, …, stay as they are (`del-definition`).
 
-**Re-indenting likely input (`reindented`).** User request (2026-11-26):
-some input is typed at the wrong indent (`assignment-indexed.md:202` has
-an input line at five spaces), so it reads as output and the block
-differs. For a block that differs, a run of lines read as output that sits
-between two input lines (blank lines aside, no other output between) and
-is indented 1 to 8 spaces but not 6 is moved to the six-space indent, and
-the page runs again with all such trials. A trial is kept only if its
-block then matches; the kept ones are proved once more in a further run
-(if that fails, none is kept). The proposal shows the lines as input.
+**Re-indenting likely input (`reindented`).** User requests (2026-11-26):
+some input is typed at the wrong indent (`assignment-indexed.md:202` at
+five spaces between inputs; `mix.md`, `times.md`, `stencil.md` at seven or
+eight after output; `syntax-colour-tokens.md:29` at five after output), so
+it reads as output. For a block that differs, or fails with an error it
+does not show, the candidates are lines read as output that are indented
+1 to 8 spaces but not 6 and either form a run between two input lines
+(blank lines aside, no other output between) or are indented 4 to 8
+spaces and look like code: a glyph displayed output rarely shows (`←`,
+`⍝`, `{`, `⎕`, `⍳`, `⍴`, `⊃`, …) or a leading quote, and no box drawing.
+They move to the six-space indent and the page runs again with all such
+trials. A trial is kept if its block then matches, or if every moved line
+ran without error and displayed exactly the output printed under it, at
+least one displaying something (a mis-read output row run as code prints
+where the docs show nothing). The kept ones are proved once more (if that
+fails, none is kept). A block with a code-like candidate that is not kept
+gets split `ambiguous`, reason `odd-indent`: the split would put code in
+the output.
+
+**Comment continuation lines.** A comment-only line indented past six
+spaces right after an input line (`              ⍝ the hash table`)
+continues that input's comment and is input.
+
+**Unshown output.** An input line with no printed output that printed
+something makes the block `suspect-input` (it may be a folded output row).
+When every such line looks like code (as above), the docs just left the
+output out: the reason is `unshown-output` and the split stands.
+
+**Box state replies.** `]box`/`]boxing` reply `Was ON`/`Was OFF`, which
+reflects the style the tool set before the block, not the page's: that
+line is not compared.
 
 **Running typed definitions.** A typed definition without numbers
 (rewritten, or so in the guide) is one input unit: its header, body and
