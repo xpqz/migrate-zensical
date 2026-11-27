@@ -54,6 +54,40 @@ To also check that every `HELP_URL` in the interpreter's `help_urls.h` names a p
 
 Run the tests of the tooling itself with `uv run pytest -q`.
 
+### Offline bundle
+
+The offline bundle is the whole site as one archive, `dyalog-docs-<X.Y>.tar.gz`, built with Zensical's `offline` plugin so that it opens from `file:` URLs with no network. It replaces `dyalog.chm` behind F1. `chm.yml` builds it beside the CHM and attaches it, its `.sha256` and `tools/offline/Docs.dyalog` to the same `v<X.Y>.<n>` release; Jenkins carries them from there (see `design/offline-bundle-handoff.md`).
+
+To build it, from the repository root (about 20 seconds; `X.Y` comes from `extra.version_majmin` in `zensical.toml`):
+
+```
+uv run python tools/offline/build_bundle.py --out out/offline --git-info local:test
+```
+
+To check that it loads with no network, extract it and point the site tests at it. They need Chromium for Playwright, installed once with `uv run playwright install chromium`, and take about a minute and a half:
+
+```
+mkdir -p out/offline-site
+tar -xzf out/offline/dyalog-docs-21.0.tar.gz -C out/offline-site
+OFFLINE_SITE="$PWD/out/offline-site/dyalog-docs-21.0" uv run pytest -q tools/offline/test_offline_site.py
+```
+
+`tools/offline/known-broken-links.txt` is their baseline of links already broken in the site, which only shrinks.
+
+Two installers put the bundle in place, with the same layout: `<root>/<X.Y>/`, whose `bundle.json` records the checksum it was installed from. Each verifies the checksum, swaps the new copy in by rename, leaves the installed copy as it was if anything fails, and prints the `DYALOGHELPDIR` value that points F1 at it.
+
+- From a Dyalog session, the `]Docs` user command (`tools/offline/Docs.dyalog`): `]Docs` reports what is installed, `]Docs update` installs or updates, `]Docs -??` lists the options.
+- From a shell or a Dockerfile, `tools/offline/dyalog-docs-update.sh` (POSIX `sh`, with `curl` or `wget`):
+
+  ```
+  sh tools/offline/dyalog-docs-update.sh --version 21.0
+  sh tools/offline/dyalog-docs-update.sh --from out/offline/dyalog-docs-21.0.tar.gz --root /tmp/docs
+  ```
+
+  `--system` installs the machine-wide copy, and `--help` lists the options.
+
+Both download from `https://docs.dyalog.com/<X.Y>/files/` by default. `--from` (`-from=` for `]Docs`) installs a local archive instead, with its `.sha256` beside it.
+
 ### Platform notes
 
 - **Windows:** use PowerShell. If uv is configured to link packages with symlinks and `uv sync` fails (symlinks need Developer Mode or an elevated shell), have it copy instead: `$env:UV_LINK_MODE="copy"`. The commands above work unchanged in PowerShell.
