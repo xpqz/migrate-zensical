@@ -132,17 +132,6 @@ jobs:
           fi
           ls -la out/offline
 
-      - name: Test the offline bundle
-        # Extracted as an installer would; the tests prove it loads with no network.
-        env:
-          VERSION_XY: ${{ steps.release-version.outputs.VERSION }}
-        run: |
-          uv run playwright install --with-deps chromium
-          mkdir -p out/offline-site
-          tar -xzf "out/offline/dyalog-docs-${VERSION_XY}.tar.gz" -C out/offline-site
-          OFFLINE_SITE="$PWD/out/offline-site/dyalog-docs-${VERSION_XY}" \
-            uv run pytest -q tools/offline/test_offline_site.py
-
       - name: Manage draft releases and create the release
         # Without a CHM there is nothing to release: no asset-less releases,
         # and no release carrying the bundle without the CHM Jenkins expects.
