@@ -1,7 +1,8 @@
 name: Build CHM
 
-# Builds the CHM help file from the Zensical project and attaches it to a
-# GitHub release tagged v<X.Y>.<n>, which is what Jenkins'
+# Builds the CHM help file and the offline bundle (dyalog-docs-<X.Y>.tar.gz,
+# its .sha256 and the ]Docs user command that installs it) from the Zensical
+# project and attaches them to a GitHub release tagged v<X.Y>.<n>, which is what Jenkins'
 # getVersionedReleaseAssets selects (the newest non-draft release whose tag
 # starts with "v<version>."). The tag naming follows the MkDocs-era
 # mkdocs-chm.yml: X.Y from extra.version_majmin, n the commit count, and a
@@ -113,8 +114,38 @@ jobs:
             --build-date "$BUILD_DATE"
           ls -la out/chm/*.chm
 
+      - name: Build the offline bundle
+        # dyalog-docs-<X.Y>.tar.gz and its .sha256, X.Y from zensical.toml,
+        # which must be the version this release is tagged with.
+        env:
+          VERSION_XY: ${{ steps.release-version.outputs.VERSION }}
+          GIT_INFO: ${{ steps.git-info.outputs.GIT_INFO }}
+          BUILD_DATE: ${{ steps.git-info.outputs.DATE }}
+        run: |
+          uv run python tools/offline/build_bundle.py \
+            --out out/offline \
+            --git-info "$GIT_INFO" \
+            --build-date "$BUILD_DATE"
+          if [ ! -f "out/offline/dyalog-docs-${VERSION_XY}.tar.gz" ]; then
+            echo "::error::The bundle is not for version ${VERSION_XY}: $(ls out/offline)"
+            exit 1
+          fi
+          ls -la out/offline
+
+      - name: Test the offline bundle
+        # Extracted as an installer would; the tests prove it loads with no network.
+        env:
+          VERSION_XY: ${{ steps.release-version.outputs.VERSION }}
+        run: |
+          uv run playwright install --with-deps chromium
+          mkdir -p out/offline-site
+          tar -xzf "out/offline/dyalog-docs-${VERSION_XY}.tar.gz" -C out/offline-site
+          OFFLINE_SITE="$PWD/out/offline-site/dyalog-docs-${VERSION_XY}" \
+            uv run pytest -q tools/offline/test_offline_site.py
+
       - name: Manage draft releases and create the release
-        # Without a CHM there is nothing to release: no asset-less releases.
+        # Without a CHM there is nothing to release: no asset-less releases,
+        # and no release carrying the bundle without the CHM Jenkins expects.
         if: ${{ inputs.generate_chm }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -169,6 +200,9 @@ jobs:
           echo "Creating new ${RELEASE_TYPE} release: $RELEASE_TAG"
           gh release create "$RELEASE_TAG" \
             out/chm/*.chm \
+            out/offline/dyalog-docs-*.tar.gz \
+            out/offline/dyalog-docs-*.tar.gz.sha256 \
+            tools/offline/Docs.dyalog \
             "${DRAFT_FLAG[@]}" \
             --target "$GITHUB_SHA" \
             --title "$RELEASE_NAME" \

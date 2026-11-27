@@ -38,6 +38,17 @@ jobs:
       - name: Content checks and build
         run: uv run python tools/check.py
 
+      - name: Offline bundle
+        # Builds the bundle chm.yml releases and proves it loads with no
+        # network; the installers' own tests ran with the others above.
+        run: |
+          uv run python tools/offline/build_bundle.py --out out/offline --git-info "${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}:${GITHUB_SHA::8}"
+          uv run playwright install --with-deps chromium
+          mkdir -p out/offline-site
+          tar -xzf out/offline/dyalog-docs-*.tar.gz -C out/offline-site
+          OFFLINE_SITE="$(echo "$PWD"/out/offline-site/dyalog-docs-*)" \
+            uv run pytest -q tools/offline/test_offline_site.py
+
   platforms:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     strategy:
