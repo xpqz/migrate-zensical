@@ -199,8 +199,10 @@ Only if the owner decides these links should be relative (spec, Open decisions).
 - Modify: `CONTRIBUTE.md` (building and testing the bundle locally; both installers)
 
 - [x] **Step 1:** Add to `chm.yml`: `build_bundle.py --out out/offline --git-info "$GIT_INFO" --build-date "$BUILD_DATE"`, `uv run playwright install chromium`, the site tests on the extracted bundle, then `out/offline/*` and `tools/offline/Docs.dyalog` in the release's asset list.
-- [ ] **Step 2: Verify** with `workflow_dispatch` on a branch: the draft `v21.0.<n>` release lists `dyalog.chm`, the PDFs, `dyalog-docs-21.0.tar.gz`, `dyalog-docs-21.0.tar.gz.sha256` and `Docs.dyalog`; `dyalog-docs-update.sh --from` installs the downloaded archive.
-- [ ] **Step 3: Commit** `Release the offline bundle with the CHM`.
+- [x] **Step 2: Verify** with `workflow_dispatch` on a branch: the draft `v21.0.<n>` release lists `dyalog.chm`, the PDFs, `dyalog-docs-21.0.tar.gz`, `dyalog-docs-21.0.tar.gz.sha256` and `Docs.dyalog`; `dyalog-docs-update.sh --from` installs the downloaded archive.
+- [x] **Step 3: Commit** `Release the offline bundle with the CHM`.
+
+Done (PR #19). Run 46033109717 on `offline-release` made draft `v21.0.81` with `dyalog.chm`, `dyalog-docs-21.0.tar.gz`, its `.sha256` and `Docs.dyalog` (this repository's `chm.yml` attaches no PDFs); the downloaded archive verified and installed with `dyalog-docs-update.sh --from` (2,773 files).
 
 ### Task 8: Jenkins, SVN and installer handoff
 
