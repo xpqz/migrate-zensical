@@ -1,0 +1,61 @@
+⍝ Tests for the ]Docs user command's install logic, run by test_docs_ucmd.py.
+⍝ Environment: DOCS_UCMD (Docs.dyalog), DOCS_ARCHIVE (with .sha256 beside it),
+⍝ DOCS_TAMPERED (a .sha256 beside it that matches neither it nor DOCS_ARCHIVE),
+⍝ DOCS_ROOT (empty dir).
+⍝ Prints one PASS/FAIL line per check; exits 1 on any failure.
+
+Env←{2 ⎕NQ'.' 'GetEnvironment'⍵}
+docs←⎕SE.⎕FIX'file://',Env'DOCS_UCMD'
+archive←Env'DOCS_ARCHIVE'
+tampered←Env'DOCS_TAMPERED'
+root←Env'DOCS_ROOT'
+fails←0
+Check←{⎕←(⊃'FAIL ' 'PASS '⌷⍨1+⍵),⍺ ⋄ fails+←~⍵ ⋄ ⍬}
+Opts←{⍺←'' ⋄ o←⎕NS ⍬ ⋄ o.(version root system from baseurl)←'21.0'⍵ 0 ⍺ '' ⋄ o}
+Text←{∊⍵,¨⎕UCS 10}
+Leftovers←{⊃⎕NINFO⍠1⊢⍵,'/.*'}
+Sha←{(⊃⎕NGET ⍵,'.sha256')↑⍨64}
+Bytes←{t←⍵ ⎕NTIE 0 ⋄ b←⎕NREAD t 83 ¯1 0 ⋄ b⊣⎕NUNTIE t}  ⍝ raw: ⎕NGET normalises line endings
+
+dest←root,'/21.0'
+r←docs.Install archive Opts root
+'fresh install creates index.html'Check ⎕NEXISTS dest,'/index.html'
+meta←⎕JSON⊃⎕NGET dest,'/bundle.json'
+'bundle.json records the archive sha256'Check meta.sha256≡Sha archive
+'bundle.json has no CR line separators'Check~13∊Bytes dest,'/bundle.json'
+'result names the DYALOGHELPDIR value'Check∨/('DYALOGHELPDIR=file://',dest)⍷Text r
+
+stamp←3 ⎕NINFO dest,'/index.html'
+r←docs.Install archive Opts root
+'second run reports up to date'Check∨/'up to date'⍷Text r
+'second run leaves the install untouched'Check stamp≡3 ⎕NINFO dest,'/index.html'
+
+(⊂'previous')⎕NPUT dest,'/f.txt'
+ok←0
+:Trap 11 22
+    {}docs.Install tampered Opts root
+:Else
+    ok←∨/'checksum'⍷⎕DMX.Message
+:EndTrap
+'tampered archive is refused with a checksum error'Check ok
+'previous install intact after refused update'Check ⎕NEXISTS dest,'/f.txt'
+'no temporary directories left behind'Check 0=≢Leftovers root
+
+spaced←root,'/Application Support/Dyalog/docs'
+r←docs.Install archive Opts spaced
+'root with spaces works'Check ⎕NEXISTS spaced,'/21.0/index.html'
+
+lone←root,'/lone.tar.gz'
+lone ⎕NCOPY archive
+ok←0
+:Trap 22
+    {}docs.Install lone Opts root,'/other'
+:Else
+    ok←∨/'.sha256'⍷⎕DMX.Message
+:EndTrap
+'archive without a .sha256 beside it is refused'Check ok
+
+s←docs.Status Opts root
+'status reports version and build date'Check∧/∨/¨('21.0' '2026-11-27')⍷¨⊂Text s
+
+⎕OFF fails>0
