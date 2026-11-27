@@ -142,22 +142,24 @@ Repository: `~/work/tauride`. Read its `CLAUDE.md` first. Branch `offline-help`;
 
 ### Task 4: Shell installer
 
+Done. `test_update_sh.py` (15 tests, also under `dash` with `TEST_SH=dash`) adds a copy installed by `]Docs` recognised as current, an update over an older copy, a failed download (exit 2), a corrupt archive (exit 4), `--from` without its `.sha256`, the default per-user root and usage errors. Checked by hand in `alpine:3.20` (busybox `wget` over HTTP, `--system`) and `debian:stable-slim` (`--from`).
+
 **Files:**
 - Create: `tools/offline/dyalog-docs-update.sh` (POSIX sh, `set -eu`), `tools/offline/test_update_sh.py`
 
 **Interfaces:**
 - Produces: `dyalog-docs-update.sh [--version X.Y] [--root DIR] [--system] [--base-url URL] [--from ARCHIVE]`. Defaults: `--root` the spec's per-user root for the platform, `--system` the machine-wide root; `--base-url https://docs.dyalog.com/<X.Y>/files`. `--version` is required unless `--from` is given (then read from the archive's top directory). Exit codes: 0 installed or already current, 1 usage, 2 download, 3 checksum mismatch, 4 extraction. Prints the `DYALOGHELPDIR=file://...` value on success.
 
-- [ ] **Step 1: Failing tests**, each running the script with `subprocess` against an archive from Task 2's `package` in `tmp_path`, and `--base-url file://<tmp>` (curl reads `file:` URLs, so no network):
+- [x] **Step 1: Failing tests**, each running the script with `subprocess` against an archive from Task 2's `package` in `tmp_path`, and `--base-url file://<tmp>` (curl reads `file:` URLs, so no network):
   - `test_fresh_install`: `<root>/21.0/index.html` exists; `bundle.json` has `sha256`.
   - `test_already_current_is_noop`: second run exits 0, prints `up to date`, directory mtime unchanged.
   - `test_checksum_mismatch_keeps_old`: tamper the archive; exit 3; previous install intact; no stray temp directories under root.
   - `test_root_with_spaces`: root `tmp/Application Support/Dyalog/docs` works.
   - `test_from_local_archive`: `--from` with the `.sha256` beside it, no `--base-url`.
-- [ ] **Step 2: Run**. Expected: FAIL.
-- [ ] **Step 3: Implement**: download `.sha256`, compare with installed `bundle.json` `sha256`, download archive, verify with `sha256sum -c` or `shasum -a 256 -c`, extract into `<root>/.<X.Y>.new`, write `sha256` into its `bundle.json`, rename old to `.<X.Y>.old`, new to `<X.Y>`, delete old. Trap removes temp directories on failure.
-- [ ] **Step 4: Run**. Expected: PASS.
-- [ ] **Step 5: Commit** `Add shell installer for the offline bundle`.
+- [x] **Step 2: Run**. Expected: FAIL.
+- [x] **Step 3: Implement**: download `.sha256`, compare with installed `bundle.json` `sha256`, download archive, verify with `sha256sum -c` or `shasum -a 256 -c`, extract into `<root>/.<X.Y>.new`, write `sha256` into its `bundle.json`, rename old to `.<X.Y>.old`, new to `<X.Y>`, delete old. Trap removes temp directories on failure.
+- [x] **Step 4: Run**. Expected: PASS.
+- [x] **Step 5: Commit** `Add shell installer for the offline bundle`.
 
 ### Task 5: User command `]Docs`
 
