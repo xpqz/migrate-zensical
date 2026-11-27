@@ -1,0 +1,10 @@
+# Links in the offline bundle whose target is not in the bundle, as
+# "<page>: <href>". Source-link defects to fix upstream, plus files that are
+# served from docs.dyalog.com/<X.Y>/files/ only. This baseline only shrinks:
+# a broken link not listed here fails test_relative_links_resolve, and a
+# listed link that resolves must be removed.
+language-reference-guide/system-functions/system-functions-by-category.html: ../../dotnet-interface-guide/index.html
+language-reference-guide/system-functions/system-functions-by-category.html: ../ucs/
+licences-overview.html: ../files/Licences%20for%20third-party%20components.docx
+object-reference/objects/htmlrenderer.html: ../../../files/HTMLRenderer_User_Guide.pdf
+programming-reference-guide/object-oriented-programming/class-members/properties/keyed-properties-print.html: ../../../property-section/propertyarguments-class.html

@@ -51,10 +51,14 @@ chm = [
     "htmlmin2==0.1.13",
     "csscompressor==0.9.5",
 ]
+# tools/offline/test_offline_site.py: loads the offline bundle from file://
+# in headless Chromium and records every request that leaves the disk.
+# Browsers install separately: `uv run playwright install chromium`.
+offline = ["playwright==1.65.2"]
 
 [tool.uv]
-# A plain `uv sync` installs these, so the CHM tests run rather than skip.
-default-groups = ["dev", "chm"]
+# A plain `uv sync` installs these, so the CHM and offline tests run rather than skip.
+default-groups = ["dev", "chm", "offline"]
 
 [tool.setuptools]
 py-modules = ["dyalog_caption", "dyalog_vars"]
