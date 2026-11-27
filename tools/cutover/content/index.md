@@ -53,7 +53,9 @@ Alternatively, if you have a GitHub account, you can click the appropriate butto
 </div>
 
 <script>
-[...document.querySelectorAll(".grid a[href*=error]")].forEach(e=>
+// Pre-fills the issue body from the template on GitHub. The offline bundle
+// (file:) makes no network request, so there the links open unfilled.
+if (location.protocol !== "file:") [...document.querySelectorAll(".grid a[href*=error]")].forEach(e=>
   fetch(
     e.href.replace(
       /github.*template=/,"raw.githubusercontent.com/Dyalog/documentation/refs/heads/main/.github/ISSUE_TEMPLATE/"

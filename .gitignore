@@ -21,3 +21,7 @@ __pycache__/
 # code-blocks.py review log (tools/cutover/code-blocks.py) and its backup
 /code-blocks.yml
 /code-blocks.yml.bak
+
+# Offline bundle: generated config and its build output (archives go to /out/)
+/zensical/offline.toml
+/zensical/site-offline/
