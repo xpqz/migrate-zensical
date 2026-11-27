@@ -161,17 +161,18 @@ Repository: `~/work/tauride`. Read its `CLAUDE.md` first. Branch `offline-help`;
 
 ### Task 5: User command `]Docs`
 
+Done. Style and helpers follow `]Get` (`get.dyalog`).
+
 **Files:**
-- Create: `tools/offline/Docs.dyalog` (user command namespace: `List`, `Run`, `Help`), `tools/offline/test_docs_ucmd.apls`
+- Create: `tools/offline/Docs.dyalog` (group Experimental), `tools/offline/test_docs_ucmd.apls`, `tools/offline/test_docs_ucmd.py`
 
 **Interfaces:**
-- Produces: `]Docs.Update [-version=X.Y] [-root=DIR] [-system] [-from=ARCHIVE] [-baseurl=URL]` and `]Docs.Status`. Version defaults to the running interpreter's `X.Y` (`2⊃#.⎕WG'APLVersion'`). On Windows `-system` installs into `<install dir>\help\docs`, the install directory being `2 ⎕NQ'.' 'GetEnvironment' 'DYALOG'`, and needs an elevated session. Same defaults, layout, checksum and swap behaviour as Task 4. Download with HttpCommand; checksum and extraction with `⎕SH` (`shasum -a 256` or `sha256sum`; `certutil -hashfile <f> SHA256` on Windows; `tar -xzf`, Windows' built-in `tar.exe`). `Status` prints version, build date, git and the `DYALOGHELPDIR` value to set.
+- `]Docs [status|update] [-version=X.Y] [-root=DIR] [-system] [-from=ARCHIVE] [-baseurl=URL]`; `status` is the default. Version defaults to the running interpreter's `X.Y`. On Windows `-system` installs into `<install dir>\help\docs` (`2 ⎕NQ'.' 'GetEnvironment' 'DYALOG'`) and needs an elevated session. Download with HttpCommand from `-baseurl` (default `https://docs.dyalog.com/%V/files`); checksum with `shasum -a 256`, `sha256sum` or `certutil -hashfile … SHA256`; extraction with `tar -xzf` (Windows' built-in `tar.exe`). `-from` requires the `.sha256` beside the archive.
+- API for scripts and tests: `Docs.Install opts` and `Docs.Status opts`, each returning message lines; `opts` fields as the modifiers.
 
-- [ ] **Step 1: Failing test script** run by `dyalogscript tools/offline/test_docs_ucmd.apls <archive>`: fresh install from `-from`, second run reports up to date, tampered archive leaves the install intact, root with a space. Exits 1 on the first failure.
-- [ ] **Step 2: Run**. Expected: FAIL.
-- [ ] **Step 3: Implement**.
-- [ ] **Step 4: Run**. Expected: PASS on macOS; record a manual Windows run of the same script in the PR.
-- [ ] **Step 5: Commit** `Add ]Docs user command for the offline bundle`.
+- [x] `test_docs_ucmd.py` builds fixture archives with `package` and runs `test_docs_ucmd.apls` under `dyalogscript` (12 checks: fresh install, recorded sha256, LF-only `bundle.json`, printed `DYALOGHELPDIR`, up-to-date no-op, tampered archive refused with the previous install intact and no temporary directories left, root with spaces, missing `.sha256` refused, status).
+- [x] Manual, macOS session: `]Docs`, `]Docs -??`, `]Docs update -baseurl=http://127.0.0.1:8765` (download, then up to date), and a 404 reported as `HTTP 404 fetching …`.
+- [x] Windows session (21.0.54393, through the API rather than the UCMD framework): install to `%LOCALAPPDATA%\Dyalog\docs\21.0`, up to date, tampered archive refused with no leftovers, root with spaces, status, help; `bundle.json` gets CRLF. F1 in tauride (main) opened the per-user copy.
 
 ### Task 6: Same-version absolute links (documentation repository), pending decision
 
@@ -203,6 +204,6 @@ Only if the owner decides these links should be relative (spec, Open decisions).
 
 Outside this repository; written up for the owners, not built here.
 
-- [ ] **Step 1:** Write `design/offline-bundle-handoff.md`: `gitdocs2svn` (JenkinsBuild) copies the three new assets into `docbin`; each version's `docbin` `filelist.txt` lists them so "Update online files" publishes them to `https://docs.dyalog.com/<X.Y>/files/`; the interpreter installers unpack the bundle where they place `dyalog.chm` and set `DYALOGHELPDIR`; the interpreter's two changes from the spec. Note that the gh-pages `Jenkinsfile` is what Jenkins runs and must be synced first.
+- [x] **Step 1:** Write `design/offline-bundle-handoff.md`: `gitdocs2svn` (JenkinsBuild) copies the three new assets into `docbin`; each version's `docbin` `filelist.txt` lists them so "Update online files" publishes them to `https://docs.dyalog.com/<X.Y>/files/`; the interpreter installers unpack the bundle where they place `dyalog.chm` and set `DYALOGHELPDIR`; the interpreter's two changes from the spec. Note that the gh-pages `Jenkinsfile` is what Jenkins runs and must be synced first.
 - [ ] **Step 2:** Once Jenkins has run, `dyalog-docs-update.sh --version 21.0` with the default base URL installs from `docs.dyalog.com`.
 

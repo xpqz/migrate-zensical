@@ -107,10 +107,6 @@ The value is the unencoded path (`file:///Users/a/Library/Application Support/Dy
 
 The trailing `/` form does not exist in the bundle: the topic `language-reference-guide/symbols/rho` is the file `language-reference-guide/symbols/rho.html`.
 
-Requested of the interpreter team (spec only; not built here):
-
-1. When `DYALOGHELPDIR` starts with `file://`, format a topic as `<prefix>/<path>.html`, and the prefix itself as `<prefix>/index.html`.
-2. In the Windows IDE, open such a URL in the default browser, as is done for `https://`.
-3. When `DYALOGHELPDIR` is not set, apply the lookup order under Install location, percent-encoding the path.
+Requested of the interpreter team (spec only; not built here): see `design/offline-bundle-handoff.md`, which also covers the installers, Jenkins and SVN. In short: build `<prefix>/<path>.html` for a `file://` prefix; with the installed non-URL `DyalogHelpDir`, look for the per-user copy, then `<DyalogHelpDir>\docs`, then `dyalog.chm`, then online; percent-encode file URLs; open local pages directly; route the Help menu's fixed topics the same way.
 
 RIDE (tested in the tauride fork) reads `DYALOGHELPDIR` from its own environment, which a spawned interpreter inherits, and rewrites `file:` help URLs ending in `/` to `.html` itself. With `DYALOGHELPDIR` unset, it applies the lookup order to the `https://docs.dyalog.com/<X.Y>/` URLs the interpreter returns. It therefore works against an unchanged 21.0 interpreter.
